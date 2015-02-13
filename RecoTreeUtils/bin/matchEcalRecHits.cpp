@@ -1,11 +1,12 @@
-#include <TH1F.h>
 #include <TMath.h>
 #include <TROOT.h>
 #include <TFile.h>
 #include <TSystem.h>
 
+#include "SimDataFormats/Vertex/interface/SimVertex.h"
 #include "DataFormats/FWLite/interface/Event.h"
 #include "DataFormats/FWLite/interface/Handle.h"
+#include "DataFormats/JetReco/interface/GenJet.h"
 #include "DataFormats/JetReco/interface/PFJet.h"
 #include "DataFormats/FWLite/interface/InputSource.h"
 #include "DataFormats/FWLite/interface/OutputFiles.h"
@@ -51,7 +52,6 @@ typedef ROOT::Math::PositionVector3D<ROOT::Math::CylindricalEta3D<Double32_t> > 
 typedef map<const reco::PFCluster*, pair<const reco::PFCandidate*, float> > cluster_map;
 
 //****************************************************************************************
-
 float DeltaPhi (float phi1, float phi2)
 {
     float delta_phi = TMath::Abs(phi1 - phi2);
@@ -63,7 +63,6 @@ float DeltaPhi (float phi1, float phi2)
 }
 
 //****************************************************************************************
-
 float DeltaR (float eta1, float eta2, float phi1, float phi2)
 {
     float d_phi = DeltaPhi(phi1, phi2);
@@ -108,32 +107,40 @@ sub_det_elements GetLinks(reco::PFBlock* block, unsigned int iEle)
 
 int MatchPhotons(const reco::PFCandidate* photon, cluster_map* clusterList)
 {
-    reco::PFBlock block = *photon->elementsInBlocks().at(0).first.get();
+    //reco::PFBlock block = *photon->elementsInBlocks().at(0).first.get();
     const reco::PFCluster* pfCluster = NULL;
     //---search for the right ECAL cluster---
     float min_dist_cluster=100;
-    for(unsigned int iEle=0; iEle<block.elements().size(); iEle++)
-    {
-    	if(block.elements()[iEle].type() != 4)
-    	    continue;
-        sub_det_elements clusters = GetLinks(&block, iEle);        
-        for(unsigned int iCls=0; iCls<clusters.size(); iCls++)
-        {
-            if(clusters.at(iCls).second->type() != 4)
+    // for(unsigned int iEle=0; iEle<block.elements().size(); iEle++)
+    // {
+    for (auto& blockPair : photon->elementsInBlocks())
+    {        
+	unsigned int pos = blockPair.second;
+	const reco::PFBlockElement& blockElement = blockPair.first->elements()[pos];
+	//{
+    	// if(block.elements()[iEle].type() != 4)
+    	//     continue;
+        // sub_det_elements clusters = GetLinks(&block, iEle);        
+        // for(unsigned int iCls=0; iCls<clusters.size(); iCls++)
+        // {
+        //     if(clusters.at(iCls).second->type() != 4)
+        //         continue;
+            if(blockElement.type() != 4)
                 continue;
-            reco::PFCluster tmpCluster = *clusters.at(iCls).second->clusterRef().get();
+            reco::PFCluster tmpCluster = *blockElement.clusterRef().get();	 
+            //reco::PFCluster tmpCluster = *clusters.at(iCls).second->clusterRef().get();
             tmpCluster.calculatePositionREP();
             REPPoint pfClusterPos = tmpCluster.positionREP();
             float tmp_dist=DeltaR(pfClusterPos.Eta(), photon->eta(),
                                   pfClusterPos.Phi(), photon->phi());
-            if(tmp_dist < min_dist_cluster)
+            if(tmp_dist < min_dist_cluster && blockElement.clusterRef().isAvailable())
             {
                 min_dist_cluster = tmp_dist;
-                pfCluster = clusters.at(iCls).second->clusterRef().get();                
+                pfCluster = blockElement.clusterRef().get();//clusters.at(iCls).second->clusterRef().get();                
                 cout << "DeltaR        : " << min_dist_cluster << endl
                      << "Cluster Energy: " << pfCluster->energy() << endl;
             }
-        }        
+            //}        
     }
     if(pfCluster)
     {
@@ -188,7 +195,8 @@ int MatchCharged(const reco::PFCandidate* charged, cluster_map* clusterList)
     return -1;
 }
 
-pair<bool, float> GetTimeFromRecHits(const reco::PFCluster* pfCluster, vector<EcalRecHit>* recHitsEK)
+pair<bool, float> GetTimeFromRecHits(const reco::PFCluster* pfCluster,
+                                     vector<EcalRecHit>* recHitsEK, float vtxTime)
 {
     vector<pair<DetId,float> > detIdMap = pfCluster->hitsAndFractions();
     int nMatch=0;
@@ -203,7 +211,7 @@ pair<bool, float> GetTimeFromRecHits(const reco::PFCluster* pfCluster, vector<Ec
 		nMatch++;
 		if(recHitsEK->at(iRec).energy() >= recHitsEK->at(hardestRecHit).energy())
 		{
-		    candTime = recHitsEK->at(iRec).time();
+		    candTime = recHitsEK->at(iRec).time() - vtxTime * 1E9;
 		}
 	    }
 	}
@@ -212,9 +220,6 @@ pair<bool, float> GetTimeFromRecHits(const reco::PFCluster* pfCluster, vector<Ec
         return pair<bool, float>(true, candTime);
     else
         return pair<bool, float>(false, candTime);
-    // cout << "PFCandidate ecal time   : " << candTime << endl
-    //      << "# match/PFRec/totRec    : " << nMatch << "/" << detIdMap.size() << "/" << recHitsEK->size()
-    //      << endl << endl;
 }
 
 //****************************************************************************************
@@ -227,16 +232,22 @@ int main(int argc, char* argv[])
     //---histos---
     TFile* outFile = TFile::Open(argv[2], "recreate");    
     TH1F* h_neutral_time = new TH1F("neutral_time", "Time of the most energetic RecHit",
-    				    200, -10, 10);
+    				    100, -5, 5);
     TH1F* h_charged_time = new TH1F("charged_time", "Time of the most energetic RecHit",
-    				    200, -10, 10);
-    h_charged_time->SetFillColor(kRed);
+    				    100, -5, 5);
+    TH1F* h_energy_ratio_nocut = new TH1F("energy_ratio_nocut", "Energy ratio Reco/Gen",
+                                          50, 0, 1.5);
+    TH1F* h_energy_ratio_cut = new TH1F("energy_ratio_cut", "Energy ratio Reco/Gen",
+                                        50, 0, 1.5);
+    
     //---FWLite interfaces---
     TFile* inFile = TFile::Open(argv[1]);
     fwlite::Event event(inFile);
+    fwlite::Handle<vector<SimVertex> > genVtxHandle;
     fwlite::Handle<vector<reco::PFJet> > jetsHandle;
+    fwlite::Handle<vector<reco::GenJet> > genJetsHandle;
     fwlite::Handle<edm::SortedCollection<EcalRecHit, 
-					 edm::StrictWeakOrdering<EcalRecHit > > > recSort;
+					 edm::StrictWeakOrdering<EcalRecHit > > > recSort;    
     //---events loop---
     int iEvent=1;
     for(event.toBegin(); !event.atEnd(); ++event)
@@ -246,61 +257,109 @@ int main(int argc, char* argv[])
 	// if(iEvent != 48)
 	//     continue;
 	//candHandle.getByLabel(event, "particleFlow");
+        //---get gen primary vertex (for time correction)---
+        float primaryVtxTime=-1;
+        genVtxHandle.getByLabel(event, "g4SimHits");
+        if(genVtxHandle.ptr()->size() > 0 && genVtxHandle.ptr()->at(0).vertexId() == 0)
+            primaryVtxTime = genVtxHandle.ptr()->at(0).position().t();
 	//---get PFJets and hardest jet constituents---
 	jetsHandle.getByLabel(event, "ak5PFJetsCHS");
+        genJetsHandle.getByLabel(event, "ak5GenJets");
 	int goodJetIndex=0;
 	for(unsigned int iJet=0; iJet<jetsHandle.ptr()->size(); iJet++)
 	{
-	    if(jetsHandle.ptr()->at(iJet).energy() !=
+	    if(jetsHandle.ptr()->at(iJet).energy() ==
 	       jetsHandle.ptr()->at(iJet).photonEnergy())
-	    {
-		goodJetIndex = iJet;
-		break;
-	    }
-	}
-	if(goodJetIndex == -1 || !jetsHandle.isValid())
-	    continue;
-	vector<edm::Ptr<reco::PFCandidate> > candidates =
-	    jetsHandle.ptr()->at(goodJetIndex).getPFConstituents();
-	// //---get EK detailed time RecHits---
-	recSort.getByLabel(event, "ecalDetailedTimeRecHit", "EcalRecHitsEK", "RECO");
-	if(!recSort.isValid())
-	    continue;
-	vector<EcalRecHit>* recVect = (vector<EcalRecHit>*)recSort.ptr();
+                continue;
+            // {
+	    //     goodJetIndex = iJet;
+	    //     break;
+	    // }
+            //}
+            if(goodJetIndex == -1 || !jetsHandle.isValid() || jetsHandle.ptr()->at(iJet).pt() < 100)
+                continue;
+            vector<edm::Ptr<reco::PFCandidate> > candidates =
+                jetsHandle.ptr()->at(iJet).getPFConstituents();
+            // //---get EK detailed time RecHits---
+            recSort.getByLabel(event, "ecalDetailedTimeRecHit", "EcalRecHitsEK", "RECO");
+            if(!recSort.isValid())
+                continue;
+            vector<EcalRecHit>* recVect = (vector<EcalRecHit>*)recSort.ptr();
 
-	//---Particle container---
-        vector<const reco::PFCandidate*> photons;
-        vector<const reco::PFCandidate*> charged;
-        cluster_map clusterList;
-	//---Costituent loop---
-	for(unsigned int iCand=0; iCand<candidates.size(); iCand++)
-	{		
-	    if(candidates.at(iCand).isNull())
-		continue;
-	    const reco::PFCandidate* pfCand = candidates.at(iCand).get();
-	    if(!pfCand)
-		cout << "ERROR: void pfCand" << endl;
-	    if(pfCand->particleId() == 4)
-                photons.push_back(pfCand);
-	    else if (pfCand->particleId() < 4)
-                charged.push_back(pfCand);
-	}
-        for(unsigned int iPho=0; iPho<photons.size(); iPho++)
-            MatchPhotons(photons.at(iPho), &clusterList);
-        for(unsigned int iChr=0; iChr<charged.size(); iChr++)
-            MatchCharged(charged.at(iChr), &clusterList);
-        for(cluster_map::iterator it=clusterList.begin(); it!=clusterList.end(); ++it)
-        {
-            pair<bool, float> particleTime = GetTimeFromRecHits(it->first, recVect);
-            if(it->second.first->particleId() == 4 && particleTime.first)
-                h_neutral_time->Fill(particleTime.second);
-            if(it->second.first->particleId() < 4 && particleTime.first)
-                h_charged_time->Fill(particleTime.second);
+            //---Particle container---
+            vector<const reco::PFCandidate*> photons;
+            vector<const reco::PFCandidate*> charged;
+            cluster_map clusterList;
+            //---Costituent loop---
+            for(unsigned int iCand=0; iCand<candidates.size(); iCand++)
+            {		
+                if(candidates.at(iCand).isNull())
+                    continue;
+                const reco::PFCandidate* pfCand = candidates.at(iCand).get();
+                if(!pfCand)
+                    cout << "ERROR: void pfCand" << endl;
+                if(pfCand->particleId() == 4)
+                    photons.push_back(pfCand);
+                else if (pfCand->particleId() < 4)
+                    charged.push_back(pfCand);
+            }
+            for(unsigned int iPho=0; iPho<photons.size(); iPho++)
+                MatchPhotons(photons.at(iPho), &clusterList);
+            for(unsigned int iChr=0; iChr<charged.size(); iChr++)
+                MatchPhotons(charged.at(iChr), &clusterList);
+            float charged_mean_time=0;
+            int n_charged=0;
+            for(cluster_map::iterator it=clusterList.begin(); it!=clusterList.end(); ++it)
+            {
+                pair<bool, float> particleTime = GetTimeFromRecHits(it->first, recVect, primaryVtxTime);            
+                if(it->second.first->particleId() < 4 && particleTime.first)
+                {
+                    cout << "match found" << endl;
+                    h_charged_time->Fill(particleTime.second);
+                    charged_mean_time += particleTime.second;
+                    n_charged++;
+                }            
+            }
+            charged_mean_time = charged_mean_time/n_charged;
+            float pu_photon_E_sum=0;
+            for(cluster_map::iterator it=clusterList.begin(); it!=clusterList.end(); ++it)
+            {
+                pair<bool, float> particleTime = GetTimeFromRecHits(it->first, recVect, primaryVtxTime);            
+                if(it->second.first->particleId() == 4 && particleTime.first)
+                {
+                    h_neutral_time->Fill(particleTime.second);//-charged_mean_time);
+                    if(fabs(particleTime.second/*-charged_mean_time*/) > 0.1)
+                        pu_photon_E_sum += it->second.first->energy();
+                }
+            }
+            float dR_jets=1000;
+            int gen_match=-1;
+            for(unsigned int iGen=0; iGen<genJetsHandle.ptr()->size(); iGen++)
+            {
+                float dR_jets_tmp = DeltaR(jetsHandle.ptr()->at(iJet).eta(),
+                                           genJetsHandle.ptr()->at(iGen).eta(),
+                                           jetsHandle.ptr()->at(iJet).phi(),
+                                           genJetsHandle.ptr()->at(iGen).phi());
+                if(dR_jets_tmp < 0.5 && dR_jets_tmp < dR_jets)
+                {
+                    dR_jets = dR_jets_tmp;
+                    gen_match = iGen;
+                }
+            }
+            if(gen_match != -1)
+            {
+                h_energy_ratio_nocut->Fill(jetsHandle.ptr()->at(iJet).energy() /
+                                           genJetsHandle.ptr()->at(gen_match).energy());
+                h_energy_ratio_cut->Fill((jetsHandle.ptr()->at(iJet).energy()-pu_photon_E_sum)/
+                                     genJetsHandle.ptr()->at(gen_match).energy());
+            }
         }
     }
     outFile->cd();
     h_neutral_time->Write();
     h_charged_time->Write();
+    h_energy_ratio_nocut->Write();
+    h_energy_ratio_cut->Write();
     outFile->Close();
     return 0;
 }
