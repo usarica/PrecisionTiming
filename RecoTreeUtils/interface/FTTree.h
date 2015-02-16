@@ -26,6 +26,10 @@ public:
     int event_n;
     int particle_n;
     int particle_type;
+    float particle_E;
+    float particle_pt;
+    float particle_eta;
+    float particle_phi;
     float maxE_time;
     float maxE_energy;
     vector<float> all_time;
@@ -45,6 +49,10 @@ FTTree::FTTree()
     event_n=0;
     particle_n=0;
     particle_type=0;
+    particle_E=0;
+    particle_pt=0;
+    particle_eta=0;
+    particle_phi=0;
     maxE_time=0;
     maxE_energy=0;
 
@@ -52,6 +60,10 @@ FTTree::FTTree()
     tree_->Branch("event", &event_n, "event/I");
     tree_->Branch("particle_n", &particle_n, "particle_n/I");
     tree_->Branch("particle_type", &particle_type, "particle_type/I");
+    tree_->Branch("particle_E", &particle_E, "particle_E/F");
+    tree_->Branch("particle_pt", &particle_pt, "particle_pt/F");
+    tree_->Branch("particle_eta", &particle_eta, "particle_eta/F");
+    tree_->Branch("particle_phi", &particle_phi, "particle_phi/F");
     tree_->Branch("maxE_time", &maxE_time, "maxE_time/F");
     tree_->Branch("maxE_energy", &maxE_energy, "maxE_energy/F");
     tree_->Branch("all_time", "std::vector<float>", &all_time);

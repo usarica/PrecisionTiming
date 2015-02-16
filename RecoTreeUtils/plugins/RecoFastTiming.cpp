@@ -23,7 +23,7 @@
 #include "FWCore/PythonParameterSet/interface/MakeParameterSets.h"
 #include "PhysicsTools/FWLite/interface/TFileService.h"
 
-#include "FastTiming/RecoTreeUtils/interface/ParticleWithFT.h"
+#include "FastTiming/RecoTreeUtils/interface/PFCandidateWithFT.h"
 #include "FastTiming/RecoTreeUtils/interface/FTTree.h"
 
 using namespace std;
@@ -97,16 +97,22 @@ int main(int argc, char* argv[])
             candHandle.getByLabel(event, "particleFlow");
             for(unsigned int iCand=0; iCand<candHandle.ptr()->size(); iCand++)
             {                
-                ParticleWithFT particle(&candHandle.ptr()->at(iCand), recVect, primaryVtxTime);                
-                outTree.particle_n = iCand;
-                outTree.particle_type = particle.Type();
-                if(outTree.particle_type > 4)
+                PFCandidateWithFT particle(&candHandle.ptr()->at(iCand), recVect, primaryVtxTime);                
+                if(particle.particleId() > 4 || !particle.GetPFCluster())
                     continue;
+                outTree.particle_n = iCand;
+                outTree.particle_type = particle.particleId();
+                outTree.particle_E = particle.energy();
+                outTree.particle_pt = particle.pt();
+                outTree.particle_eta = particle.eta();
+                outTree.particle_phi = particle.phi();
                 outTree.maxE_time = particle.GetRecHitTimeMaxE().first;
                 outTree.maxE_energy = particle.GetRecHitTimeMaxE().second;
                 outTree.all_time.clear();
                 outTree.all_energy.clear();
                 vector<pair<float, float> > TandE = particle.GetRecHitsTimeE();
+                if(TandE.size() == 0)
+                    continue;
                 for(unsigned int iRec=0; iRec<TandE.size(); iRec++)
                 {
                     outTree.all_time.push_back(TandE.at(iRec).first);
