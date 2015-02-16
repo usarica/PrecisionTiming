@@ -22,6 +22,8 @@
 #include "FWCore/PythonParameterSet/interface/MakeParameterSets.h"
 #include "PhysicsTools/FWLite/interface/TFileService.h"
 
+#include "FastTiming/RecoTreeUtils/interface/Utils.h"
+
 using namespace std;
 
 typedef enum sub_det {
@@ -46,30 +48,8 @@ typedef enum sub_det {
 //---sub detectors cluster----------------------------------------------------------------
 //---/ distance from reference element / reference to objetc /
 typedef vector<pair<float, const reco::PFBlockElement*> > sub_det_elements;
-//---CMSSW position-----------------------------------------------------------------------
-typedef ROOT::Math::PositionVector3D<ROOT::Math::CylindricalEta3D<Double32_t> > REPPoint;
 //---Cluster candidate map----------------------------------------------------------------
 typedef map<const reco::PFCluster*, pair<const reco::PFCandidate*, float> > cluster_map;
-
-//****************************************************************************************
-float DeltaPhi (float phi1, float phi2)
-{
-    float delta_phi = TMath::Abs(phi1 - phi2);
-    if (delta_phi > 2*TMath::Pi()) 
-	delta_phi -= 2*TMath::Pi();
-    if (delta_phi > TMath::Pi() && delta_phi < 2*TMath::Pi()) 
-	delta_phi = 2*TMath::Pi() - delta_phi;
-    return delta_phi;
-}
-
-//****************************************************************************************
-float DeltaR (float eta1, float eta2, float phi1, float phi2)
-{
-    float d_phi = DeltaPhi(phi1, phi2);
-    float d_eta = TMath::Abs(eta1 - eta2);
-
-    return TMath::Sqrt(pow(d_eta,2)+pow(d_phi,2));
-}
 
 //****************************************************************************************
 
@@ -280,7 +260,7 @@ int main(int argc, char* argv[])
                 continue;
             vector<edm::Ptr<reco::PFCandidate> > candidates =
                 jetsHandle.ptr()->at(iJet).getPFConstituents();
-            // //---get EK detailed time RecHits---
+            //---get EK detailed time RecHits---
             recSort.getByLabel(event, "ecalDetailedTimeRecHit", "EcalRecHitsEK", "RECO");
             if(!recSort.isValid())
                 continue;
