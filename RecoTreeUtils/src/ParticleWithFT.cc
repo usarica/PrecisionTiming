@@ -1,4 +1,4 @@
-#include "FastTiming/RecoTreeUtils/interface/ParticleWithFT.hpp"
+#include "FastTiming/RecoTreeUtils/interface/ParticleWithFT.h"
 
 //**********Ctors*************************************************************************
 

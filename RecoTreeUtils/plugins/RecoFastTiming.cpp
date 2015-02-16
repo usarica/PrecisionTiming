@@ -23,7 +23,8 @@
 #include "FWCore/PythonParameterSet/interface/MakeParameterSets.h"
 #include "PhysicsTools/FWLite/interface/TFileService.h"
 
-#include "FastTiming/RecoTreeUtils/interface/ParticleWithFT.hpp"
+#include "FastTiming/RecoTreeUtils/interface/ParticleWithFT.h"
+#include "FastTiming/RecoTreeUtils/interface/FTTree.h"
 
 using namespace std;
 
@@ -52,17 +53,17 @@ int main(int argc, char* argv[])
     vector<string> filesList = filesOpt.getParameter<vector<string> >("inputFiles");    
     TFile* outFile = TFile::Open(filesOpt.getParameter<string>("outputFile").c_str(), "recreate");
     outFile->cd();
-    TTree* outTree = new TTree();
-    int event_n=0, particle_n=0, particle_type=0;
-    float maxE_time=0, maxE_energy=0;
-    vector<float> all_time, all_energy;
-    outTree->Branch("event", &event_n, "event/I");
-    outTree->Branch("particle_n", &particle_n, "particle_n/I");
-    outTree->Branch("particle_type", &particle_type, "particle_type/I");
-    outTree->Branch("maxE_time", &maxE_time, "maxE_time/F");
-    outTree->Branch("maxE_energy", &maxE_energy, "maxE_energy/F");
-    outTree->Branch("all_time", "std::vector<float>", &all_time);
-    outTree->Branch("all_energy", "std::vector<float>", &all_energy);
+    FTTree outTree;
+    // int event_n=0, particle_n=0, particle_type=0;
+    // float maxE_time=0, maxE_energy=0;
+    // vector<float> all_time, all_energy;
+    // outTree->Branch("event", &event_n, "event/I");
+    // outTree->Branch("particle_n", &particle_n, "particle_n/I");
+    // outTree->Branch("particle_type", &particle_type, "particle_type/I");
+    // outTree->Branch("maxE_time", &maxE_time, "maxE_time/F");
+    // outTree->Branch("maxE_energy", &maxE_energy, "maxE_energy/F");
+    // outTree->Branch("all_time", "std::vector<float>", &all_time);
+    // outTree->Branch("all_energy", "std::vector<float>", &all_energy);
 
     int iEvent=0;
     for(unsigned int iFile=0; iFile<filesList.size(); iFile++)
@@ -79,7 +80,7 @@ int main(int argc, char* argv[])
         //---events loop---
         for(event.toBegin(); !event.atEnd(); ++event)
         {
-            event_n = iEvent;
+            outTree.event_n = iEvent;
             cout << "\r### EVENT: " << iEvent << flush;
             iEvent++;            
             //---get gen vertex time---
@@ -97,26 +98,26 @@ int main(int argc, char* argv[])
             for(unsigned int iCand=0; iCand<candHandle.ptr()->size(); iCand++)
             {                
                 ParticleWithFT particle(&candHandle.ptr()->at(iCand), recVect, primaryVtxTime);                
-                particle_n = iCand;
-                particle_type = particle.Type();
-                if(particle_type > 4)
+                outTree.particle_n = iCand;
+                outTree.particle_type = particle.Type();
+                if(outTree.particle_type > 4)
                     continue;
-                maxE_time = particle.GetRecHitTimeMaxE().first;
-                maxE_energy = particle.GetRecHitTimeMaxE().second;
-                all_time.clear();
-                all_energy.clear();
+                outTree.maxE_time = particle.GetRecHitTimeMaxE().first;
+                outTree.maxE_energy = particle.GetRecHitTimeMaxE().second;
+                outTree.all_time.clear();
+                outTree.all_energy.clear();
                 vector<pair<float, float> > TandE = particle.GetRecHitsTimeE();
                 for(unsigned int iRec=0; iRec<TandE.size(); iRec++)
                 {
-                    all_time.push_back(TandE.at(iRec).first);
-                    all_energy.push_back(TandE.at(iRec).second);
+                    outTree.all_time.push_back(TandE.at(iRec).first);
+                    outTree.all_energy.push_back(TandE.at(iRec).second);
                 }
-                outTree->Fill();
+                outTree.Fill();
             }
         }
     }
     outFile->cd();
-    outTree->Write("fast_timing");
+    outTree.Write("fast_timing");
     outFile->Close();
     return 0;
 }
