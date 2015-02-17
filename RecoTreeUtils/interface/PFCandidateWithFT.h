@@ -11,6 +11,9 @@
 #include "DataFormats/ParticleFlowReco/interface/PFCluster.h"
 #include "DataFormats/ParticleFlowReco/interface/PFBlock.h"
 #include "DataFormats/ParticleFlowReco/interface/PFBlockElement.h"
+#include "DataFormats/ParticleFlowReco/interface/PFBlockElementTrack.h"
+#include "DataFormats/Math/interface/LorentzVector.h"
+#include "TLorentzVector.h"
 
 #include "FastTiming/RecoTreeUtils/interface/Utils.h"
 
@@ -34,6 +37,14 @@ public:
     pair<float, float> GetRecHitTimeMaxE() {return GetRecHitTimeE(ecalSeed_);};
     vector<pair<float, float> > GetRecHitsTimeE();
     
+    inline float GetTrackR_inner() { return float(innerMomentum_.Perp()/0.3 / 3.8); };
+    inline float GetTrackR_outer() { return float(outerMomentum_.Perp()/0.3 / 3.8); };
+    inline float GetTrackR() { return Momentum_ /0.3 / 3.8; };
+
+    float GetTrackAlpha();
+    float GetTrackLength();
+    
+
 private:
     const reco::PFCandidate* pfCand_;
     const reco::PFCluster*   pfCluster_;
@@ -43,6 +54,11 @@ private:
     float                    maxRecHitE_;
     float                    time_;
     float                    vtxTime_;
+    const reco::Track*       Track_;
+    TLorentzVector           innerMomentum_;
+    TLorentzVector           outerMomentum_;
+    float                    Momentum_;
+
 };
 
 #endif
