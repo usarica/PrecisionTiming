@@ -69,6 +69,7 @@ int main(int argc, char* argv[])
     for(unsigned int iFile=0; iFile<filesList.size(); iFile++)
     {
         TFile* inFile = TFile::Open(filesList.at(iFile).c_str());
+	std::cout << " >>> " << filesList.at(iFile) << std::endl;
         //---FWLite interfaces---
         fwlite::Event event(inFile);
         fwlite::Handle<vector<SimVertex> > genVtxHandle;
@@ -80,6 +81,7 @@ int main(int argc, char* argv[])
         //---events loop---
         for(event.toBegin(); !event.atEnd(); ++event)
         {
+	  //	  if(iEvent == 11 ) break;
             outTree.event_n = iEvent;
             cout << "\r### EVENT: " << iEvent << flush;
             iEvent++;            
@@ -110,6 +112,11 @@ int main(int argc, char* argv[])
                 outTree.maxE_energy = particle.GetRecHitTimeMaxE().second;
                 outTree.all_time.clear();
                 outTree.all_energy.clear();
+
+		if(particle.GetTrackR() != 0.){
+		  particle.GetTrackInfo(outTree.track_phiIn, outTree.track_phiOut, outTree.track_charge);
+		  outTree.trackCluster_dr = particle.GetDrTrackCluster();
+		}
                 vector<pair<float, float> > TandE = particle.GetRecHitsTimeE();
                 if(TandE.size() == 0)
                     continue;
@@ -119,6 +126,8 @@ int main(int argc, char* argv[])
                     outTree.all_energy.push_back(TandE.at(iRec).second);
                 }
                 outTree.Fill();
+
+		////////// track part
             }
         }
     }

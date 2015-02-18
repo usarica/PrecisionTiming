@@ -14,6 +14,7 @@
 #include "DataFormats/ParticleFlowReco/interface/PFBlockElementTrack.h"
 #include "DataFormats/Math/interface/LorentzVector.h"
 #include "TLorentzVector.h"
+#include "DataFormats/Math/interface/Vector3D.h"
 
 #include "FastTiming/RecoTreeUtils/interface/Utils.h"
 
@@ -37,12 +38,13 @@ public:
     pair<float, float> GetRecHitTimeMaxE() {return GetRecHitTimeE(ecalSeed_);};
     vector<pair<float, float> > GetRecHitsTimeE();
     
-    inline float GetTrackR_inner() { return float(innerMomentum_.Perp()/0.3 / 3.8); };
-    inline float GetTrackR_outer() { return float(outerMomentum_.Perp()/0.3 / 3.8); };
-    inline float GetTrackR() { return Momentum_ /0.3 / 3.8; };
-
-    float GetTrackAlpha();
+    inline float GetTrackR_inner() { return float(sqrt(innerP_.perp2()) / 0.3 / 3.8); };
+    inline float GetTrackR_outer() { return float(sqrt(outerP_.perp2()) / 0.3 / 3.8); };
+    inline float GetTrackR() { return trackPt_ / 0.3 / 3.8; };
+    inline float GetDrTrackCluster() { return drTrackCluster_; };
+    void GetTrackInfo(float& phiIn, float& phiOut, int& charge);
     float GetTrackLength();
+
     
 
 private:
@@ -54,11 +56,11 @@ private:
     float                    maxRecHitE_;
     float                    time_;
     float                    vtxTime_;
-    const reco::Track*       Track_;
-    TLorentzVector           innerMomentum_;
-    TLorentzVector           outerMomentum_;
-    float                    Momentum_;
-
+    const reco::Track*       recoTrack_;
+    math::XYZVector          innerP_;
+    math::XYZVector          outerP_;
+    float                    trackPt_;
+    float                    drTrackCluster_;
 };
 
 #endif
