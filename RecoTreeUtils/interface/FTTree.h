@@ -24,6 +24,8 @@ public:
     
     //---branches variables---
     int event_n;
+    float gen_vtx_z;
+    float gen_vtx_t;
     int particle_n;
     int particle_type;
     float particle_E;
@@ -51,6 +53,8 @@ FTTree::FTTree()
     tree_ = new TTree();
     //---init
     event_n=0;
+    gen_vtx_z=0;
+    gen_vtx_t=0;
     particle_n=0;
     particle_type=0;
     particle_E=0;
@@ -66,6 +70,8 @@ FTTree::FTTree()
 
     //---create branches
     tree_->Branch("event", &event_n, "event/I");
+    tree_->Branch("gen_vtx_z", &gen_vtx_z, "gen_vtx_z/F");
+    tree_->Branch("gen_vtx_t", &gen_vtx_t, "gen_vtx_t/F");
     tree_->Branch("particle_n", &particle_n, "particle_n/I");
     tree_->Branch("particle_type", &particle_type, "particle_type/I");
     tree_->Branch("particle_E", &particle_E, "particle_E/F");
@@ -84,7 +90,9 @@ FTTree::FTTree()
 
 FTTree::FTTree(TTree* tree)
 {
-    tree_ = tree;
+    tree_ = tree;    
+    gen_vtx_z=0;
+    gen_vtx_t=0;
     event_n=0;
     particle_n=0;
     particle_type=0;

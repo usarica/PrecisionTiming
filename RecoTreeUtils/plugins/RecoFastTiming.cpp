@@ -54,16 +54,6 @@ int main(int argc, char* argv[])
     TFile* outFile = TFile::Open(filesOpt.getParameter<string>("outputFile").c_str(), "recreate");
     outFile->cd();
     FTTree outTree;
-    // int event_n=0, particle_n=0, particle_type=0;
-    // float maxE_time=0, maxE_energy=0;
-    // vector<float> all_time, all_energy;
-    // outTree->Branch("event", &event_n, "event/I");
-    // outTree->Branch("particle_n", &particle_n, "particle_n/I");
-    // outTree->Branch("particle_type", &particle_type, "particle_type/I");
-    // outTree->Branch("maxE_time", &maxE_time, "maxE_time/F");
-    // outTree->Branch("maxE_energy", &maxE_energy, "maxE_energy/F");
-    // outTree->Branch("all_time", "std::vector<float>", &all_time);
-    // outTree->Branch("all_energy", "std::vector<float>", &all_energy);
 
     int iEvent=0;
     for(unsigned int iFile=0; iFile<filesList.size(); iFile++)
@@ -81,7 +71,6 @@ int main(int argc, char* argv[])
         //---events loop---
         for(event.toBegin(); !event.atEnd(); ++event)
         {
-	  //	  if(iEvent == 11 ) break;
             outTree.event_n = iEvent;
             cout << "\r### EVENT: " << iEvent << flush;
             iEvent++;            
@@ -90,6 +79,9 @@ int main(int argc, char* argv[])
             genVtxHandle.getByLabel(event, "g4SimHits");
             if(genVtxHandle.ptr()->size() > 0 && genVtxHandle.ptr()->at(0).vertexId() == 0)
                 primaryVtxTime = genVtxHandle.ptr()->at(0).position().t();
+            //---fill gen vtx infos 
+            outTree.gen_vtx_z = genVtxHandle.ptr()->at(0).position().z();
+            outTree.gen_vtx_t = primaryVtxTime*1E9;                
             //---get EK detailed time RecHits---
             recSort.getByLabel(event, "ecalDetailedTimeRecHit", "EcalRecHitsEK", "RECO");
             if(!recSort.isValid())
@@ -112,8 +104,8 @@ int main(int argc, char* argv[])
                 outTree.maxE_energy = particle.GetRecHitTimeMaxE().second;
                 outTree.all_time.clear();
                 outTree.all_energy.clear();
-
-		if(particle.GetTrackR() != 0.){
+		if(particle.GetTrackR() != 0.)
+                {
 		  particle.GetTrackInfo(outTree.track_phiIn, outTree.track_phiOut, outTree.track_charge);
 		  outTree.trackCluster_dr = particle.GetDrTrackCluster();
 		}

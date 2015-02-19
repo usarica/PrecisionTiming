@@ -101,27 +101,49 @@ vector<pair<float, float> > PFCandidateWithFT::GetRecHitsTimeE()
 {
     vector<pair<float, float> > TandE_vect;
     vector<pair<DetId, float> > detIdMap = pfCluster_->hitsAndFractions();
-    for(unsigned int iRec=0; iRec<recHitColl_.size(); iRec++)
+    //---Sort cluster rechits---
+    vector<DetId> sortedDetId;
+    sortedDetId.push_back(detIdMap.at(0).first);
+    for(unsigned int i=1; i<detIdMap.size(); i++)        
     {
-	for(unsigned int iDet=0; iDet<detIdMap.size(); iDet++)
-	{
-	    if(detIdMap.at(iDet).first == recHitColl_.at(iRec).id())
+        bool inserted=false;
+        for(unsigned int j=0; j<sortedDetId.size(); j++)
+        {
+            if(detIdMap.at(i).first.rawId() < sortedDetId.at(j).rawId())
+            {
+                sortedDetId.insert(sortedDetId.begin()+j, detIdMap.at(i).first);
+                inserted=true;
+                break;
+            }
+        }
+        if(!inserted)
+            sortedDetId.push_back(detIdMap.at(i).first);
+    }
+    //---search for the right rechits
+    unsigned int rh_start=0;
+    for(unsigned int iDet=0; iDet<sortedDetId.size(); iDet++)
+    {
+        for(unsigned int iRec=rh_start; iRec<recHitColl_.size(); iRec++)
+        {
+	    if(sortedDetId.at(iDet) == recHitColl_.at(iRec).id())
 	    {
-                    TandE_vect.push_back(make_pair(
-                                           recHitColl_.at(iRec).time() - vtxTime_ * 1E9,
-                                           recHitColl_.at(iRec).energy()));
+                rh_start=iRec+1;
+                TandE_vect.push_back(make_pair(
+                                         recHitColl_.at(iRec).time() - vtxTime_ * 1E9,
+                                         recHitColl_.at(iRec).energy()));
+                break;
 	    }
 	}
     }
     return TandE_vect;
 }
 
-
 //----------     --------------------------
-void PFCandidateWithFT::GetTrackInfo(float& phiIn, float& phiOut, int& charge){
-  phiIn = innerP_.phi();
-  phiOut = outerP_.phi();
-  charge = pfCand_->charge();
-  return;
+void PFCandidateWithFT::GetTrackInfo(float& phiIn, float& phiOut, int& charge)
+{
+    phiIn = innerP_.phi();
+    phiOut = outerP_.phi();
+    charge = pfCand_->charge();
+    return;
 }
 
