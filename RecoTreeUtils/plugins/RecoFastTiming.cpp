@@ -104,9 +104,10 @@ int main(int argc, char* argv[])
                 outTree.maxE_energy = particle.GetRecHitTimeMaxE().second;
                 outTree.all_time.clear();
                 outTree.all_energy.clear();
-		if(particle.GetTrackR() != 0.)
-                {
-		  particle.GetTrackInfo(outTree.track_phiIn, outTree.track_phiOut, outTree.track_charge);
+		if(particle.GetTrackR() != 0.){
+		  particle.GetTrackInfo(outTree.track_phiIn, outTree.track_phiOut, outTree.track_alpha, 
+					outTree.track_radius, outTree.track_secant, outTree.track_charge);
+		  outTree.track_length = particle.GetTrackLength();
 		  outTree.trackCluster_dr = particle.GetDrTrackCluster();
 		}
                 vector<pair<float, float> > TandE = particle.GetRecHitsTimeE();
