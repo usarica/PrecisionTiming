@@ -69,7 +69,6 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand,
 	      min_dist_cluster = tmp_dist;
 	    }
 	}
-
     }
 }
 
