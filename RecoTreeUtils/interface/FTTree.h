@@ -37,6 +37,10 @@ public:
     float track_phiIn;
     float track_phiOut;
     int track_charge;
+    float track_length;
+    float track_alpha;
+    float track_secant;
+    float track_radius;
     float trackCluster_dr;
     vector<float> all_time;
     vector<float> all_energy;
@@ -66,6 +70,10 @@ FTTree::FTTree()
     track_phiIn = 0.;
     track_phiOut = 0.;
     track_charge = 0;
+    track_length = 0.;
+    track_alpha = 0.;
+    track_secant = 0.;
+    track_radius = 0.;
     trackCluster_dr = 0.;
 
     //---create branches
@@ -83,6 +91,10 @@ FTTree::FTTree()
     tree_->Branch("track_phiIn", &track_phiIn, "track_phiIn/F");
     tree_->Branch("track_phiOut", &track_phiOut, "track_phiOut/F");
     tree_->Branch("track_charge", &track_charge, "track_charge/I");
+    tree_->Branch("track_length", &track_length, "track_length/F");
+    tree_->Branch("track_alpha", &track_alpha, "track_alpha/F");
+    tree_->Branch("track_secant", &track_secant, "track_secant/F");
+    tree_->Branch("track_radius", &track_radius, "track_radius/F");
     tree_->Branch("trackCluster_dr", &trackCluster_dr, "trackCluster_dr/F");
     tree_->Branch("all_time", "std::vector<float>", &all_time);
     tree_->Branch("all_energy", "std::vector<float>", &all_energy);
@@ -101,6 +113,10 @@ FTTree::FTTree(TTree* tree)
     track_phiIn = 0.;
     track_phiOut = 0.;
     track_charge = 0;
+    track_length = 0;
+    track_alpha = 0.;
+    track_secant = 0.;
+    track_radius = 0.;
     trackCluster_dr = 0.;
 }
 
