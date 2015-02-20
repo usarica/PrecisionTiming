@@ -12,9 +12,9 @@
 #include "DataFormats/ParticleFlowReco/interface/PFBlock.h"
 #include "DataFormats/ParticleFlowReco/interface/PFBlockElement.h"
 #include "DataFormats/ParticleFlowReco/interface/PFBlockElementTrack.h"
-#include "DataFormats/Math/interface/LorentzVector.h"
-#include "TLorentzVector.h"
+
 #include "DataFormats/Math/interface/Vector3D.h"
+#include "Math/GenVector/VectorUtil.h"
 
 #include "FastTiming/RecoTreeUtils/interface/Utils.h"
 
@@ -42,9 +42,8 @@ public:
     inline float GetTrackR_outer() { return float(sqrt(outerP_.perp2()) / 0.3 / 3.8); };
     inline float GetTrackR() { return trackPt_ / 0.3 / 3.8; };
     inline float GetDrTrackCluster() { return drTrackCluster_; };
-    void GetTrackInfo(float& phiIn, float& phiOut, int& charge);
-    float GetTrackLength();
-
+    inline float GetTrackLength() { return trackL_; };
+    void GetTrackInfo(float& phiIn, float& phiOut, float& alpha, float& trackR, float& secant, int& charge);
     
 
 private:
@@ -59,7 +58,11 @@ private:
     const reco::Track*       recoTrack_;
     math::XYZVector          innerP_;
     math::XYZVector          outerP_;
+    math::XYZVector          secant_;
+    double                   alpha_;
     float                    trackPt_;
+    double                   trackR_;
+    double                   trackL_;
     float                    drTrackCluster_;
 };
 

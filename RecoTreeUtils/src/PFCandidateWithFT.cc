@@ -9,7 +9,7 @@ PFCandidateWithFT::PFCandidateWithFT():
 PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand,
                                vector<EcalRecHit>* ecalRecHits, float vtxTime):
   reco::PFCandidate(*PFCand), clusterE_(0), maxRecHitE_(0), time_(0), vtxTime_(vtxTime), 
-  innerP_(0,0,0), outerP_(0,0,0), trackPt_(0), drTrackCluster_(0)
+  innerP_(0,0,0), outerP_(0,0,0), secant_(0,0,0), alpha_(0), trackPt_(0), trackR_(0), trackL_(0), drTrackCluster_(0)
 {
     pfCand_ = PFCand;
     pfCluster_ = NULL;
@@ -18,7 +18,8 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand,
     //    innerMomentum_(0), outerMomentum_(0)
 
     //---get the right ecal cluster---
-    float min_dist_cluster=100;
+    float min_dist_cluster = 100;
+    float min_dist_track = 100;
     for(auto& blockPair : pfCand_->elementsInBlocks())
     {        
 	unsigned int pos = blockPair.second;
@@ -49,24 +50,23 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand,
 	  const math::XYZPoint pfTrackPos(elementTrack.positionAtECALEntrance().x(), 
 					  elementTrack.positionAtECALEntrance().y(), 
 					  elementTrack.positionAtECALEntrance().z());
-	  float tmp_dist=DeltaR(pfTrackPos.eta(), pfCand_->eta(),
-				pfTrackPos.phi(), pfCand_->phi());
+	  float tmp_dist = DeltaR(pfTrackPos.eta(), pfCand_->eta(),
+				  pfTrackPos.phi(), pfCand_->phi());
 	  drTrackCluster_ = tmp_dist;
-	  //	  std::cout << " tmp_dist = " << tmp_dist << std::endl;
-	  if(tmp_dist < min_dist_cluster)
+	  if(tmp_dist < min_dist_track)
 	    {
-	      /*
-	      double p = et.trackRef()->p();  
-	      double pt = et.trackRef()->pt(); 
-	      double eta = et.trackRef()->eta();
-	      double phi = et.trackRef()->phi();
-	      */
+	      min_dist_track = tmp_dist;
 
 	      recoTrack_ = &tmpTrack;	 
 	      innerP_ = math::XYZVector(tmpTrack.innerMomentum().x(), tmpTrack.innerMomentum().y(), tmpTrack.innerMomentum().z());
-	      outerP_ = math::XYZVector(tmpTrack.outerMomentum().x(), tmpTrack.outerMomentum().y(), tmpTrack.outerMomentum().z());
+	      outerP_ = math::XYZVector(tmpTrack.outerMomentum().x(), tmpTrack.outerMomentum().y(), tmpTrack.outerMomentum().z());  // if ok => can be removed
+	      secant_ = math::XYZVector(pfTrackPos.x()-innerP_.x(), pfTrackPos.y()-innerP_.y(), pfTrackPos.z()-innerP_.z());
+	      if(pfCand_->charge() == 1) alpha_ = ROOT::Math::VectorUtil::Angle(innerP_, secant_);
+	      if(pfCand_->charge() == -1) alpha_ = ROOT::Math::VectorUtil::Angle(innerP_, innerP_);
+
 	      trackPt_ = elementTrack.trackRef()->pt();
-	      min_dist_cluster = tmp_dist;
+	      trackR_ = trackPt_ / 0.3 / 3.8;
+	      trackL_ = 2 * alpha_ * trackR_;
 	    }
 	}
 
@@ -139,10 +139,13 @@ vector<pair<float, float> > PFCandidateWithFT::GetRecHitsTimeE()
 }
 
 //----------     --------------------------
-void PFCandidateWithFT::GetTrackInfo(float& phiIn, float& phiOut, int& charge)
+void PFCandidateWithFT::GetTrackInfo(float& phiIn, float& phiOut, float& alpha, float& trackR, float& secant, int& charge)
 {
     phiIn = innerP_.phi();
     phiOut = outerP_.phi();
+    alpha = alpha_;
+    trackR = trackR_;
+    secant = secant;
     charge = pfCand_->charge();
     return;
 }
