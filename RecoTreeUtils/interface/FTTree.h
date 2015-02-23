@@ -34,8 +34,6 @@ public:
     float particle_phi;
     float maxE_time;
     float maxE_energy;
-    float track_phiIn;
-    float track_phiOut;
     int track_charge;
     float track_length;
     float track_alpha;
@@ -67,8 +65,6 @@ FTTree::FTTree()
     particle_phi=0;
     maxE_time=0;
     maxE_energy=0;
-    track_phiIn = 0.;
-    track_phiOut = 0.;
     track_charge = 0;
     track_length = 0.;
     track_alpha = 0.;
@@ -88,8 +84,6 @@ FTTree::FTTree()
     tree_->Branch("particle_phi", &particle_phi, "particle_phi/F");
     tree_->Branch("maxE_time", &maxE_time, "maxE_time/F");
     tree_->Branch("maxE_energy", &maxE_energy, "maxE_energy/F");
-    tree_->Branch("track_phiIn", &track_phiIn, "track_phiIn/F");
-    tree_->Branch("track_phiOut", &track_phiOut, "track_phiOut/F");
     tree_->Branch("track_charge", &track_charge, "track_charge/I");
     tree_->Branch("track_length", &track_length, "track_length/F");
     tree_->Branch("track_alpha", &track_alpha, "track_alpha/F");
@@ -110,8 +104,6 @@ FTTree::FTTree(TTree* tree)
     particle_type=0;
     maxE_time=0;
     maxE_energy=0;
-    track_phiIn = 0.;
-    track_phiOut = 0.;
     track_charge = 0;
     track_length = 0;
     track_alpha = 0.;

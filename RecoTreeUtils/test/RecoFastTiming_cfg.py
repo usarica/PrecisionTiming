@@ -2,10 +2,10 @@ import FWCore.ParameterSet.Config as cms
 
 process = cms.PSet()
 
-process.ioFilesB = cms.PSet(
+process.ioFiles = cms.PSet(
     inputFiles = cms.vstring("/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC23/outfile4test/SingleJet/RAW-RECO_noPU.root"),
     
-    outputFile = cms.string('QCD_noPU.root')
+    outputFile = cms.string('outfile4test/QCD_noPU.root')
 )
 
 process.ioFilesB = cms.PSet(
@@ -214,7 +214,7 @@ process.ioFilesB = cms.PSet(
     
 )
 
-process.ioFiles = cms.PSet(
+process.ioFilesB = cms.PSet(
     outputFile = cms.string('outfile4test/SingleGamma_noPU.root'),
     
     inputFiles = cms.vstring(

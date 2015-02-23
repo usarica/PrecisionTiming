@@ -7,66 +7,34 @@ PFCandidateWithFT::PFCandidateWithFT():
 {}
 
 PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand,
-                               vector<EcalRecHit>* ecalRecHits, float vtxTime):
-  reco::PFCandidate(*PFCand), clusterE_(0), maxRecHitE_(0), time_(0), vtxTime_(vtxTime), 
-  innerP_(0,0,0), outerP_(0,0,0), secant_(0,0,0), alpha_(0), trackPt_(0), trackR_(0), trackL_(0), drTrackCluster_(0)
+                               vector<EcalRecHit>* ecalRecHits, const SimVertex* primaryVtx):
+  reco::PFCandidate(*PFCand), clusterE_(0), maxRecHitE_(0), time_(0), vtxTime_(primaryVtx->position().t()), 
+  vtxPos_(0,0,0), secant_(0,0,0), alpha_(0), trackR_(0), trackL_(-1)
 {
     pfCand_ = PFCand;
-    pfCluster_ = NULL;
+    primaryVtx_ = primaryVtx;
     recHitColl_ = *ecalRecHits;   
+    pfCluster_ = NULL;
     recoTrack_ = NULL;
-    //    innerMomentum_(0), outerMomentum_(0)
 
     //---get the right ecal cluster---
     float min_dist_cluster = 100;
-    float min_dist_track = 100;
     for(auto& blockPair : pfCand_->elementsInBlocks())
     {        
 	unsigned int pos = blockPair.second;
 	const reco::PFBlockElement& blockElement = blockPair.first->elements()[pos];
-	//Cluster
-        // if(blockElement.type() != 4 || !blockElement.clusterRef().isAvailable())
-        //     continue;
-	if(blockElement.type() == 4 && blockElement.clusterRef().isAvailable()){
-	  reco::PFCluster tmpCluster = *blockElement.clusterRef().get();	 
-	  tmpCluster.calculatePositionREP();
-	  REPPoint pfClusterPos = tmpCluster.positionREP();
-	  float tmp_dist=DeltaR(pfClusterPos.Eta(), pfCand_->eta(),
-				pfClusterPos.Phi(), pfCand_->phi());
-	  if(tmp_dist < min_dist_cluster)
+	if(blockElement.type() == 4 && blockElement.clusterRef().isAvailable())
+        {
+            reco::PFCluster tmpCluster = *blockElement.clusterRef().get();	 
+            tmpCluster.calculatePositionREP();
+            REPPoint pfClusterPos = tmpCluster.positionREP();
+            float tmp_dist=DeltaR(pfClusterPos.Eta(), pfCand_->eta(),
+                                  pfClusterPos.Phi(), pfCand_->phi());
+            if(tmp_dist < min_dist_cluster)
 	    {
-	      min_dist_cluster = tmp_dist;
-	      pfCluster_ = blockElement.clusterRef().get();
-	      ecalSeed_ = pfCluster_->seed();
-	    }
-	}
-
-	//Track
-        if(blockElement.type() == 1 && blockElement.trackRef().isAvailable()){
-	  
-	  reco::Track tmpTrack = *blockElement.trackRef().get();	 
-	  // Characteristics of the track
-	  const reco::PFBlockElementTrack& elementTrack = dynamic_cast<const reco::PFBlockElementTrack &>(blockElement);
-	  const math::XYZPoint pfTrackPos(elementTrack.positionAtECALEntrance().x(), 
-					  elementTrack.positionAtECALEntrance().y(), 
-					  elementTrack.positionAtECALEntrance().z());
-	  float tmp_dist = DeltaR(pfTrackPos.eta(), pfCand_->eta(),
-				  pfTrackPos.phi(), pfCand_->phi());
-	  drTrackCluster_ = tmp_dist;
-	  if(tmp_dist < min_dist_track)
-	    {
-	      min_dist_track = tmp_dist;
-
-	      recoTrack_ = &tmpTrack;	 
-	      innerP_ = math::XYZVector(tmpTrack.innerMomentum().x(), tmpTrack.innerMomentum().y(), tmpTrack.innerMomentum().z());
-	      outerP_ = math::XYZVector(tmpTrack.outerMomentum().x(), tmpTrack.outerMomentum().y(), tmpTrack.outerMomentum().z());  // if ok => can be removed
-	      secant_ = math::XYZVector(pfTrackPos.x()-innerP_.x(), pfTrackPos.y()-innerP_.y(), pfTrackPos.z()-innerP_.z());
-	      if(pfCand_->charge() == 1) alpha_ = ROOT::Math::VectorUtil::Angle(innerP_, secant_);
-	      if(pfCand_->charge() == -1) alpha_ = ROOT::Math::VectorUtil::Angle(innerP_, innerP_);
-
-	      trackPt_ = elementTrack.trackRef()->pt();
-	      trackR_ = trackPt_ / 0.3 / 3.8;
-	      trackL_ = 2 * alpha_ * trackR_;
+                min_dist_cluster = tmp_dist;
+                pfCluster_ = blockElement.clusterRef().get();
+                ecalSeed_ = pfCluster_->seed();
 	    }
 	}
     }
@@ -137,11 +105,22 @@ vector<pair<float, float> > PFCandidateWithFT::GetRecHitsTimeE()
     return TandE_vect;
 }
 
-//----------     --------------------------
-void PFCandidateWithFT::GetTrackInfo(float& phiIn, float& phiOut, float& alpha, float& trackR, float& secant, int& charge)
+//----------Get track length--------------------------------------------------------------
+float PFCandidateWithFT::GetTrackLength()
 {
-    phiIn = innerP_.phi();
-    phiOut = outerP_.phi();
+    if(pfCand_->particleId() < 4)
+    {
+        if(trackL_ == -1)
+            TrackReconstruction();
+        return trackL_;
+
+    }
+    return trackL_;
+}
+
+//----------Simple track info getter------------------------------------------------------
+void PFCandidateWithFT::GetTrackInfo(float& alpha, float& trackR, float& secant, int& charge)
+{
     alpha = alpha_;
     trackR = trackR_;
     secant = secant;
@@ -149,3 +128,46 @@ void PFCandidateWithFT::GetTrackInfo(float& phiIn, float& phiOut, float& alpha, 
     return;
 }
 
+//----------Track reconstruction----------------------------------------------------------
+
+void PFCandidateWithFT::TrackReconstruction()
+{
+    float min_dist_track = 100;
+    for(auto& blockPair : pfCand_->elementsInBlocks())
+    {
+	unsigned int pos = blockPair.second;
+	const reco::PFBlockElement& blockElement = blockPair.first->elements()[pos];
+        if(blockElement.type() == 1 && blockElement.trackRef().isAvailable())
+        {
+            reco::Track tmpTrack = *blockElement.trackRef().get();	 
+            //---Characteristics of the track
+            const reco::PFBlockElementTrack& elementTrack = dynamic_cast<const reco::PFBlockElementTrack &>(blockElement);
+            const math::XYZPoint pfTrackPos(elementTrack.positionAtECALEntrance().x(), 
+                                            elementTrack.positionAtECALEntrance().y(),
+                                            elementTrack.positionAtECALEntrance().z());
+
+            float tmp_dist = DeltaR(pfTrackPos.eta(), pfCand_->eta(),
+                                    pfTrackPos.phi(), pfCand_->phi());
+            if(tmp_dist < min_dist_track)
+            {
+                min_dist_track = tmp_dist;
+
+                recoTrack_ = &tmpTrack;	 
+                vtxPos_ = math::XYZVector(primaryVtx_->position().x(),
+                                          primaryVtx_->position().y(),
+                                          primaryVtx_->position().z());
+                secant_ = math::XYZVector(pfTrackPos.x()-vtxPos_.x(), pfTrackPos.y()-vtxPos_.y(), 0);              
+                trackPt_ = elementTrack.trackRef()->pt();
+                trackR_ = trackPt_ / 0.3 / 3.8;
+                alpha_ = asin(secant_.R() / (100*2*trackR_));
+                trackL_ = sqrt(pow(2*alpha_*trackR_, 2) + pow((pfTrackPos.z()-vtxPos_.z())/100, 2));
+
+                // DEBUG: controllare (con pietro magari) la differenza tra le diverse approssimazioni
+                //        utili per calcolare la traccia.
+                //trackR_ = (trackL_ - (fabs(pfTrackPos.z()-vtxPos_.z()))/100/cos(asin(pfCand_->pt()/pfCand_->p())))/3E8;
+                //trackR_ = (2*alpha_*trackR_ - secant_.R()/100)/3E8;
+            }
+        }
+    }
+    return;
+}

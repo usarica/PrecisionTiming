@@ -4,7 +4,6 @@
 #include <TTree.h>
 #include <TSystem.h>
 
-#include "SimDataFormats/Vertex/interface/SimVertex.h"
 #include "DataFormats/FWLite/interface/Event.h"
 #include "DataFormats/FWLite/interface/Handle.h"
 #include "DataFormats/JetReco/interface/GenJet.h"
@@ -75,13 +74,14 @@ int main(int argc, char* argv[])
             cout << "\r### EVENT: " << iEvent << flush;
             iEvent++;            
             //---get gen vertex time---
-            float primaryVtxTime=-1;
+            const SimVertex* primaryVtx=NULL;
             genVtxHandle.getByLabel(event, "g4SimHits");
-            if(genVtxHandle.ptr()->size() > 0 && genVtxHandle.ptr()->at(0).vertexId() == 0)
-                primaryVtxTime = genVtxHandle.ptr()->at(0).position().t();
+            if(genVtxHandle.ptr()->size() == 0 || genVtxHandle.ptr()->at(0).vertexId() != 0)
+                continue;
+            primaryVtx = &genVtxHandle.ptr()->at(0);
             //---fill gen vtx infos 
-            outTree.gen_vtx_z = genVtxHandle.ptr()->at(0).position().z();
-            outTree.gen_vtx_t = primaryVtxTime*1E9;                
+            outTree.gen_vtx_z = primaryVtx->position().z();
+            outTree.gen_vtx_t = primaryVtx->position().t()*1E9;                
             //---get EK detailed time RecHits---
             recSort.getByLabel(event, "ecalDetailedTimeRecHit", "EcalRecHitsEK", "RECO");
             if(!recSort.isValid())
@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
             candHandle.getByLabel(event, "particleFlow");
             for(unsigned int iCand=0; iCand<candHandle.ptr()->size(); iCand++)
             {                
-                PFCandidateWithFT particle(&candHandle.ptr()->at(iCand), recVect, primaryVtxTime);                
+                PFCandidateWithFT particle(&candHandle.ptr()->at(iCand), recVect, primaryVtx);
                 if(particle.particleId() > 4 || !particle.GetPFCluster())
                     continue;
                 outTree.particle_n = iCand;
@@ -104,12 +104,11 @@ int main(int argc, char* argv[])
                 outTree.maxE_energy = particle.GetRecHitTimeMaxE().second;
                 outTree.all_time.clear();
                 outTree.all_energy.clear();
-		if(particle.GetTrackR() != 0.){
-		  particle.GetTrackInfo(outTree.track_phiIn, outTree.track_phiOut, outTree.track_alpha, 
-					outTree.track_radius, outTree.track_secant, outTree.track_charge);
-		  outTree.track_length = particle.GetTrackLength();
-		  outTree.trackCluster_dr = particle.GetDrTrackCluster();
-		}
+                outTree.track_length = particle.GetTrackLength();
+                outTree.track_radius = particle.GetTrackR();
+                particle.GetTrackInfo(outTree.track_alpha, outTree.track_radius,
+                                      outTree.track_secant, outTree.track_charge);
+                outTree.trackCluster_dr = particle.GetDrTrackCluster();
                 vector<pair<float, float> > TandE = particle.GetRecHitsTimeE();
                 if(TandE.size() == 0)
                     continue;
