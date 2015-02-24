@@ -37,9 +37,9 @@ public:
     inline const reco::PFCandidate* GetPFCandidate() {return pfCand_;};    
     inline float GetTrackR() { return trackPt_ / 0.3 / 3.8; };
     inline float GetDrTrackCluster() { return drTrackCluster_; };   
-    inline float GetTrackTOF() { return trackL_/3E8; };
+    inline float GetTOF() { return GetTrackLength()/3E8; };
     inline pair<float, float> GetRecHitTimeMaxE() {return GetRecHitTimeE(ecalSeed_);};
-    float GetTrackLength();
+    float GetTrackLength();   
     void GetTrackInfo(float& alpha, float& trackR, float& secant, int& charge);
     pair<float, float> GetRecHitTimeE(DetId id);
     vector<pair<float, float> > GetRecHitsTimeE();

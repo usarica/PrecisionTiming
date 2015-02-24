@@ -101,14 +101,15 @@ int main(int argc, char* argv[])
                 outTree.particle_eta = particle.eta();
                 outTree.particle_phi = particle.phi();
                 outTree.maxE_time = particle.GetRecHitTimeMaxE().first;
-                outTree.maxE_energy = particle.GetRecHitTimeMaxE().second;
+                outTree.maxE_energy = particle.GetRecHitTimeMaxE().second;                
+                outTree.reco_vtx_time = particle.GetTOF();
                 outTree.all_time.clear();
                 outTree.all_energy.clear();
                 outTree.track_length = particle.GetTrackLength();
                 outTree.track_radius = particle.GetTrackR();
                 particle.GetTrackInfo(outTree.track_alpha, outTree.track_radius,
                                       outTree.track_secant, outTree.track_charge);
-                outTree.trackCluster_dr = particle.GetDrTrackCluster();
+                outTree.trackCluster_dr = particle.GetDrTrackCluster();                
                 vector<pair<float, float> > TandE = particle.GetRecHitsTimeE();
                 if(TandE.size() == 0)
                     continue;
@@ -118,8 +119,6 @@ int main(int argc, char* argv[])
                     outTree.all_energy.push_back(TandE.at(iRec).second);
                 }
                 outTree.Fill();
-
-		////////// track part
             }
         }
     }
