@@ -35,6 +35,7 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand,
                 min_dist_cluster = tmp_dist;
                 pfCluster_ = blockElement.clusterRef().get();
                 ecalSeed_ = pfCluster_->seed();
+                time_ = GetRecHitTimeMaxE().first + vtxTime_ + GetGenTOF();
 	    }
 	}
     }
@@ -105,6 +106,12 @@ vector<pair<float, float> > PFCandidateWithFT::GetRecHitsTimeE()
     return TandE_vect;
 }
 
+//----------TOF wrt sim vertex------------------------------------------------------------
+float PFCandidateWithFT::GetGenTOF()
+{
+    return 1;
+}
+
 //----------Get track length--------------------------------------------------------------
 float PFCandidateWithFT::GetTrackLength()
 {
@@ -129,7 +136,6 @@ void PFCandidateWithFT::GetTrackInfo(float& alpha, float& trackR, float& secant,
 }
 
 //----------Track reconstruction----------------------------------------------------------
-
 void PFCandidateWithFT::TrackReconstruction()
 {
     float min_dist_track = 100;

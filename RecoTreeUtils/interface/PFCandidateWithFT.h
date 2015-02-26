@@ -39,7 +39,8 @@ public:
     inline float GetDrTrackCluster() { return drTrackCluster_; };   
     inline float GetTOF() { return GetTrackLength()/3E8; };
     inline pair<float, float> GetRecHitTimeMaxE() {return GetRecHitTimeE(ecalSeed_);};
-    float GetTrackLength();   
+    float GetTrackLength();
+    float GetGenTOF();
     void GetTrackInfo(float& alpha, float& trackR, float& secant, int& charge);
     pair<float, float> GetRecHitTimeE(DetId id);
     vector<pair<float, float> > GetRecHitsTimeE();
