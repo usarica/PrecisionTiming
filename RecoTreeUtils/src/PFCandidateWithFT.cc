@@ -3,20 +3,25 @@
 //**********Ctors*************************************************************************
 
 PFCandidateWithFT::PFCandidateWithFT():
-    clusterE_(0), maxRecHitE_(0), time_(0), vtxTime_(0)
+    clusterE_(0), maxRecHitE_(0), absTime_(0), vtxTime_(0)
 {}
 
-PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand,
-                               vector<EcalRecHit>* ecalRecHits, const SimVertex* primaryVtx):
-  reco::PFCandidate(*PFCand), clusterE_(0), maxRecHitE_(0), time_(0), vtxTime_(primaryVtx->position().t()), 
-  vtxPos_(0,0,0), secant_(0,0,0), alpha_(0), trackR_(0), trackL_(-1)
+PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<EcalRecHit>* ecalRecHits,
+                                     const SimVertex* genVtx, const CaloGeometry* skGeometry):
+  reco::PFCandidate(*PFCand), clusterE_(0), maxRecHitE_(0), absTime_(0), vtxTime_(genVtx->position().t()), 
+  ecalPos_(0,0,0), genVtxPos_(0,0,0), secant_(0,0,0), alpha_(0), trackR_(0), trackL_(-1)
 {
     pfCand_ = PFCand;
-    primaryVtx_ = primaryVtx;
-    recHitColl_ = *ecalRecHits;   
+    skGeometry_ = skGeometry;
+    recHitColl_ = ecalRecHits;   
+    genVtx_ = genVtx;
     pfCluster_ = NULL;
     recoTrack_ = NULL;
 
+    //---gen vtx info---
+    genVtxPos_ = math::XYZVector(genVtx_->position().x(),
+                                 genVtx_->position().y(),
+                                 genVtx_->position().z());
     //---get the right ecal cluster---
     float min_dist_cluster = 100;
     for(auto& blockPair : pfCand_->elementsInBlocks())
@@ -34,10 +39,18 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand,
 	    {
                 min_dist_cluster = tmp_dist;
                 pfCluster_ = blockElement.clusterRef().get();
-                ecalSeed_ = pfCluster_->seed();
-                time_ = GetRecHitTimeMaxE().first + vtxTime_ + GetGenTOF();
 	    }
 	}
+    }
+    if(pfCluster_)
+    {
+        ecalSeed_ = pfCluster_->seed();
+        if(skGeometry_)
+        {
+            const CaloCellGeometry* cell=skGeometry_->getGeometry(ecalSeed_);
+            ecalPos_ = dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(3*0.4-0.075-0.25);
+            absTime_ = GetRecHitTimeMaxE().first + vtxTime_*1E9 + GetGenTOF();
+        }
     }
 }
 
@@ -52,12 +65,12 @@ PFCandidateWithFT::~PFCandidateWithFT()
 pair<float, float> PFCandidateWithFT::GetRecHitTimeE(DetId id)
 {
     //---search for the right recHit---
-    for(unsigned int iRec=0; iRec<recHitColl_.size(); iRec++)
+    for(unsigned int iRec=0; iRec<recHitColl_->size(); iRec++)
     {
-        if(recHitColl_.at(iRec).id() == id)
+        if(recHitColl_->at(iRec).id() == id)
         {
-                return make_pair(recHitColl_.at(iRec).time() - vtxTime_ * 1E9,
-                                 recHitColl_.at(iRec).energy());
+                return make_pair(recHitColl_->at(iRec).time() - vtxTime_ * 1E9,
+                                 recHitColl_->at(iRec).energy());
         }
     }
     //---if not found return time=0, energy=-1---
@@ -91,14 +104,14 @@ vector<pair<float, float> > PFCandidateWithFT::GetRecHitsTimeE()
     unsigned int rh_start=0;
     for(unsigned int iDet=0; iDet<sortedDetId.size(); iDet++)
     {
-        for(unsigned int iRec=rh_start; iRec<recHitColl_.size(); iRec++)
+        for(unsigned int iRec=rh_start; iRec<recHitColl_->size(); iRec++)
         {
-	    if(sortedDetId.at(iDet) == recHitColl_.at(iRec).id())
+	    if(sortedDetId.at(iDet) == recHitColl_->at(iRec).id())
 	    {
                 rh_start=iRec+1;
                 TandE_vect.push_back(make_pair(
-                                         recHitColl_.at(iRec).time() - vtxTime_ * 1E9,
-                                         recHitColl_.at(iRec).energy()));
+                                         recHitColl_->at(iRec).time() - vtxTime_ * 1E9,
+                                         recHitColl_->at(iRec).energy()));
                 break;
 	    }
 	}
@@ -109,7 +122,8 @@ vector<pair<float, float> > PFCandidateWithFT::GetRecHitsTimeE()
 //----------TOF wrt sim vertex------------------------------------------------------------
 float PFCandidateWithFT::GetGenTOF()
 {
-    return 1;
+    //---(distance/c)*1E9
+    return (recoVtxPos_ - ecalPos_).R()/30;
 }
 
 //----------Get track length--------------------------------------------------------------
@@ -145,28 +159,21 @@ void PFCandidateWithFT::TrackReconstruction()
 	const reco::PFBlockElement& blockElement = blockPair.first->elements()[pos];
         if(blockElement.type() == 1 && blockElement.trackRef().isAvailable())
         {
-            reco::Track tmpTrack = *blockElement.trackRef().get();	 
+            recoTrack_ = blockElement.trackRef().get();	 
             //---Characteristics of the track
             const reco::PFBlockElementTrack& elementTrack = dynamic_cast<const reco::PFBlockElementTrack &>(blockElement);
-            const math::XYZPoint pfTrackPos(elementTrack.positionAtECALEntrance().x(), 
-                                            elementTrack.positionAtECALEntrance().y(),
-                                            elementTrack.positionAtECALEntrance().z());
-
-            float tmp_dist = DeltaR(pfTrackPos.eta(), pfCand_->eta(),
-                                    pfTrackPos.phi(), pfCand_->phi());
+            
+            float tmp_dist = DeltaR(recoTrack_->eta(), pfCand_->eta(),
+                                    recoTrack_->phi(), pfCand_->phi());
             if(tmp_dist < min_dist_track)
             {
                 min_dist_track = tmp_dist;
-
-                recoTrack_ = &tmpTrack;	 
-                vtxPos_ = math::XYZVector(primaryVtx_->position().x(),
-                                          primaryVtx_->position().y(),
-                                          primaryVtx_->position().z());
-                secant_ = math::XYZVector(pfTrackPos.x()-vtxPos_.x(), pfTrackPos.y()-vtxPos_.y(), 0);              
+                recoVtxPos_ = math::XYZVector(recoTrack_->vx(), recoTrack_->vy(), recoTrack_->vz());
+                secant_ = math::XYZVector(ecalPos_.x()-recoVtxPos_.x(), ecalPos_.y()-recoVtxPos_.y(), 0);              
                 trackPt_ = elementTrack.trackRef()->pt();
                 trackR_ = trackPt_ / 0.3 / 3.8;
                 alpha_ = asin(secant_.R() / (100*2*trackR_));
-                trackL_ = sqrt(pow(2*alpha_*trackR_, 2) + pow((pfTrackPos.z()-vtxPos_.z())/100, 2));
+                trackL_ = sqrt(pow(2*alpha_*trackR_, 2) + pow((ecalPos_.z()-recoVtxPos_.z())/100, 2));
 
                 // DEBUG: controllare (con pietro magari) la differenza tra le diverse approssimazioni
                 //        utili per calcolare la traccia.

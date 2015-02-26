@@ -1,4 +1,3 @@
-#include <TMath.h>
 #include <TROOT.h>
 #include <TFile.h>
 #include <TTree.h>
@@ -17,18 +16,11 @@
 #include "DataFormats/JetReco/interface/GenJet.h"
 #include "DataFormats/JetReco/interface/PFJet.h"
 #include "DataFormats/Common/interface/SortedCollection.h"
-#include "DataFormats/EcalRecHit/interface/EcalRecHit.h"
-#include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
-#include "DataFormats/ParticleFlowReco/interface/PFRecTrack.h"
-#include "DataFormats/ParticleFlowReco/interface/PFCluster.h"
-#include "DataFormats/ParticleFlowReco/interface/PFBlock.h"
-#include "DataFormats/ParticleFlowReco/interface/PFBlockElement.h"
-#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
-#include "Geometry/Records/interface/CaloGeometryRecord.h"
-#include "Geometry/CaloGeometry/interface/TruncatedPyramid.h"
 
 #include "FastTiming/RecoTreeUtils/interface/PFCandidateWithFT.h"
 #include "FastTiming/RecoTreeUtils/interface/FTTree.h"
+
+typedef std::vector<reco::TrackBaseRef >::const_iterator trackRef_iterator;
 
 using namespace std;
 
@@ -54,6 +46,7 @@ private:
     //---objects interfaces---
     edm::ESHandle<CaloGeometry> geoHandle;
     edm::Handle<vector<SimVertex> > genVtxHandle;
+    edm::Handle<vector<reco::Vertex> > recoVtxHandle;
     edm::Handle<vector<reco::PFCandidate> > candHandle;
     // edm::Handle<vector<reco::PFJet> > jetsHandle;
     // edm::Handle<vector<reco::GenJet> > genJetsHandle;
@@ -92,14 +85,18 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
     Setup.get<CaloGeometryRecord>().get(geoHandle);
     skGeometry = geoHandle.product();
     //---get gen vertex time---
-    const SimVertex* primaryVtx=NULL;
+    const SimVertex* genVtx=NULL;
     Event.getByLabel("g4SimHits", genVtxHandle);
     if(genVtxHandle.product()->size() == 0 || genVtxHandle.product()->at(0).vertexId() != 0)
         return;
-    primaryVtx = &genVtxHandle.product()->at(0);
+    genVtx = &genVtxHandle.product()->at(0);
+    //---get reco primary vtxs---
+    const reco::Vertex* recoVtx;
+    Event.getByLabel("offlinePrimaryVertices", recoVtxHandle);
+    recoVtx = &recoVtxHandle.product()->at(0);
     //---fill gen vtx infos 
-    outTree->gen_vtx_z = primaryVtx->position().z();
-    outTree->gen_vtx_t = primaryVtx->position().t()*1E9;                
+    outTree->gen_vtx_z = genVtx->position().z();
+    outTree->gen_vtx_t = genVtx->position().t()*1E9;                
     //---get EK detailed time RecHits---
     Event.getByLabel(edm::InputTag("ecalDetailedTimeRecHit", "EcalRecHitsEK", "RECO"),
                       recSort);
@@ -110,7 +107,8 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
     Event.getByLabel("particleFlow", candHandle);
     for(unsigned int iCand=0; iCand<candHandle.product()->size(); iCand++)
     {
-        PFCandidateWithFT particle(&candHandle.product()->at(iCand), recVect, primaryVtx);
+        PFCandidateWithFT particle(&candHandle.product()->at(iCand), 
+                                   recVect, genVtx, skGeometry);
         if(particle.particleId() > 4 || !particle.GetPFCluster())
             continue;
         outTree->particle_n = iCand;
@@ -121,11 +119,16 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
         outTree->particle_phi = particle.phi();
         outTree->maxE_time = particle.GetRecHitTimeMaxE().first;
         outTree->maxE_energy = particle.GetRecHitTimeMaxE().second;                
-        outTree->reco_vtx_time = particle.GetTOF();
+        outTree->reco_vtx_t = particle.GetTime()-particle.GetTOF();
+        outTree->reco_vtx_z = particle.GetRecoVtxPos().z();
+        // for(trackRef_iterator it=recoVtx->tracks_begin(); it!=recoVtx->tracks_end(); ++it)
+        // {
+        //     if(it->get() == particle.GetTrack())
+        //         outTree->reco_vtx_z = recoVtx->z();
+        // }
         outTree->all_time.clear();
         outTree->all_energy.clear();
         outTree->track_length = particle.GetTrackLength();
-        outTree->track_radius = particle.GetTrackR();
         particle.GetTrackInfo(outTree->track_alpha, outTree->track_radius,
                               outTree->track_secant, outTree->track_charge);
         outTree->trackCluster_dr = particle.GetDrTrackCluster();                

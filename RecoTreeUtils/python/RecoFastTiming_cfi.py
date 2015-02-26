@@ -129,7 +129,7 @@ def GetSampleFiles(sampleName, filesOpt):
             "root://eoscms//eos/cms/store/caf/user/amartell/fastTiming/QCD_Pt15_500_14TeV_Tune4C_RECO_PU140inTime/QCD_14TeV_upgradePLS3_RECO_140PUinTime_24.root",
             "root://eoscms//eos/cms/store/caf/user/amartell/fastTiming/QCD_Pt15_500_14TeV_Tune4C_RECO_PU140inTime/QCD_14TeV_upgradePLS3_RECO_140PUinTime_25.root",
             "root://eoscms//eos/cms/store/caf/user/amartell/fastTiming/QCD_Pt15_500_14TeV_Tune4C_RECO_PU140inTime/QCD_14TeV_upgradePLS3_RECO_140PUinTime_26.root",
-            "root://eoscms//eos/cms/store/caf/user/amartell/fastTiming/QCD_Pt15_500_14TeV_Tune4C_RECO_PU140inTime/QCD_14TeV_upgradePLS3_RECO_140PUinTime_27.root",
+            #"root://eoscms//eos/cms/store/caf/user/amartell/fastTiming/QCD_Pt15_500_14TeV_Tune4C_RECO_PU140inTime/QCD_14TeV_upgradePLS3_RECO_140PUinTime_27.root",
             "root://eoscms//eos/cms/store/caf/user/amartell/fastTiming/QCD_Pt15_500_14TeV_Tune4C_RECO_PU140inTime/QCD_14TeV_upgradePLS3_RECO_140PUinTime_28.root",
             "root://eoscms//eos/cms/store/caf/user/amartell/fastTiming/QCD_Pt15_500_14TeV_Tune4C_RECO_PU140inTime/QCD_14TeV_upgradePLS3_RECO_140PUinTime_29.root",
             "root://eoscms//eos/cms/store/caf/user/amartell/fastTiming/QCD_Pt15_500_14TeV_Tune4C_RECO_PU140inTime/QCD_14TeV_upgradePLS3_RECO_140PUinTime_3.root",
