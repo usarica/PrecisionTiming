@@ -12,9 +12,9 @@ FastTiming
 * Python:
   * The list of samples and file that can be analyzed by RecoFastTiming are listed in RecoFastTiming_cfi.py
   * GetSampleFiles set the right i/o files for the given sample name. Currently available samples:
-    1. QCD_noPU 
-    2. QCD_140PU
-    3. SingleGammaE50_noPU
+    * 1) QCD_noPU 
+    * 2) QCD_140PU
+    * 3) SingleGammaE50_noPU
 
 * In order to run the analyzer execute:
   ```
