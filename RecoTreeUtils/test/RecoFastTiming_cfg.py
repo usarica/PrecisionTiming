@@ -11,6 +11,7 @@ options.register('sampleName',
                  "sample to process")
 options.parseArguments()
 
+## Get I/O files from the list given the sample name
 filesOpt = cms.PSet(
     inputFiles = cms.untracked.vstring(""),
     outputFile = cms.string("")
@@ -18,7 +19,13 @@ filesOpt = cms.PSet(
 
 GetSampleFiles(options.sampleName, filesOpt)
 
+##------------------------------------------------------------------------------
+
 process = cms.Process("RecoFastTiming")
+
+## load the SK geometry
+process.load('Configuration.Geometry.GeometryExtended2023SHCalNoTaperReco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023SHCalNoTaper_cff')
 
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 

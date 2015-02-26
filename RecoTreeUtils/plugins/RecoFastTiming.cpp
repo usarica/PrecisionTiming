@@ -1,6 +1,3 @@
-#ifndef FastTiming_RecoTreeUtils_RecoFastTiming_h
-#define FastTiming_RecoTreeUtils_RecoFastTiming_h
-
 #include <TMath.h>
 #include <TROOT.h>
 #include <TFile.h>
@@ -55,12 +52,13 @@ private:
     TFile* outFile;
     FTTree* outTree;   
     //---objects interfaces---
+    edm::ESHandle<CaloGeometry> geoHandle;
     edm::Handle<vector<SimVertex> > genVtxHandle;
     edm::Handle<vector<reco::PFCandidate> > candHandle;
     // edm::Handle<vector<reco::PFJet> > jetsHandle;
     // edm::Handle<vector<reco::GenJet> > genJetsHandle;
     edm::Handle<edm::SortedCollection<EcalRecHit, 
-                                      edm::StrictWeakOrdering<EcalRecHit > > > recSort;    
+                                      edm::StrictWeakOrdering<EcalRecHit > > > recSort;
 };
 
 void RecoFastTiming::beginJob()
@@ -88,7 +86,11 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
         return;
     }
     outTree->event_n = iEvent;
-    iEvent++;            
+    iEvent++;
+    //---get the geometry---
+    edm::ESHandle<CaloGeometry> geoHandle;
+    Setup.get<CaloGeometryRecord>().get(geoHandle);
+    skGeometry = geoHandle.product();
     //---get gen vertex time---
     const SimVertex* primaryVtx=NULL;
     Event.getByLabel("g4SimHits", genVtxHandle);
@@ -139,7 +141,6 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
     }
 }
 
-#endif
-//define this as a plug-in
+//define this as a plugin
 DEFINE_FWK_MODULE(RecoFastTiming);
 

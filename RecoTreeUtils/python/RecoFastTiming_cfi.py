@@ -3,10 +3,10 @@ import FWCore.ParameterSet.Config as cms
 def GetSampleFiles(sampleName, filesOpt):
     if sampleName == 'QCD_noPU' :
         filesOpt.inputFiles = cms.untracked.vstring("file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC23/outfile4test/SingleJet/RAW-RECO_noPU.root")
-        filesOpt.outputFile = cms.string("/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC23/src/FastTiming/RecoTreeUtils/ntuples/QCD_noPU.root")
+        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/QCD_noPU.root")
         
     if sampleName == "QCD_140PU" :        
-        filesOpt.inputFiles = cms.string("/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC23/src/FastTiming/RecoTreeUtils/ntuples/QCD_140PU.root")
+        filesOpt.inputFiles = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/QCD_140PU.root")
             
         filesOpt.inputFiles = cms.untracked.vstring(*(
             "root://eoscms//eos/cms/store/caf/user/amartell/fastTiming/QCD_Pt15_500_14TeV_Tune4C_RECO_PU140inTime/QCD_14TeV_upgradePLS3_RECO_140PUinTime_1.root",
@@ -211,7 +211,7 @@ def GetSampleFiles(sampleName, filesOpt):
             "root://eoscms//eos/cms/store/caf/user/amartell/fastTiming/QCD_Pt15_500_14TeV_Tune4C_RECO_PU140inTime/QCD_14TeV_upgradePLS3_RECO_140PUinTime_99.root"))    
 
     if sampleName == "SingleGammaE50_noPU" :
-        filesOpt.outputFile = cms.string("/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC23/src/FastTiming/RecoTreeUtils/ntuples/SingleGammaE50_noPU.root")
+        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/SingleGammaE50_noPU.root")
             
         filesOpt.inputFiles = cms.untracked.vstring(*(
             "root://eoscms//eos/cms/store/user/amartell/fastTiming/SingleGammaE50_noPU/SingleGammaE50_noPU_DIGIRECO_1.root",
