@@ -6,7 +6,7 @@ def GetSampleFiles(sampleName, filesOpt):
         filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/QCD_noPU.root")
         
     if sampleName == "QCD_140PU" :        
-        filesOpt.inputFiles = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/QCD_140PU.root")
+        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/QCD_140PU.root")
             
         filesOpt.inputFiles = cms.untracked.vstring(*(
             "root://eoscms//eos/cms/store/caf/user/amartell/fastTiming/QCD_Pt15_500_14TeV_Tune4C_RECO_PU140inTime/QCD_14TeV_upgradePLS3_RECO_140PUinTime_1.root",
