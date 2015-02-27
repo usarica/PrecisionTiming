@@ -38,6 +38,7 @@ public:
     float reco_vtx_t;
     int track_charge;
     float track_length;
+    float track_length_helix;
     float track_alpha;
     float track_secant;
     float track_radius;
@@ -71,6 +72,7 @@ FTTree::FTTree()
     reco_vtx_t=0;
     track_charge=0;
     track_length=0.;
+    track_length_helix=0;
     track_alpha=0.;
     track_secant=0.;
     track_radius=0.;
@@ -92,6 +94,7 @@ FTTree::FTTree()
     tree_->Branch("reco_vtx_t", &reco_vtx_t, "reco_vtx_t/F");
     tree_->Branch("track_charge", &track_charge, "track_charge/I");
     tree_->Branch("track_length", &track_length, "track_length/F");
+    tree_->Branch("track_length_helix", &track_length_helix, "track_length_helix/F");
     tree_->Branch("track_alpha", &track_alpha, "track_alpha/F");
     tree_->Branch("track_secant", &track_secant, "track_secant/F");
     tree_->Branch("track_radius", &track_radius, "track_radius/F");
@@ -114,6 +117,7 @@ FTTree::FTTree(TTree* tree)
     reco_vtx_t=0;
     track_charge=0;
     track_length=0;
+    track_length_helix=0;
     track_alpha=0.;
     track_secant=0.;
     track_radius=0.;

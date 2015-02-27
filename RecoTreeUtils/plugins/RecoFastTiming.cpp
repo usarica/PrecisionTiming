@@ -13,6 +13,7 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 #include "PhysicsTools/FWLite/interface/TFileService.h"
+#include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 #include "DataFormats/JetReco/interface/GenJet.h"
 #include "DataFormats/JetReco/interface/PFJet.h"
 #include "DataFormats/Common/interface/SortedCollection.h"
@@ -21,6 +22,22 @@
 #include "FastTiming/RecoTreeUtils/interface/FTTree.h"
 
 typedef std::vector<reco::TrackBaseRef >::const_iterator trackRef_iterator;
+
+
+double sumPtSquared(const reco::Vertex & v) 
+{
+    double sum = 0.;
+    double pT;
+    for (reco::Vertex::trackRef_iterator it = v.tracks_begin(); it != v.tracks_end(); it++) {
+        pT = (**it).pt();
+        double epT=(**it).ptError();
+        pT=pT>epT ? pT-epT : 0;
+        
+        sum += pT*pT;
+    }
+    return sum;
+}
+ 
 
 using namespace std;
 
@@ -39,11 +56,13 @@ private:
 
     int iEvent;
     const CaloGeometry* skGeometry;
+    const MagneticField* magField;
     //---output file---
     edm::Service<TFileService> fs;
     TFile* outFile;
     FTTree* outTree;   
     //---objects interfaces---
+    edm::ESHandle<MagneticField> magFieldHandle;             
     edm::ESHandle<CaloGeometry> geoHandle;
     edm::Handle<vector<SimVertex> > genVtxHandle;
     edm::Handle<vector<reco::Vertex> > recoVtxHandle;
@@ -80,8 +99,10 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
     }
     outTree->event_n = iEvent;
     iEvent++;
+    //---get the magnetic field---
+    Setup.get<IdealMagneticFieldRecord>().get(magFieldHandle);
+    magField = magFieldHandle.product();
     //---get the geometry---
-    edm::ESHandle<CaloGeometry> geoHandle;
     Setup.get<CaloGeometryRecord>().get(geoHandle);
     skGeometry = geoHandle.product();
     //---get gen vertex time---
@@ -108,7 +129,7 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
     for(unsigned int iCand=0; iCand<candHandle.product()->size(); iCand++)
     {
         PFCandidateWithFT particle(&candHandle.product()->at(iCand), 
-                                   recVect, genVtx, skGeometry);
+                                   recVect, genVtx, recoVtx, skGeometry, magField);
         if(particle.particleId() > 4 || !particle.GetPFCluster())
             continue;
         outTree->particle_n = iCand;
@@ -129,6 +150,7 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
         outTree->all_time.clear();
         outTree->all_energy.clear();
         outTree->track_length = particle.GetTrackLength();
+        outTree->track_length_helix = particle.GetPropagatedTrackLength();
         particle.GetTrackInfo(outTree->track_alpha, outTree->track_radius,
                               outTree->track_secant, outTree->track_charge);
         outTree->trackCluster_dr = particle.GetDrTrackCluster();                

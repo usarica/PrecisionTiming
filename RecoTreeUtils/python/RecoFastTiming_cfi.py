@@ -3,6 +3,7 @@ import FWCore.ParameterSet.Config as cms
 def GetSampleFiles(sampleName, filesOpt):
     if sampleName == 'QCD_noPU' :
         filesOpt.inputFiles = cms.untracked.vstring("file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC23/outfile4test/SingleJet/RAW-RECO_noPU.root")
+        # filesOpt.inputFiles = cms.untracked.vstring("file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC23/outfile4test/SingleJet/RAW-RECO_noPU_evt_content_test.root")
         filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/QCD_noPU.root")
         
     if sampleName == "QCD_140PU" :        

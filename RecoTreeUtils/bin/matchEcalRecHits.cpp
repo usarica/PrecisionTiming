@@ -79,6 +79,8 @@ int main(int argc, char* argv[])
             if(genVtxHandle.ptr()->size() == 0 || genVtxHandle.ptr()->at(0).vertexId() != 0)
                 continue;
             primaryVtx = &genVtxHandle.ptr()->at(0);
+            //---fake reco vtx--- TODO
+            const reco::Vertex* recoVtx=NULL;
             //---fill gen vtx infos 
             outTree.gen_vtx_z = primaryVtx->position().z();
             outTree.gen_vtx_t = primaryVtx->position().t()*1E9;                
@@ -91,7 +93,8 @@ int main(int argc, char* argv[])
             candHandle.getByLabel(event, "particleFlow");
             for(unsigned int iCand=0; iCand<candHandle.ptr()->size(); iCand++)
             {                
-                PFCandidateWithFT particle(&candHandle.ptr()->at(iCand), recVect, primaryVtx);
+                PFCandidateWithFT particle(&candHandle.ptr()->at(iCand), recVect,
+                                           primaryVtx, recoVtx);
                 if(particle.particleId() > 4 || !particle.GetPFCluster())
                     continue;
                 outTree.particle_n = iCand;

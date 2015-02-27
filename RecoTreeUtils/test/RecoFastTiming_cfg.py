@@ -23,9 +23,11 @@ GetSampleFiles(options.sampleName, filesOpt)
 
 process = cms.Process("RecoFastTiming")
 
-## load the SK geometry
+## load the SK geometry and magnetic field config
 process.load('Configuration.Geometry.GeometryExtended2023SHCalNoTaperReco_cff')
 process.load('Configuration.Geometry.GeometryExtended2023SHCalNoTaper_cff')
+process.load('Configuration.StandardSequences.MagneticField_38T_PostLS1_cff')
+process.load('Configuration/EventContent/EventContent_cff')
 
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 

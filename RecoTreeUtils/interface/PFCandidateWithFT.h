@@ -1,6 +1,13 @@
 #ifndef PFCandidateWithFT_H
 #define PFCandidateWithFT_H
 
+//****************************************************************************************
+// lengths are in cm, times are in ns
+//
+//
+//
+//****************************************************************************************
+
 #include <vector>
 
 #include "TMath.h"
@@ -17,6 +24,9 @@
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
 #include "Geometry/CaloGeometry/interface/TruncatedPyramid.h"
 
+#include "TrackPropagation/SteppingHelixPropagator/interface/SteppingHelixPropagator.h"
+#include "TrackingTools/TrajectoryState/interface/FreeTrajectoryState.h"
+
 #include "DataFormats/Math/interface/Vector3D.h"
 #include "Math/GenVector/VectorUtil.h"
 
@@ -31,7 +41,8 @@ public:
     //---ctors---
     PFCandidateWithFT();
     PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<EcalRecHit>* ecalRecHits,
-                      const SimVertex* primaryVtx, const CaloGeometry* skGeometry=NULL);
+                      const SimVertex* genVtx, const reco::Vertex* recoVtx,
+                      const CaloGeometry* skGeometry=NULL, const MagneticField* magField=NULL);
     //---dtor---
     ~PFCandidateWithFT();
     //---getters---
@@ -41,9 +52,10 @@ public:
     inline const reco::Track*       GetTrack() {return recoTrack_;};
     inline math::XYZVector          GetRecoVtxPos() {return recoVtxPos_;};
     inline float                    GetDrTrackCluster() { return drTrackCluster_; };   
-    inline float                    GetTOF() { return GetTrackLength()/3E8*1E9; };
+    inline float                    GetTOF() { return GetPropagatedTrackLength()/3E10*1E9; };
     inline pair<float, float>       GetRecHitTimeMaxE() {return GetRecHitTimeE(ecalSeed_);};
     float                           GetTrackLength();
+    float                           GetPropagatedTrackLength();
     float                           GetGenTOF();
     void                            GetTrackInfo(float& alpha, float& trackR, float& secant, int& charge);
     pair<float, float>              GetRecHitTimeE(DetId id);
@@ -56,6 +68,8 @@ public:
 private:
     const reco::PFCandidate* pfCand_;
     const reco::PFCluster*   pfCluster_;
+    const reco::Vertex*      recoVtx_;
+    const MagneticField*     magField_;
     const CaloGeometry*      skGeometry_;
     const SimVertex*         genVtx_;
     vector<EcalRecHit>*      recHitColl_;
@@ -73,6 +87,7 @@ private:
     float                    trackPt_;
     float                    trackR_;
     float                    trackL_;
+    float                    propagatedTrackL_;
     float                    drTrackCluster_;
 };
 

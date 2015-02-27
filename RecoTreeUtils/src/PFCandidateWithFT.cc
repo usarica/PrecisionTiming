@@ -7,14 +7,17 @@ PFCandidateWithFT::PFCandidateWithFT():
 {}
 
 PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<EcalRecHit>* ecalRecHits,
-                                     const SimVertex* genVtx, const CaloGeometry* skGeometry):
+                                     const SimVertex* genVtx, const reco::Vertex* recoVtx,
+                                     const CaloGeometry* skGeometry, const MagneticField* magField):
   reco::PFCandidate(*PFCand), clusterE_(0), maxRecHitE_(0), absTime_(0), vtxTime_(genVtx->position().t()), 
-  ecalPos_(0,0,0), genVtxPos_(0,0,0), secant_(0,0,0), alpha_(0), trackR_(0), trackL_(-1)
+  ecalPos_(0,0,0), genVtxPos_(0,0,0), secant_(0,0,0), alpha_(0), trackR_(0), trackL_(-1), propagatedTrackL_(-1)
 {
     pfCand_ = PFCand;
+    magField_ = magField;
     skGeometry_ = skGeometry;
     recHitColl_ = ecalRecHits;   
     genVtx_ = genVtx;
+    recoVtx_ = recoVtx;
     pfCluster_ = NULL;
     recoTrack_ = NULL;
 
@@ -22,6 +25,10 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<Eca
     genVtxPos_ = math::XYZVector(genVtx_->position().x(),
                                  genVtx_->position().y(),
                                  genVtx_->position().z());
+    //---reco vtx info---
+    recoVtxPos_ = math::XYZVector(recoVtx_->position().x(),
+                                  recoVtx_->position().y(),
+                                  recoVtx_->position().z());
     //---get the right ecal cluster---
     float min_dist_cluster = 100;
     for(auto& blockPair : pfCand_->elementsInBlocks())
@@ -131,12 +138,35 @@ float PFCandidateWithFT::GetTrackLength()
 {
     if(pfCand_->particleId() < 4)
     {
-        if(trackL_ == -1)
+        if(!recoTrack_)
             TrackReconstruction();
         return trackL_;
 
     }
     return trackL_;
+}
+
+//----------Get track length using CMSSW tools--------------------------------------------
+
+float PFCandidateWithFT::GetPropagatedTrackLength()
+{
+    if(pfCand_->particleId() < 4)
+    {
+        if(!recoTrack_)
+            TrackReconstruction();
+        if(recoTrack_)
+        {
+            GlobalPoint startingPoint(recoVtxPos_.x(), recoVtxPos_.y(), recoVtxPos_.z());
+            GlobalVector startingMomentum(recoTrack_->innerMomentum().x(),
+                                          recoTrack_->innerMomentum().y(),
+                                          recoTrack_->innerMomentum().z());
+            GlobalPoint endPoint(ecalPos_.x(), ecalPos_.y(), ecalPos_.z());
+            FreeTrajectoryState trajectory(startingPoint, startingMomentum, recoTrack_->charge(), magField_);
+            SteppingHelixPropagator propagator(magField_);
+            propagatedTrackL_ = propagator.propagateWithPath(trajectory, endPoint).second;
+        }
+    }    
+    return propagatedTrackL_;
 }
 
 //----------Simple track info getter------------------------------------------------------
@@ -168,12 +198,11 @@ void PFCandidateWithFT::TrackReconstruction()
             if(tmp_dist < min_dist_track)
             {
                 min_dist_track = tmp_dist;
-                recoVtxPos_ = math::XYZVector(recoTrack_->vx(), recoTrack_->vy(), recoTrack_->vz());
                 secant_ = math::XYZVector(ecalPos_.x()-recoVtxPos_.x(), ecalPos_.y()-recoVtxPos_.y(), 0);              
                 trackPt_ = elementTrack.trackRef()->pt();
-                trackR_ = trackPt_ / 0.3 / 3.8;
-                alpha_ = asin(secant_.R() / (100*2*trackR_));
-                trackL_ = sqrt(pow(2*alpha_*trackR_, 2) + pow((ecalPos_.z()-recoVtxPos_.z())/100, 2));
+                trackR_ = trackPt_*100 / 0.3 / 3.8;
+                alpha_ = asin(secant_.R() / (2*trackR_));
+                trackL_ = sqrt(pow(2*alpha_*trackR_, 2) + pow(ecalPos_.z()-recoVtxPos_.z(), 2));
 
                 // DEBUG: controllare (con pietro magari) la differenza tra le diverse approssimazioni
                 //        utili per calcolare la traccia.
@@ -182,5 +211,4 @@ void PFCandidateWithFT::TrackReconstruction()
             }
         }
     }
-    return;
 }

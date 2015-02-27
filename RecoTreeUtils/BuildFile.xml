@@ -3,6 +3,7 @@
 <use   name="FWCore/FWLite"/>
 <use   name="FWCore/PythonParameterSet"/>
 <use   name="Geometry/EcalAlgo"/>
+<use   name="TrackPropagation/SteppingHelixPropagator"/>
 <use   name="DataFormats/FWLite"/>
 <use   name="DataFormats/Luminosity"/>
 <use   name="CommonTools/Utils"/>
