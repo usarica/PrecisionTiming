@@ -29,7 +29,7 @@ process.load('Configuration.Geometry.GeometryExtended2023SHCalNoTaper_cff')
 process.load('Configuration.StandardSequences.MagneticField_38T_PostLS1_cff')
 process.load('Configuration/EventContent/EventContent_cff')
 
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(50) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 process.source = cms.Source("PoolSource",
                             fileNames = filesOpt.inputFiles)

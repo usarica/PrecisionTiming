@@ -10,8 +10,8 @@ PFCandidateWithFT::PFCandidateWithFT()
 PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<EcalRecHit>* ecalRecHits,
                                      const SimVertex* genVtx, const VertexWithFT* recoVtx,
                                      const CaloGeometry* skGeometry, const MagneticField* magField):
-  reco::PFCandidate(*PFCand), clusterE_(0), maxRecHitE_(0), rawTime_(0), vtxTime_(genVtx->position().t()),
-  ecalPos_(0,0,0), genVtxPos_(0,0,0), recoVtxPos_(0,0,0), trackL_(-1), propagatedTrackL_(-1)
+    clusterE_(0), maxRecHitE_(0), rawTime_(0), vtxTime_(genVtx->position().t()),
+    ecalPos_(0,0,0), genVtxPos_(0,0,0), recoVtxPos_(0,0,0), trackL_(-1), propagatedTrackL_(-1)
 {
     pfCand_ = PFCand;
     magField_ = magField;

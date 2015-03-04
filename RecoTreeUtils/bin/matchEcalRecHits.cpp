@@ -93,14 +93,14 @@ int main(int argc, char* argv[])
             {                
                 PFCandidateWithFT particle(&candHandle.ptr()->at(iCand), recVect,
                                            primaryVtx);
-                if(particle.particleId() > 4 || !particle.GetPFCluster())
+                if(particle.GetPFCandidate()->particleId() > 4 || !particle.GetPFCluster())
                     continue;
                 outTree.particle_n = iCand;
-                outTree.particle_type = particle.particleId();
-                outTree.particle_E = particle.energy();
-                outTree.particle_pt = particle.pt();
-                outTree.particle_eta = particle.eta();
-                outTree.particle_phi = particle.phi();
+                outTree.particle_type = particle.GetPFCandidate()->particleId();
+                outTree.particle_E = particle.GetPFCandidate()->energy();
+                outTree.particle_pt = particle.GetPFCandidate()->pt();
+                outTree.particle_eta = particle.GetPFCandidate()->eta();
+                outTree.particle_phi = particle.GetPFCandidate()->phi();
                 outTree.maxE_time = particle.GetRecHitTimeMaxE().first;
                 outTree.maxE_energy = particle.GetRecHitTimeMaxE().second;                
                 outTree.all_time.clear();
