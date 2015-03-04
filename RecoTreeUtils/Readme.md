@@ -5,9 +5,12 @@ FastTiming
 
 * Classes:
   * PFCandidateWithFT: PFCandidate based class, add timing information from SK endcap colorimenter.
+  * VertexWithFT: reco::Vertex based class, contains the collection of PFCandidateWithFT related to the vertex.
 
 * Plugins: 
-  * RecoFastTiming: reads the RECO Events tree and produce a ROOT flat tree with the reconstructed time information
+  * RecoFastTiming: 
+   - reads the RECO Events tree and produce a ROOT flat trees with the reconstructed time information.
+   - the output contains two TTress: one for the particles and one for the vertices.
 
 * Python:
   * The list of samples and file that can be analyzed by RecoFastTiming are listed in RecoFastTiming_cfi.py
