@@ -11,8 +11,11 @@
 #include <vector>
 
 #include "TMath.h"
+#include "TRandom.h"
 
 #include "SimDataFormats/Vertex/interface/SimVertex.h"
+#include "DataFormats/Math/interface/deltaR.h"
+#include "DataFormats/Common/interface/RefToBase.h" 
 #include "DataFormats/EcalRecHit/interface/EcalRecHit.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "DataFormats/ParticleFlowReco/interface/PFRecTrack.h"
@@ -27,39 +30,46 @@
 #include "TrackPropagation/SteppingHelixPropagator/interface/SteppingHelixPropagator.h"
 #include "TrackingTools/TrajectoryState/interface/FreeTrajectoryState.h"
 
-#include "DataFormats/Math/interface/Vector3D.h"
-#include "Math/GenVector/VectorUtil.h"
+#include "FastTiming/RecoTreeUtils/interface/VertexWithFT.h"
 
-#include "FastTiming/RecoTreeUtils/interface/Utils.h"
+typedef edm::RefToBase<reco::Track> TrackBaseRef;
+typedef ROOT::Math::PositionVector3D<ROOT::Math::CylindricalEta3D<Double32_t> > REPPoint;
 
 using namespace std;
 
+class VertexWithFT;
+
 //****************************************************************************************
+
 class PFCandidateWithFT: public reco::PFCandidate
 {
 public:
     //---ctors---
     PFCandidateWithFT();
     PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<EcalRecHit>* ecalRecHits,
-                      const SimVertex* genVtx, const reco::Vertex* recoVtx,
+                      const SimVertex* genVtx, const VertexWithFT* recoVtx=NULL,
                       const CaloGeometry* skGeometry=NULL, const MagneticField* magField=NULL);
     //---dtor---
     ~PFCandidateWithFT();
     //---getters---
-    inline float                    GetTime() {return absTime_;};
     inline const reco::PFCluster*   GetPFCluster() {return pfCluster_;};
     inline const reco::PFCandidate* GetPFCandidate() {return pfCand_;};
-    inline const reco::Track*       GetTrack() {return recoTrack_;};
+    inline const VertexWithFT*      GetRecoVtx() {return recoVtx_;};
     inline math::XYZVector          GetRecoVtxPos() {return recoVtxPos_;};
-    inline float                    GetDrTrackCluster() { return drTrackCluster_; };   
+    inline float                    GetDrTrackCluster() { return drTrackCluster_; };
+    inline float                    GetRawTime() {return rawTime_;};
     inline float                    GetTOF() { return GetPropagatedTrackLength()/3E10*1E9; };
     inline pair<float, float>       GetRecHitTimeMaxE() {return GetRecHitTimeE(ecalSeed_);};
+    const reco::Track*              GetTrack();
     float                           GetTrackLength();
     float                           GetPropagatedTrackLength();
     float                           GetGenTOF();
-    void                            GetTrackInfo(float& alpha, float& trackR, float& secant, int& charge);
+    float                           GetECALTime(float smearing=0);
+    float                           GetVtxTime(float smearing=0);
     pair<float, float>              GetRecHitTimeE(DetId id);
     vector<pair<float, float> >     GetRecHitsTimeE();
+    //---setters---
+    void                            SetRecoVtx(const VertexWithFT* recoVtx);
     //---utils---
     inline bool                     hasTime() {if(pfCluster_) return true; return false;};
     void                            TrackReconstruction();
@@ -68,7 +78,7 @@ public:
 private:
     const reco::PFCandidate* pfCand_;
     const reco::PFCluster*   pfCluster_;
-    const reco::Vertex*      recoVtx_;
+    const VertexWithFT*      recoVtx_;
     const MagneticField*     magField_;
     const CaloGeometry*      skGeometry_;
     const SimVertex*         genVtx_;
@@ -76,16 +86,15 @@ private:
     DetId                    ecalSeed_;
     float                    clusterE_;
     float                    maxRecHitE_;
-    float                    absTime_;
+    float                    rawTime_;
+    float                    tSmearing_;
+    float                    smearedRawTime_;
     float                    vtxTime_;
     const reco::Track*       recoTrack_;
     math::XYZVector          ecalPos_;
     math::XYZVector          genVtxPos_;
     math::XYZVector          recoVtxPos_;
-    math::XYZVector          secant_;
-    float                    alpha_;
     float                    trackPt_;
-    float                    trackR_;
     float                    trackL_;
     float                    propagatedTrackL_;
     float                    drTrackCluster_;

@@ -23,7 +23,7 @@
 #include "PhysicsTools/FWLite/interface/TFileService.h"
 
 #include "FastTiming/RecoTreeUtils/interface/PFCandidateWithFT.h"
-#include "FastTiming/RecoTreeUtils/interface/FTTree.h"
+#include "FastTiming/RecoTreeUtils/interface/FTFile.h"
 
 using namespace std;
 
@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
     vector<string> filesList = filesOpt.getParameter<vector<string> >("inputFiles");    
     TFile* outFile = TFile::Open(filesOpt.getParameter<string>("outputFile").c_str(), "recreate");
     outFile->cd();
-    FTTree outTree;
+    FTParticlesTree outTree;
 
     int iEvent=0;
     for(unsigned int iFile=0; iFile<filesList.size(); iFile++)
@@ -79,8 +79,6 @@ int main(int argc, char* argv[])
             if(genVtxHandle.ptr()->size() == 0 || genVtxHandle.ptr()->at(0).vertexId() != 0)
                 continue;
             primaryVtx = &genVtxHandle.ptr()->at(0);
-            //---fake reco vtx--- TODO
-            const reco::Vertex* recoVtx=NULL;
             //---fill gen vtx infos 
             outTree.gen_vtx_z = primaryVtx->position().z();
             outTree.gen_vtx_t = primaryVtx->position().t()*1E9;                
@@ -94,7 +92,7 @@ int main(int argc, char* argv[])
             for(unsigned int iCand=0; iCand<candHandle.ptr()->size(); iCand++)
             {                
                 PFCandidateWithFT particle(&candHandle.ptr()->at(iCand), recVect,
-                                           primaryVtx, recoVtx);
+                                           primaryVtx);
                 if(particle.particleId() > 4 || !particle.GetPFCluster())
                     continue;
                 outTree.particle_n = iCand;
@@ -108,8 +106,6 @@ int main(int argc, char* argv[])
                 outTree.all_time.clear();
                 outTree.all_energy.clear();
                 outTree.track_length = particle.GetTrackLength();
-                particle.GetTrackInfo(outTree.track_alpha, outTree.track_radius,
-                                      outTree.track_secant, outTree.track_charge);
                 outTree.trackCluster_dr = particle.GetDrTrackCluster();                
                 vector<pair<float, float> > TandE = particle.GetRecHitsTimeE();
                 if(TandE.size() == 0)

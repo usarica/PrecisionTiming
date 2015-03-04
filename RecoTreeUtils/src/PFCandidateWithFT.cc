@@ -1,16 +1,17 @@
 #include "FastTiming/RecoTreeUtils/interface/PFCandidateWithFT.h"
 
+typedef std::vector<reco::TrackBaseRef >::const_iterator trackRef_iterator;
+
 //**********Ctors*************************************************************************
 
-PFCandidateWithFT::PFCandidateWithFT():
-    clusterE_(0), maxRecHitE_(0), absTime_(0), vtxTime_(0)
+PFCandidateWithFT::PFCandidateWithFT()
 {}
 
 PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<EcalRecHit>* ecalRecHits,
-                                     const SimVertex* genVtx, const reco::Vertex* recoVtx,
+                                     const SimVertex* genVtx, const VertexWithFT* recoVtx,
                                      const CaloGeometry* skGeometry, const MagneticField* magField):
-  reco::PFCandidate(*PFCand), clusterE_(0), maxRecHitE_(0), absTime_(0), vtxTime_(genVtx->position().t()), 
-  ecalPos_(0,0,0), genVtxPos_(0,0,0), secant_(0,0,0), alpha_(0), trackR_(0), trackL_(-1), propagatedTrackL_(-1)
+  reco::PFCandidate(*PFCand), clusterE_(0), maxRecHitE_(0), rawTime_(0), vtxTime_(genVtx->position().t()),
+  ecalPos_(0,0,0), genVtxPos_(0,0,0), recoVtxPos_(0,0,0), trackL_(-1), propagatedTrackL_(-1)
 {
     pfCand_ = PFCand;
     magField_ = magField;
@@ -20,15 +21,17 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<Eca
     recoVtx_ = recoVtx;
     pfCluster_ = NULL;
     recoTrack_ = NULL;
-
+    smearedRawTime_=0;
+    tSmearing_=-1;
     //---gen vtx info---
     genVtxPos_ = math::XYZVector(genVtx_->position().x(),
                                  genVtx_->position().y(),
                                  genVtx_->position().z());
     //---reco vtx info---
-    recoVtxPos_ = math::XYZVector(recoVtx_->position().x(),
-                                  recoVtx_->position().y(),
-                                  recoVtx_->position().z());
+    if(recoVtx_)
+        recoVtxPos_ = math::XYZVector(recoVtx_->position().x(),
+                                      recoVtx_->position().y(),
+                                      recoVtx_->position().z());
     //---get the right ecal cluster---
     float min_dist_cluster = 100;
     for(auto& blockPair : pfCand_->elementsInBlocks())
@@ -40,10 +43,10 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<Eca
             reco::PFCluster tmpCluster = *blockElement.clusterRef().get();	 
             tmpCluster.calculatePositionREP();
             REPPoint pfClusterPos = tmpCluster.positionREP();
-            float tmp_dist=DeltaR(pfClusterPos.Eta(), pfCand_->eta(),
-                                  pfClusterPos.Phi(), pfCand_->phi());
+            float tmp_dist=deltaR(pfClusterPos.Eta(), pfClusterPos.Phi(),
+                                  pfCand_->eta(), pfCand_->phi());
             if(tmp_dist < min_dist_cluster)
-	    {
+            {
                 min_dist_cluster = tmp_dist;
                 pfCluster_ = blockElement.clusterRef().get();
 	    }
@@ -56,7 +59,7 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<Eca
         {
             const CaloCellGeometry* cell=skGeometry_->getGeometry(ecalSeed_);
             ecalPos_ = dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(3*0.4-0.075-0.25);
-            absTime_ = GetRecHitTimeMaxE().first + vtxTime_*1E9 + GetGenTOF();
+            rawTime_ = GetRecHitTimeMaxE().first + vtxTime_*1E9 + GetGenTOF();
         }
     }
 }
@@ -133,15 +136,59 @@ float PFCandidateWithFT::GetGenTOF()
     return (recoVtxPos_ - ecalPos_).R()/30;
 }
 
+//----------Apply a time resolution smearing to the raw time------------------------------
+//---NOTE: smearing must be in ns
+float PFCandidateWithFT::GetECALTime(float smearing)
+{
+    if(tSmearing_ == -1)
+    {
+        //---unique seed
+        TRandom rndm(0);
+        tSmearing_ = smearing;
+        smearedRawTime_ = rndm.Gaus(rawTime_, smearing);
+    }
+    return smearedRawTime_;
+}
+
+//----------Get TOF corrected vtx time----------------------------------------------------
+float PFCandidateWithFT::GetVtxTime(float smearing)
+{
+    if(tSmearing_ == -1)
+        GetECALTime(smearing);
+
+    return smearedRawTime_ - GetTOF();
+}
+
+//----------Get the right track ref from the PFBlock--------------------------------------
+const reco::Track* PFCandidateWithFT::GetTrack()
+{
+    if(recoTrack_)
+        return recoTrack_;
+    //---get the track from the PFBlock
+    float min_dist_track = 100;
+    for(auto& blockPair : pfCand_->elementsInBlocks())
+    {
+	unsigned int pos = blockPair.second;
+	const reco::PFBlockElement& blockElement = blockPair.first->elements()[pos];
+        if(blockElement.type() == 1 && blockElement.trackRef().isAvailable())
+        {
+            recoTrack_ = blockElement.trackRef().get();	 
+            float tmp_dist = deltaR(recoTrack_->eta(), recoTrack_->phi(),
+                                    pfCand_->eta(), pfCand_->phi());
+            if(tmp_dist < min_dist_track)
+                min_dist_track = tmp_dist;
+        }
+    }
+    return recoTrack_;
+}
+
 //----------Get track length--------------------------------------------------------------
 float PFCandidateWithFT::GetTrackLength()
 {
     if(pfCand_->particleId() < 4)
     {
-        if(!recoTrack_)
+        if(trackL_ == -1)
             TrackReconstruction();
-        return trackL_;
-
     }
     return trackL_;
 }
@@ -153,7 +200,7 @@ float PFCandidateWithFT::GetPropagatedTrackLength()
     if(pfCand_->particleId() < 4)
     {
         if(!recoTrack_)
-            TrackReconstruction();
+            GetTrack();
         if(recoTrack_)
         {
             GlobalPoint startingPoint(recoVtxPos_.x(), recoVtxPos_.y(), recoVtxPos_.z());
@@ -165,50 +212,37 @@ float PFCandidateWithFT::GetPropagatedTrackLength()
             SteppingHelixPropagator propagator(magField_);
             propagatedTrackL_ = propagator.propagateWithPath(trajectory, endPoint).second;
         }
-    }    
+    }
     return propagatedTrackL_;
-}
-
-//----------Simple track info getter------------------------------------------------------
-void PFCandidateWithFT::GetTrackInfo(float& alpha, float& trackR, float& secant, int& charge)
-{
-    alpha = alpha_;
-    trackR = trackR_;
-    secant = secant;
-    charge = pfCand_->charge();
-    return;
 }
 
 //----------Track reconstruction----------------------------------------------------------
 void PFCandidateWithFT::TrackReconstruction()
 {
-    float min_dist_track = 100;
-    for(auto& blockPair : pfCand_->elementsInBlocks())
-    {
-	unsigned int pos = blockPair.second;
-	const reco::PFBlockElement& blockElement = blockPair.first->elements()[pos];
-        if(blockElement.type() == 1 && blockElement.trackRef().isAvailable())
-        {
-            recoTrack_ = blockElement.trackRef().get();	 
-            //---Characteristics of the track
-            const reco::PFBlockElementTrack& elementTrack = dynamic_cast<const reco::PFBlockElementTrack &>(blockElement);
-            
-            float tmp_dist = DeltaR(recoTrack_->eta(), pfCand_->eta(),
-                                    recoTrack_->phi(), pfCand_->phi());
-            if(tmp_dist < min_dist_track)
-            {
-                min_dist_track = tmp_dist;
-                secant_ = math::XYZVector(ecalPos_.x()-recoVtxPos_.x(), ecalPos_.y()-recoVtxPos_.y(), 0);              
-                trackPt_ = elementTrack.trackRef()->pt();
-                trackR_ = trackPt_*100 / 0.3 / 3.8;
-                alpha_ = asin(secant_.R() / (2*trackR_));
-                trackL_ = sqrt(pow(2*alpha_*trackR_, 2) + pow(ecalPos_.z()-recoVtxPos_.z(), 2));
-
-                // DEBUG: controllare (con pietro magari) la differenza tra le diverse approssimazioni
-                //        utili per calcolare la traccia.
-                //trackR_ = (trackL_ - (fabs(pfTrackPos.z()-vtxPos_.z()))/100/cos(asin(pfCand_->pt()/pfCand_->p())))/3E8;
-                //trackR_ = (2*alpha_*trackR_ - secant_.R()/100)/3E8;
-            }
-        }
-    }
+    if(!recoTrack_)
+        GetTrack();
+    
+    math::XYZVector secant(ecalPos_.x()-recoVtxPos_.x(), ecalPos_.y()-recoVtxPos_.y(), 0);              
+    trackPt_ = recoTrack_->pt();
+    float trackR = trackPt_*100 / 0.3 / 3.8;
+    float alpha = asin(secant.R() / (2*trackR));
+    trackL_ = sqrt(pow(2*alpha*trackR, 2) + pow(ecalPos_.z()-recoVtxPos_.z(), 2));
+    // DEBUG: controllare (con pietro magari) la differenza tra le diverse approssimazioni
+    //        utili per calcolare la traccia.
+    //trackR_ = (trackL_ - (fabs(pfTrackPos.z()-vtxPos_.z()))/100/cos(asin(pfCand_->pt()/pfCand_->p())))/3E8;
+    //trackR_ = (2*alpha_*trackR_ - secant_.R()/100)/3E8;
 }
+
+//**********Setters***********************************************************************
+
+//----------Set primary reco vtx reference------------------------------------------------
+void PFCandidateWithFT::SetRecoVtx(const VertexWithFT* recoVtx)
+{
+    if(!recoVtx)
+        return;
+    recoVtx_ = recoVtx;
+    recoVtxPos_ = math::XYZVector(recoVtx_->position().x(),
+                                  recoVtx_->position().y(),
+                                  recoVtx_->position().z());
+}
+
