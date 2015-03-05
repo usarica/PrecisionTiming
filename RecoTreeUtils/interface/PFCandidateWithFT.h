@@ -47,14 +47,14 @@ public:
     //---ctors---
     PFCandidateWithFT();
     PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<EcalRecHit>* ecalRecHits,
-                      const SimVertex* genVtx, const VertexWithFT* recoVtx=NULL,
+                      const SimVertex* genVtx, VertexWithFT* recoVtx=NULL,
                       const CaloGeometry* skGeometry=NULL, const MagneticField* magField=NULL);
     //---dtor---
     ~PFCandidateWithFT();
     //---getters---
     inline const reco::PFCluster*   GetPFCluster() {return pfCluster_;};
     inline const reco::PFCandidate* GetPFCandidate() const {return pfCand_;}; 
-    inline const VertexWithFT*      GetRecoVtx() {return recoVtx_;};
+    inline VertexWithFT*            GetRecoVtx() {return recoVtx_;};
     inline math::XYZVector          GetRecoVtxPos() {return recoVtxPos_;};
     inline float                    GetDrTrackCluster() { return drTrackCluster_; };
     inline float                    GetRawTime() {return rawTime_;};
@@ -69,7 +69,7 @@ public:
     pair<float, float>              GetRecHitTimeE(DetId id);
     vector<pair<float, float> >     GetRecHitsTimeE();
     //---setters---
-    void                            SetRecoVtx(const VertexWithFT* recoVtx);
+    void                            SetRecoVtx(VertexWithFT* recoVtx);
     //---utils---
     inline bool                     hasTime() {if(pfCluster_) return true; return false;};
     void                            TrackReconstruction();
@@ -78,10 +78,10 @@ public:
 private:
     const reco::PFCandidate* pfCand_;
     const reco::PFCluster*   pfCluster_;
-    const VertexWithFT*      recoVtx_;
     const MagneticField*     magField_;
     const CaloGeometry*      skGeometry_;
     const SimVertex*         genVtx_;
+    VertexWithFT*            recoVtx_;
     vector<EcalRecHit>*      recHitColl_;
     DetId                    ecalSeed_;
     float                    clusterE_;

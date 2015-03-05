@@ -40,6 +40,7 @@ public:
     float track_length;
     float track_length_helix;
     float track_dz;
+    float track_dxy;
     float trackCluster_dr;
     vector<float> all_time;
     vector<float> all_energy;
@@ -71,6 +72,7 @@ FTParticlesTree::FTParticlesTree()
     track_length=0;
     track_length_helix=0;
     track_dz=0;
+    track_dxy=0;
     trackCluster_dr=0;
 
     //---create branches
@@ -91,6 +93,7 @@ FTParticlesTree::FTParticlesTree()
     tree_->Branch("track_length", &track_length, "track_length/F");
     tree_->Branch("track_length_helix", &track_length_helix, "track_length_helix/F");
     tree_->Branch("track_dz", &track_dz, "track_dz/F");
+    tree_->Branch("track_dxy", &track_dxy, "track_dxy/F");
     tree_->Branch("trackCluster_dr", &trackCluster_dr, "trackCluster_dr/F");
     tree_->Branch("all_time", "std::vector<float>", &all_time);
     tree_->Branch("all_energy", "std::vector<float>", &all_energy);
