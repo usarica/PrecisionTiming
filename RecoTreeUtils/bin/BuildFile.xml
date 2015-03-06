@@ -9,6 +9,6 @@
 <use   name="PhysicsTools/Utilities"/>
 <use   name="PhysicsTools/SelectorUtils"/>
 <use   name="FastTiming/RecoTreeUtils"/>
-<environment>
-  <bin   file="matchEcalRecHits.cpp"></bin>
-</environment>
+<!-- <environment> -->
+<!--   <bin   file="matchEcalRecHits.cpp"></bin> -->
+<!-- </environment> -->

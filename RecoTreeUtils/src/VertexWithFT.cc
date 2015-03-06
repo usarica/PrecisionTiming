@@ -13,15 +13,15 @@ VertexWithFT::VertexWithFT(const reco::Vertex* recoVtx):
 }
 
 //----------Get particles container-------------------------------------------------------
-vector<pair<PFCandidateWithFT, float> > VertexWithFT::GetParticles()
+vector<pair<PFCandidateWithFT*, float> > VertexWithFT::GetParticles()
 {
     return particles_;
 }
 
 //----------Set the seed for the combined space-time vtx reco-----------------------------
-void VertexWithFT::SetSeed(PFCandidateWithFT seed)
+void VertexWithFT::SetSeed(PFCandidateWithFT* seed)
 {
-    if(!seed.GetTrack())
+    if(!seed->GetTrack())
         return;
     if(hasSeed_)
         particles_.clear();
@@ -32,7 +32,7 @@ void VertexWithFT::SetSeed(PFCandidateWithFT seed)
 }
     
 //----------Add particle to the vertex----------------------------------------------------
-void VertexWithFT::AddParticle(PFCandidateWithFT particle, float dz)
+void VertexWithFT::AddParticle(PFCandidateWithFT* particle, float dz)
 {
     if(!hasSeed_)
         SetSeed(particle);
@@ -40,7 +40,7 @@ void VertexWithFT::AddParticle(PFCandidateWithFT particle, float dz)
     {
         float dz_tmp=dz;
         if(dz_tmp == -1000)
-            dz_tmp = particle.GetTrack()->dz(this->position());
+            dz_tmp = particle->GetTrack()->dz(this->position());
 
         particles_.push_back(make_pair(particle, dz_tmp));
     }
@@ -48,7 +48,7 @@ void VertexWithFT::AddParticle(PFCandidateWithFT particle, float dz)
 }
 
 //----------Remove particle to the vertex-------------------------------------------------
-void VertexWithFT::RemoveParticle(PFCandidateWithFT particle)
+void VertexWithFT::RemoveParticle(PFCandidateWithFT* particle)
 {
 }
 
@@ -65,7 +65,7 @@ int VertexWithFT::GetNPart(float dz_cut, float smearing)
 PFCandidateWithFT* VertexWithFT::GetSeedRef()
 {
     if(hasSeed())
-        return &(particles_.at(0).first);
+        return particles_.at(0).first;
 
     return NULL;
 }
@@ -77,10 +77,10 @@ float VertexWithFT::ComputeTime(float pt_cut, float smearing)
     n_time_tracks_ = 0;
     for(unsigned int iPart=0; iPart<particles_.size(); ++iPart)
     {
-        float pt_tmp = particles_.at(iPart).first.GetPFCandidate()->pt();
-        if(pt_tmp > pt_cut && particles_.at(iPart).first.hasTime())
+        float pt_tmp = particles_.at(iPart).first->pt();
+        if(pt_tmp > pt_cut && particles_.at(iPart).first->hasTime())
         {
-            time_ += particles_.at(iPart).first.GetVtxTime(smearing);
+            time_ += particles_.at(iPart).first->GetVtxTime(smearing);
             ++n_time_tracks_;
         }
     }
@@ -100,7 +100,7 @@ float VertexWithFT::sumPtSquared(float dz_cut, float pt_cut) const
     double pT;
     for(unsigned int iPart=0; iPart<particles_.size(); ++iPart)
     {
-        pT = particles_.at(iPart).first.GetPFCandidate()->pt();
+        pT = particles_.at(iPart).first->pt();
         if(fabs(particles_.at(iPart).second) < dz_cut && pT > pt_cut)           
             sum += pT*pT;
     }

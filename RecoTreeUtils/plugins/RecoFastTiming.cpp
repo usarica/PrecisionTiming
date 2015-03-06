@@ -35,7 +35,7 @@ public:
 
     //---utils---
     int          FindPrimaryVtx(PFCandidateWithFT* particle);
-    void         AssignParticleToVertices();
+    void         AssignParticleToVertices(vector<PFCandidateWithFT*>* particles);
     
 private:
     virtual void beginJob();
@@ -58,8 +58,9 @@ private:
     // edm::Handle<vector<reco::GenJet> > genJetsHandle;
     edm::Handle<edm::SortedCollection<EcalRecHit, 
                                       edm::StrictWeakOrdering<EcalRecHit > > > recSort;
+    //---FT objects---
     vector<VertexWithFT> recoVtxCollection;
-    vector<PFCandidateWithFT> particles;
+    vector<PFCandidateWithFT> particlesCollection;
 };
 
 void RecoFastTiming::beginJob()
@@ -117,82 +118,43 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
     //---convert all particles---
     Event.getByLabel("particleFlow", candHandle);
     PFCandidateWithFT particle;
-    particles.clear();
+    particlesCollection.clear();
     for(unsigned int iCand=0; iCand<candHandle.product()->size(); ++iCand)
     {
-        particle = PFCandidateWithFT(&candHandle.product()->at(iCand), 
-                                     recVect, genVtx, recoVtx, skGeometry, magField);        
-        if(particle.GetPFCandidate()->particleId() < 4 &&
-           particle.GetPFCandidate()->pt() > 0.5 && particle.hasTime())
-        {
-            FindPrimaryVtx(&particle);
-            if(!particle.GetRecoVtx()->hasSeed() ||
-               particle.GetRecoVtx()->GetSeedRef()->GetPFCandidate()->pt() < particle.GetPFCandidate()->pt())
-            {
-                //---store the old seed in di particles collection
-                //---redundant since di PFCandidate collection is pt ordered
-                if(particle.GetRecoVtx()->hasSeed())
-                    particles.push_back(*particle.GetRecoVtx()->GetSeedRef());
-                //---set the new seed
-                particle.GetRecoVtx()->SetSeed(particle);
-            }
-            else
-                particles.push_back(particle);
-        }
-        else
-            particles.push_back(particle);        
-    }
-    AssignParticleToVertices();
-    //---loop over all particles---
-    for(unsigned int iCand=0; iCand<candHandle.product()->size(); ++iCand)
-    {
-        continue;
         particle = PFCandidateWithFT(&candHandle.product()->at(iCand), 
                                      recVect, genVtx, recoVtx, skGeometry, magField);
-        if(particle.GetPFCandidate()->particleId() >= 4)
-            continue;        
-        //---assign the right primary vtx to the track
-        int index_tmp = FindPrimaryVtx(&particle);
-        //---fill output tree---
-        if(particle.hasTime())
-        {
-            //---fill gen vtx infos 
-            outFile->particlesTree.gen_vtx_z = genVtx->position().z();
-            outFile->particlesTree.gen_vtx_t = genVtx->position().t()*1E9;                
-            //---particle variables
-            outFile->particlesTree.particle_n = iCand;
-            outFile->particlesTree.particle_type = particle.GetPFCandidate()->particleId();
-            outFile->particlesTree.particle_E = particle.GetPFCandidate()->energy();
-            outFile->particlesTree.particle_pt = particle.GetPFCandidate()->pt();
-            outFile->particlesTree.particle_eta = particle.GetPFCandidate()->eta();
-            outFile->particlesTree.particle_phi = particle.GetPFCandidate()->phi();
-            //---ecal time variables
-            outFile->particlesTree.maxE_time = particle.GetRecHitTimeMaxE().first;
-            outFile->particlesTree.maxE_energy = particle.GetRecHitTimeMaxE().second;
-            outFile->particlesTree.all_time.clear();
-            outFile->particlesTree.all_energy.clear();
-            //---vertex reco info
-            outFile->particlesTree.reco_vtx_index = index_tmp;
-            outFile->particlesTree.reco_vtx_t = particle.GetRawTime()-particle.GetTOF();
-            outFile->particlesTree.reco_vtx_z = particle.GetRecoVtxPos().z();
-            //---track info
-            outFile->particlesTree.track_length = particle.GetTrackLength();
-            outFile->particlesTree.track_length_helix = particle.GetPropagatedTrackLength();
-            outFile->particlesTree.track_dz = particle.GetTrack()->dz(particle.GetRecoVtx()->position());
-            outFile->particlesTree.track_dxy = particle.GetTrack()->dxy(particle.GetRecoVtx()->position());
-            outFile->particlesTree.trackCluster_dr = particle.GetDrTrackCluster();                
-            vector<pair<float, float> > TandE = particle.GetRecHitsTimeE();
-            if(TandE.size() == 0)
-                continue;
-            for(unsigned int iRec=0; iRec<TandE.size(); ++iRec)
-            {
-                outFile->particlesTree.all_time.push_back(TandE.at(iRec).first);
-                outFile->particlesTree.all_energy.push_back(TandE.at(iRec).second);
-            }
-            outFile->particlesTree.Fill();
-        }
+        particlesCollection.push_back(particle);
     }
+    //---search for seeds particles---
+    vector<PFCandidateWithFT*> particlesRefs;
+    for(unsigned int iPart=0; iPart<particlesCollection.size(); ++iPart)
+    {
+        PFCandidateWithFT* particleRef = &particlesCollection.at(iPart);
+        if(particleRef->particleId() < 4 &&
+           particleRef->pt() > 0.5 && particleRef->hasTime())
+        {
+            FindPrimaryVtx(particleRef);
+            if(!particleRef->GetRecoVtx()->hasSeed() ||
+               particleRef->GetRecoVtx()->GetSeedRef()->pt() < particleRef->pt())
+            {
+                //---store the old seed in di particles collection
+                //---redundant since di particles collection is pt ordered
+                if(particleRef->GetRecoVtx()->hasSeed())
+                    particlesRefs.push_back(particleRef->GetRecoVtx()->GetSeedRef());
+                //---set the new seed
+                particleRef->GetRecoVtx()->SetSeed(particleRef);
+            }
+            else
+                particlesRefs.push_back(particleRef);
+        }
+        else
+            particlesRefs.push_back(particleRef);        
+    }
+    //---link the remaining charged particles to vtxs---
+    AssignParticleToVertices(&particlesRefs);
+    //---sort the vtxs by sumpt2---
     sort(recoVtxCollection.begin(), recoVtxCollection.end());
+    //---compute vtxs times and fill tho output tree---
     for(unsigned int iVtx=0; iVtx<recoVtxCollection.size(); ++iVtx)
     {
         outFile->verticesTree.event_n = iEvent;
@@ -231,27 +193,27 @@ int RecoFastTiming::FindPrimaryVtx(PFCandidateWithFT* particle)
     return goodVtx;
 }
 
-void RecoFastTiming::AssignParticleToVertices()
+void RecoFastTiming::AssignParticleToVertices(vector<PFCandidateWithFT*>* particles)
 {
-    vector<PFCandidateWithFT>::iterator it;
-    while(particles.size() != 0)
+    vector<PFCandidateWithFT*>::iterator it;
+    while(particles->size() != 0)
     {
-        it=particles.end();
+        it=particles->end();
         --it;
-        if(!it->GetTrack())
+        if(!(*it)->GetTrack())
         {
-            particles.pop_back();
+            particles->pop_back();
             continue;
         }
         int goodVtx=-1;
         float dz_min=100, dt_min=10;
         for(unsigned int iVtx=0; iVtx<recoVtxCollection.size(); ++iVtx)
         {
-            float dz_tmp = fabs(it->GetTrack()->dz(recoVtxCollection.at(iVtx).position()));
+            float dz_tmp = fabs((*it)->GetTrack()->dz(recoVtxCollection.at(iVtx).position()));
             if(recoVtxCollection.at(iVtx).hasSeed() && dz_tmp < 0.2)
             {
-                it->SetRecoVtx(&recoVtxCollection.at(iVtx));
-                float dt_tmp = fabs(it->GetVtxTime()-recoVtxCollection.at(iVtx).ComputeTime());
+                (*it)->SetRecoVtx(&recoVtxCollection.at(iVtx));
+                float dt_tmp = fabs((*it)->GetVtxTime()-recoVtxCollection.at(iVtx).ComputeTime());
                 if(dz_tmp < dz_min && dt_tmp < 0.03*2 && dt_tmp < dt_min)
                     goodVtx=iVtx;
             }
@@ -259,12 +221,61 @@ void RecoFastTiming::AssignParticleToVertices()
         if(goodVtx != -1)
         {
             recoVtxCollection.at(goodVtx).AddParticle(*it);
-            it->SetRecoVtx(&recoVtxCollection.at(goodVtx));
+            (*it)->SetRecoVtx(&recoVtxCollection.at(goodVtx));
         }
-        particles.pop_back();        
+        particles->pop_back();        
     }
 }
 
 //define this as a plugin
 DEFINE_FWK_MODULE(RecoFastTiming);
 
+    // //---loop over all particles---
+    // for(unsigned int iCand=0; iCand<candHandle.product()->size(); ++iCand)
+    // {
+    //     continue;
+    //     particle = PFCandidateWithFT(&candHandle.product()->at(iCand), 
+    //                                  recVect, genVtx, recoVtx, skGeometry, magField);
+    //     if(particle.GetPFCandidate()->particleId() >= 4)
+    //         continue;        
+    //     //---assign the right primary vtx to the track
+    //     int index_tmp = FindPrimaryVtx(&particle);
+    //     //---fill output tree---
+    //     if(particle.hasTime())
+    //     {
+    //         //---fill gen vtx infos 
+    //         outFile->particlesTree.gen_vtx_z = genVtx->position().z();
+    //         outFile->particlesTree.gen_vtx_t = genVtx->position().t()*1E9;                
+    //         //---particle variables
+    //         outFile->particlesTree.particle_n = iCand;
+    //         outFile->particlesTree.particle_type = particle.GetPFCandidate()->particleId();
+    //         outFile->particlesTree.particle_E = particle.GetPFCandidate()->energy();
+    //         outFile->particlesTree.particle_pt = particle.GetPFCandidate()->pt();
+    //         outFile->particlesTree.particle_eta = particle.GetPFCandidate()->eta();
+    //         outFile->particlesTree.particle_phi = particle.GetPFCandidate()->phi();
+    //         //---ecal time variables
+    //         outFile->particlesTree.maxE_time = particle.GetRecHitTimeMaxE().first;
+    //         outFile->particlesTree.maxE_energy = particle.GetRecHitTimeMaxE().second;
+    //         outFile->particlesTree.all_time.clear();
+    //         outFile->particlesTree.all_energy.clear();
+    //         //---vertex reco info
+    //         outFile->particlesTree.reco_vtx_index = index_tmp;
+    //         outFile->particlesTree.reco_vtx_t = particle.GetRawTime()-particle.GetTOF();
+    //         outFile->particlesTree.reco_vtx_z = particle.GetRecoVtxPos().z();
+    //         //---track info
+    //         outFile->particlesTree.track_length = particle.GetTrackLength();
+    //         outFile->particlesTree.track_length_helix = particle.GetPropagatedTrackLength();
+    //         outFile->particlesTree.track_dz = particle.GetTrack()->dz(particle.GetRecoVtx()->position());
+    //         outFile->particlesTree.track_dxy = particle.GetTrack()->dxy(particle.GetRecoVtx()->position());
+    //         outFile->particlesTree.trackCluster_dr = particle.GetDrTrackCluster();                
+    //         vector<pair<float, float> > TandE = particle.GetRecHitsTimeE();
+    //         if(TandE.size() == 0)
+    //             continue;
+    //         for(unsigned int iRec=0; iRec<TandE.size(); ++iRec)
+    //         {
+    //             outFile->particlesTree.all_time.push_back(TandE.at(iRec).first);
+    //             outFile->particlesTree.all_energy.push_back(TandE.at(iRec).second);
+    //         }
+    //         outFile->particlesTree.Fill();
+    //     }
+    // }

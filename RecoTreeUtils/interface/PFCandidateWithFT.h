@@ -41,7 +41,7 @@ class VertexWithFT;
 
 //****************************************************************************************
 
-class PFCandidateWithFT
+class PFCandidateWithFT : public reco::PFCandidate
 {
 public:
     //---ctors---
@@ -53,7 +53,7 @@ public:
     ~PFCandidateWithFT();
     //---getters---
     inline const reco::PFCluster*   GetPFCluster() {return pfCluster_;};
-    inline const reco::PFCandidate* GetPFCandidate() const {return pfCand_;}; 
+    inline const reco::PFCandidate* GetPFCandidateRef() const {return pfCand_;}; 
     inline VertexWithFT*            GetRecoVtx() {return recoVtx_;};
     inline math::XYZVector          GetRecoVtxPos() {return recoVtxPos_;};
     inline float                    GetDrTrackCluster() { return drTrackCluster_; };
