@@ -23,7 +23,8 @@ public:
     //---getters---
     inline const reco::Vertex*               GetRecoVtxRef() {return recoVtxRef_;};
     PFCandidateWithFT*                       GetSeedRef();
-    vector<pair<PFCandidateWithFT*, float> > GetParticles();
+    vector<pair<PFCandidateWithFT*, float> > GetParticlesWithDZ();
+    vector<PFCandidateWithFT*>               GetParticles();
     int                                      GetNPart(float dz_cut=0.1, float smearing=0);
     float                                    ComputeTime(float pt_cut=2, float smearing=0);
 
@@ -31,9 +32,10 @@ public:
     void          SetSeed(PFCandidateWithFT* seed);
     
     //---utils---
+    float         sumPtSquared(float dz_cut=0.2, float pt_cut=1) const;
     void          AddParticle(PFCandidateWithFT* particle, float dz=-1000);
     void          RemoveParticle(PFCandidateWithFT* particle);
-    float         sumPtSquared(float dz_cut=0.2, float pt_cut=1) const;
+    void          FixVtxRefs();
     bool          hasSeed() {return hasSeed_;};
 
 private:

@@ -9,6 +9,7 @@ options.register('sampleName',
                  VarParsing.multiplicity.singleton,
                  VarParsing.varType.string,
                  "sample to process")
+options.maxEvents = 500
 options.parseArguments()
 
 ## Get I/O files from the list given the sample name
@@ -28,8 +29,10 @@ process.load('Configuration.Geometry.GeometryExtended2023SHCalNoTaperReco_cff')
 process.load('Configuration.Geometry.GeometryExtended2023SHCalNoTaper_cff')
 process.load('Configuration.StandardSequences.MagneticField_38T_PostLS1_cff')
 process.load('Configuration/EventContent/EventContent_cff')
+## import standard RecoFT configurations
+process.load("FastTiming.RecoTreeUtils.RecoFastTiming_cff")
 
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(500) )
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(options.maxEvents))
 
 process.source = cms.Source("PoolSource",
                             fileNames = filesOpt.inputFiles)
@@ -39,6 +42,6 @@ process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
 process.TFileService = cms.Service("TFileService",
                             fileName = filesOpt.outputFile)
 
-process.ft = cms.EDAnalyzer('RecoFastTiming')
+process.ft_path = cms.Sequence(process.RecoFastTiming)
 
-process.p = cms.Path(process.ft)
+process.path = cms.Path(process.ft_path)

@@ -12,11 +12,22 @@ VertexWithFT::VertexWithFT(const reco::Vertex* recoVtx):
     recoVtxRef_ = recoVtx;
 }
 
-//----------Get particles container-------------------------------------------------------
-vector<pair<PFCandidateWithFT*, float> > VertexWithFT::GetParticles()
+//----------Get particles container with dz info------------------------------------------
+vector<pair<PFCandidateWithFT*, float> > VertexWithFT::GetParticlesWithDZ()
 {
     return particles_;
 }
+
+//----------Get particles list------------------------------------------------------------
+vector<PFCandidateWithFT*> VertexWithFT::GetParticles()
+{
+    vector<PFCandidateWithFT*> particles;
+    for(unsigned int iPart=0; iPart<particles_.size(); ++iPart)
+        particles.push_back(particles_.at(iPart).first);
+    
+    return particles;
+}
+
 
 //----------Set the seed for the combined space-time vtx reco-----------------------------
 void VertexWithFT::SetSeed(PFCandidateWithFT* seed)
@@ -93,7 +104,6 @@ float VertexWithFT::ComputeTime(float pt_cut, float smearing)
 }
 
 //----------compute sumpt2 using all the particles related to the vtx---------------------
-
 float VertexWithFT::sumPtSquared(float dz_cut, float pt_cut) const
 {
     double sum = 0.;
@@ -106,8 +116,22 @@ float VertexWithFT::sumPtSquared(float dz_cut, float pt_cut) const
     }
     return sum;
 }
-    
-//----------relation operators------------------------------------------------------------
+
+//**********Utils*************************************************************************
+
+//----------update associated particles vtx reference-------------------------------------
+void VertexWithFT::FixVtxRefs()
+{
+    for(unsigned int iPart=0; iPart<particles_.size(); ++iPart)
+    {
+        if(particles_.at(iPart).first->GetRecoVtx() != this)
+            particles_.at(iPart).first->SetRecoVtx(this);
+    }
+
+    return;
+}        
+
+//**********relation operators************************************************************
 
 bool operator< (const VertexWithFT& v1, const VertexWithFT& v2)
 {

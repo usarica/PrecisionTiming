@@ -118,7 +118,11 @@ public:
     float gen_vtx_t;
     int reco_vtx_index;
     int reco_vtx_n_part;
+    float reco_vtx_ndof;
+    float reco_vtx_chi2;
     float reco_vtx_sumpt2;
+    float reco_vtx_seed_pt;
+    float reco_vtx_seed_t;
     float reco_vtx_z;
     float reco_vtx_t;
 
@@ -137,7 +141,11 @@ FTVerticesTree::FTVerticesTree()
     gen_vtx_t=0;
     reco_vtx_index=0;
     reco_vtx_n_part=0;
+    reco_vtx_ndof=0;
+    reco_vtx_chi2=0;
     reco_vtx_sumpt2=0;
+    reco_vtx_seed_pt=0;
+    reco_vtx_seed_t=0;
     reco_vtx_z=0;
     reco_vtx_t=0;
 
@@ -147,7 +155,11 @@ FTVerticesTree::FTVerticesTree()
     tree_->Branch("gen_vtx_t", &gen_vtx_t, "gen_vtx_t/F");
     tree_->Branch("reco_vtx_index", &reco_vtx_index, "reco_vtx_index/I");
     tree_->Branch("reco_vtx_n_part", &reco_vtx_n_part, "reco_vtx_n_part/I");
+    tree_->Branch("reco_vtx_ndof", &reco_vtx_ndof, "reco_vtx_ndof/F");
+    tree_->Branch("reco_vtx_chi2", &reco_vtx_chi2, "reco_vtx_chi2/F");
     tree_->Branch("reco_vtx_sumpt2", &reco_vtx_sumpt2, "reco_vtx_sumpt2/F");
+    tree_->Branch("reco_vtx_seed_pt", &reco_vtx_seed_pt, "reco_vtx_seed_pt/F");
+    tree_->Branch("reco_vtx_seed_t", &reco_vtx_seed_t, "reco_vtx_seed_t/F");
     tree_->Branch("reco_vtx_z", &reco_vtx_z, "reco_vtx_z/F");
     tree_->Branch("reco_vtx_t", &reco_vtx_t, "reco_vtx_t/F");
 }

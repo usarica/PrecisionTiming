@@ -72,8 +72,7 @@ public:
     void                            SetRecoVtx(VertexWithFT* recoVtx);
     //---utils---
     inline bool                     hasTime() {if(pfCluster_) return true; return false;};
-    void                            TrackReconstruction();
-    
+    void                            TrackReconstruction();    
 
 private:
     const reco::PFCandidate* pfCand_;
