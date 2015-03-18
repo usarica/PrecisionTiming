@@ -9,6 +9,7 @@ VertexWithFT::VertexWithFT(const reco::Vertex* recoVtx):
     reco::Vertex(recoVtx->position(), recoVtx->error(), recoVtx->chi2(), recoVtx->ndof(), recoVtx->tracksSize()),
     hasSeed_(false), time_(-1000), n_time_tracks_(-1)
 {
+    genVtxRef_ = NULL;
     recoVtxRef_ = recoVtx;
 }
 
@@ -41,7 +42,34 @@ void VertexWithFT::SetSeed(PFCandidateWithFT* seed)
     AddParticle(seed);
     return;
 }
+
+//----------Set gen vtx reference and id--------------------------------------------------
+//--- id=0 => signal
+//--- id>0 => PU
+void VertexWithFT::SetGenVtxRef(const SimVertex* genVtx, int id)
+{
+    genVtxRef_ = genVtx; 
+    genVtxId_ = id;
+
+    return;
+}
+
+//----------Create gen vtx from position and set id---------------------------------------
+//---ATTENTION: for genVtx from the TrackingVertexs collection time is not the abs time
+//---           but is the raw_time - TOF(0,0,0)!
+void VertexWithFT::SetGenVtxRef(math::XYZTLorentzVector vp, int id)
+{
+    math::XYZVector vp3D(vp.x(), vp.y(), vp.z());
+    double raw_t = vp.t();// + vp3D.R()/(3E10);
+    if(genVtxRef_)
+        delete genVtxRef_;
     
+    genVtxRef_ = new SimVertex(vp3D, raw_t*1E9);
+    genVtxId_ = id;
+
+    return;
+}
+
 //----------Add particle to the vertex----------------------------------------------------
 void VertexWithFT::AddParticle(PFCandidateWithFT* particle, float dz)
 {
@@ -50,6 +78,8 @@ void VertexWithFT::AddParticle(PFCandidateWithFT* particle, float dz)
     else
     {
         float dz_tmp=dz;
+        if(particle->particleId() >= 4)
+            dz_tmp = 0;
         if(dz_tmp == -1000)
             dz_tmp = particle->GetTrack()->dz(this->position());
 
@@ -63,15 +93,6 @@ void VertexWithFT::RemoveParticle(PFCandidateWithFT* particle)
 {
 }
 
-//----------Get the number of particles used for the time reconstruction------------------
-int VertexWithFT::GetNPart(float dz_cut, float smearing)
-{
-    if(n_time_tracks_ == -1)
-        ComputeTime(dz_cut, smearing);
-
-    return n_time_tracks_;
-}
-
 //----------Get a reference to the seed particle------------------------------------------
 PFCandidateWithFT* VertexWithFT::GetSeedRef()
 {
@@ -82,12 +103,21 @@ PFCandidateWithFT* VertexWithFT::GetSeedRef()
 }
 
 //----------Compute vertex time-----------------------------------------------------------
-float VertexWithFT::ComputeTime(float pt_cut, float smearing)
+//---particle_type: 0 --> all
+//---               1 --> charged particle
+//---               2 --> neutral (photons)
+float VertexWithFT::ComputeTime(int particle_type, float pt_cut, float smearing)
 {
     time_ = 0;
     n_time_tracks_ = 0;
     for(unsigned int iPart=0; iPart<particles_.size(); ++iPart)
     {
+        //---select the particles type used to compute the vtx time
+        if(particle_type == 1 && particles_.at(iPart).first->particleId() > 3)
+            continue;
+        if(particle_type == 2 && particles_.at(iPart).first->particleId() < 4)
+            continue;
+        //---loop over the selected particles
         float pt_tmp = particles_.at(iPart).first->pt();
         if(pt_tmp > pt_cut && particles_.at(iPart).first->hasTime())
         {
@@ -102,6 +132,70 @@ float VertexWithFT::ComputeTime(float pt_cut, float smearing)
     
     return time_;
 }
+
+float VertexWithFT::ComputeTimeBottomUp(int particle_type, float pt_cut, float smearing)
+{
+    time_ = 0;
+    n_time_tracks_ = 0;
+    vector<int> used_index;
+    for(unsigned int iPart=0; iPart<particles_.size(); ++iPart)
+    {
+        //---select the particles type used to compute the vtx time
+        if(particle_type == 1 && particles_.at(iPart).first->particleId() > 3)
+            continue;
+        if(particle_type == 2 && particles_.at(iPart).first->particleId() < 4)
+            continue;
+        //---loop over the selected particles
+        float pt_tmp = particles_.at(iPart).first->pt();
+        if(pt_tmp > pt_cut && particles_.at(iPart).first->hasTime())
+        {
+            time_ += particles_.at(iPart).first->GetVtxTime(smearing);
+            used_index.push_back(iPart);
+            ++n_time_tracks_;
+        }
+    }
+    time_ = time_ / n_time_tracks_;
+
+    if(n_time_tracks_ < 3)
+        return time_;
+
+    int bad_particle=-1;
+    float new_time=time_;            
+    do
+    {
+        time_ = new_time;
+        float minDeltaRMS=100;
+        for(unsigned int i=0; i<used_index.size(); ++i)
+        {
+            float tRMS=0;
+            float sRMS=0;
+            float tmp_time=((time_*n_time_tracks_) -
+                            particles_.at(used_index.at(i)).first->GetVtxTime(smearing))/(n_time_tracks_-1);
+            for(unsigned int j=0; j<used_index.size(); ++j)
+            {
+                tRMS += pow(time_ - particles_.at(used_index.at(j)).first->GetVtxTime(smearing), 2);
+                if(j != i)
+                    sRMS += pow(tmp_time - particles_.at(used_index.at(j)).first->GetVtxTime(smearing), 2);
+            }
+            tRMS = sqrt(1/(n_time_tracks_-1)*tRMS);
+            sRMS = sqrt(1/(n_time_tracks_-2)*sRMS);
+            float tmpDeltaRMS=tRMS*(sqrt(n_time_tracks_/(n_time_tracks_-1))) - sRMS;
+            if(tmpDeltaRMS > 0 && tmpDeltaRMS < minDeltaRMS)
+            {
+                new_time = tmp_time;
+                bad_particle = i;
+            }
+        }
+        if(bad_particle != -1)
+        {
+            used_index.erase(used_index.begin()+bad_particle);
+            --n_time_tracks_;
+        }
+    }
+    while(n_time_tracks_ > 2 && bad_particle!=-1);
+
+    return time_;
+}                      
 
 //----------compute sumpt2 using all the particles related to the vtx---------------------
 float VertexWithFT::sumPtSquared(float dz_cut, float pt_cut) const

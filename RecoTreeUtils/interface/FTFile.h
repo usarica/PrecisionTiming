@@ -114,10 +114,17 @@ public:
     
     //---branches variables---
     int event_n;
+    float gen_jet_pt;
+    float gen_jet_eta;
+    int gen_vtx_id;
+    float gen_vtx_x;
+    float gen_vtx_y;
     float gen_vtx_z;
     float gen_vtx_t;
     int reco_vtx_index;
     int reco_vtx_n_part;
+    int reco_vtx_n_cha;
+    int reco_vtx_n_neu;
     float reco_vtx_ndof;
     float reco_vtx_chi2;
     float reco_vtx_sumpt2;
@@ -125,6 +132,8 @@ public:
     float reco_vtx_seed_t;
     float reco_vtx_z;
     float reco_vtx_t;
+    float reco_vtx_cha_t;
+    float reco_vtx_neu_t;
 
 private:
 
@@ -136,11 +145,18 @@ FTVerticesTree::FTVerticesTree()
 {
     tree_ = new TTree();
     //---init
-    event_n=0;
+    event_n=0;    
+    gen_jet_pt=0;
+    gen_jet_eta=0;
+    gen_vtx_id=-1;
+    gen_vtx_x=0;
+    gen_vtx_y=0;
     gen_vtx_z=0;
     gen_vtx_t=0;
     reco_vtx_index=0;
     reco_vtx_n_part=0;
+    reco_vtx_n_cha=0;
+    reco_vtx_n_neu=0;
     reco_vtx_ndof=0;
     reco_vtx_chi2=0;
     reco_vtx_sumpt2=0;
@@ -148,13 +164,22 @@ FTVerticesTree::FTVerticesTree()
     reco_vtx_seed_t=0;
     reco_vtx_z=0;
     reco_vtx_t=0;
+    reco_vtx_cha_t=0;
+    reco_vtx_neu_t=0;
 
     //---create branches
     tree_->Branch("event", &event_n, "event/I");
+    tree_->Branch("gen_jet_pt", &gen_jet_pt, "gen_jet_pt/F");
+    tree_->Branch("gen_jet_eta", &gen_jet_eta, "gen_jet_eta/F");
+    tree_->Branch("gen_vtx_id", &gen_vtx_id, "gen_vtx_id/I");
+    tree_->Branch("gen_vtx_x", &gen_vtx_x, "gen_vtx_x/F");
+    tree_->Branch("gen_vtx_y", &gen_vtx_y, "gen_vtx_y/F");
     tree_->Branch("gen_vtx_z", &gen_vtx_z, "gen_vtx_z/F");
     tree_->Branch("gen_vtx_t", &gen_vtx_t, "gen_vtx_t/F");
     tree_->Branch("reco_vtx_index", &reco_vtx_index, "reco_vtx_index/I");
     tree_->Branch("reco_vtx_n_part", &reco_vtx_n_part, "reco_vtx_n_part/I");
+    tree_->Branch("reco_vtx_n_cha", &reco_vtx_n_cha, "reco_vtx_n_cha/I");
+    tree_->Branch("reco_vtx_n_neu", &reco_vtx_n_neu, "reco_vtx_n_neu/I");
     tree_->Branch("reco_vtx_ndof", &reco_vtx_ndof, "reco_vtx_ndof/F");
     tree_->Branch("reco_vtx_chi2", &reco_vtx_chi2, "reco_vtx_chi2/F");
     tree_->Branch("reco_vtx_sumpt2", &reco_vtx_sumpt2, "reco_vtx_sumpt2/F");
@@ -162,6 +187,8 @@ FTVerticesTree::FTVerticesTree()
     tree_->Branch("reco_vtx_seed_t", &reco_vtx_seed_t, "reco_vtx_seed_t/F");
     tree_->Branch("reco_vtx_z", &reco_vtx_z, "reco_vtx_z/F");
     tree_->Branch("reco_vtx_t", &reco_vtx_t, "reco_vtx_t/F");
+    tree_->Branch("reco_vtx_cha_t", &reco_vtx_cha_t, "reco_vtx_cha_t/F");
+    tree_->Branch("reco_vtx_neu_t", &reco_vtx_neu_t, "reco_vtx_neu_t/F");
 }
 
 class FTFile

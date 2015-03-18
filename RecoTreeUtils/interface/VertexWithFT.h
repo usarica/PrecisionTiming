@@ -21,14 +21,22 @@ public:
     friend bool operator> (const VertexWithFT& v1, const VertexWithFT& v2);
     
     //---getters---
+    inline int                               GetGenVtxId() {return genVtxId_;};
+    inline const SimVertex*                  GetGenVtxRef() {return genVtxRef_;};
     inline const reco::Vertex*               GetRecoVtxRef() {return recoVtxRef_;};
     PFCandidateWithFT*                       GetSeedRef();
     vector<pair<PFCandidateWithFT*, float> > GetParticlesWithDZ();
     vector<PFCandidateWithFT*>               GetParticles();
-    int                                      GetNPart(float dz_cut=0.1, float smearing=0);
-    float                                    ComputeTime(float pt_cut=2, float smearing=0);
+    int                                      GetNPart() {return n_time_tracks_;};
+    float                                    ComputeTime(int particle_type,
+                                                         float pt_cut=2, float smearing=0);
+    float                                    ComputeTimeBottomUp(int particle_type,
+                                                                 float pt_cut=2,
+                                                                 float smearing=0);
 
     //---setters---
+    void          SetGenVtxRef(const SimVertex* genVtx, int id);
+    void          SetGenVtxRef(math::XYZTLorentzVector vp, int id);
     void          SetSeed(PFCandidateWithFT* seed);
     
     //---utils---
@@ -44,7 +52,9 @@ private:
     bool                                     hasSeed_;
     float                                    time_;
     int                                      n_time_tracks_;
-    const reco::Vertex*                      recoVtxRef_;
+    int                                      genVtxId_;
+    const SimVertex*                         genVtxRef_;
+    const reco::Vertex*                      recoVtxRef_;    
 };
    
 #endif 

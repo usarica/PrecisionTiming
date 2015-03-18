@@ -8,7 +8,7 @@ RecoFastTiming = cms.EDAnalyzer("RecoFastTiming",
     ## track pt threshold for vtx time reconstrution in GeV
     ptCut           = cms.untracked.double(2),
     ## output file collections option
-    saveParticles   = cms.untracked.bool(True),
+    saveParticles   = cms.untracked.bool(False),
     saveAllRecHits  = cms.untracked.bool(False),
     saveVertices    = cms.untracked.bool(True)
 )
