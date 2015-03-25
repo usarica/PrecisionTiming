@@ -5321,4 +5321,18 @@ def GetSampleFiles(sampleName, filesOpt):
             "root://eoscms//eos/cms/store/user/amartell/fastTiming/H125GGVBF_14TeV_HLLHC_RECO_140PU/H125GGVBF_14TeV_HLLHC_RECO_140Pu_998.root",
             "root://eoscms//eos/cms/store/user/amartell/fastTiming/H125GGVBF_14TeV_HLLHC_RECO_140PU/H125GGVBF_14TeV_HLLHC_RECO_140PU_999.root"))
 
+    if sampleName == "PhoJet_140PU" :
+        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/PhoJet_140PU.root")
+            
+        filesOpt.inputFiles = cms.untracked.vstring(
+            "file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC25_patch1/MC_samples/PhoJet/nRAWRECO_140PU_0_numEvent50.root",
+            "file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC25_patch1/MC_samples/PhoJet/nRAWRECO_140PU_1_numEvent50.root",
+            "file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC25_patch1/MC_samples/PhoJet/nRAWRECO_140PU_2_numEvent50.root",
+            "file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC25_patch1/MC_samples/PhoJet/nRAWRECO_140PU_3_numEvent50.root",
+            "file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC25_patch1/MC_samples/PhoJet/nRAWRECO_140PU_4_numEvent50.root",
+            "file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC25_patch1/MC_samples/PhoJet/nRAWRECO_140PU_5_numEvent50.root",
+            "file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC25_patch1/MC_samples/PhoJet/nRAWRECO_140PU_6_numEvent50.root",
+            "file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC25_patch1/MC_samples/PhoJet/nRAWRECO_140PU_7_numEvent50.root",
+            "file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC25_patch1/MC_samples/PhoJet/nRAWRECO_140PU_8_numEvent50.root",
+            "file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC25_patch1/MC_samples/PhoJet/nRAWRECO_140PU_9_numEvent50.root")
     

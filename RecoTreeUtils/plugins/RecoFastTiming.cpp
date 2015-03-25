@@ -14,7 +14,7 @@
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 #include "PhysicsTools/FWLite/interface/TFileService.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
-#include "SimDataFormats/TrackingAnalysis/interface/TrackingVertex.h"
+#include "SimDataFormats/CrossingFrame/interface/CrossingFrame.h"
 #include "DataFormats/JetReco/interface/GenJet.h"
 #include "DataFormats/JetReco/interface/PFJet.h"
 #include "DataFormats/Common/interface/SortedCollection.h"
@@ -35,8 +35,8 @@ public:
     ~RecoFastTiming() {};
 
     //---utils---
-    void         FindGenVtxs();
-    void         MatchGenVtx(VertexWithFT* vtx);
+    int          FindGenVtxs();
+    void         MatchGenVtx();
     int          FindVtxSeedParticle(PFCandidateWithFT* particle);
     void         AssignChargedToVtxs(vector<PFCandidateWithFT*>* charged_cand);
     void         AssignNeutralToVtxs(vector<PFCandidateWithFT*>* neutral_cand);
@@ -58,7 +58,7 @@ private:
     edm::ESHandle<MagneticField> magFieldHandle_;             
     edm::ESHandle<CaloGeometry> geoHandle_;
     edm::Handle<vector<SimVertex> > genSigVtxHandle_;
-    edm::Handle<vector<TrackingVertex> > genVtxsHandle_;
+    edm::Handle<PCrossingFrame<SimVertex> > genVtxsHandle_;
     edm::Handle<vector<reco::Vertex> > recoVtxHandle_;
     edm::Handle<vector<reco::PFCandidate> > candHandle_;
     // edm::Handle<vector<reco::PFJet> > jetsHandle;
@@ -66,7 +66,8 @@ private:
     edm::Handle<edm::SortedCollection<EcalRecHit, 
                                       edm::StrictWeakOrdering<EcalRecHit > > > recSort_;
     //---FT objects---
-    map<int, const TrackingVertex*> genVtxsMap_;
+    map<int, const SimVertex*> genVtxsMap_;
+    //vector<const SimVertex*> genVtxsMap_;
     vector<VertexWithFT> recoVtxCollection_;
     vector<PFCandidateWithFT> particlesCollection_;
     //---Options---
@@ -127,30 +128,26 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
         return;
     genSignalVtx = &genSigVtxHandle_.product()->at(0);
     //---get all the generated vtxs---
-    Event.getByLabel(edm::InputTag("mix", "MergedTrackTruth", "DIGI2RAW"), genVtxsHandle_);
+    Event.getByLabel(edm::InputTag("cfWriter", "g4SimHits", "DIGI2RAW"), genVtxsHandle_);
     genVtxsMap_.clear();
+    genVtxsMap_[0] = genSignalVtx;
     FindGenVtxs();
     //---get reco primary vtxs---
     VertexWithFT* recoSignalVtx=NULL;
-    Event.getByLabel("offlinePrimaryVertices", recoVtxHandle_);
+    Event.getByLabel("offlinePrimaryVerticesWithBS", recoVtxHandle_);
     recoVtxCollection_.clear();
     for(unsigned int iVtx=0; iVtx<recoVtxHandle_.product()->size(); ++iVtx)
     {
         if(recoVtxHandle_.product()->at(iVtx).isValid() &&
-           !recoVtxHandle_.product()->at(iVtx).isFake() &&
-           recoVtxHandle_.product()->at(iVtx).chi2()/recoVtxHandle_.product()->at(iVtx).ndof() < 7 &&
-           recoVtxHandle_.product()->at(iVtx).chi2()/recoVtxHandle_.product()->at(iVtx).ndof() > 0.1)
-        {
+           !recoVtxHandle_.product()->at(iVtx).isFake())
             recoVtxCollection_.push_back(VertexWithFT(&recoVtxHandle_.product()->at(iVtx)));
-            // if(genVtxsHandle_.isValid())
-            //     FindGenVtx(&recoVtxCollection_.at(recoVtxCollection_.size()-1));
-            // else
-            //     recoVtxCollection_.at(recoVtxCollection_.size()-1).SetGenVtxRef(genSignalVtx, 0);
-        }
+            // &&
+           // recoVtxHandle_.product()->at(iVtx).chi2()/recoVtxHandle_.product()->at(iVtx).ndof() < 7 &&
+           // recoVtxHandle_.product()->at(iVtx).chi2()/recoVtxHandle_.product()->at(iVtx).ndof() > 0.1)
     }
     if(recoVtxCollection_.size() == 0)
         return;
-    recoSignalVtx = &recoVtxCollection_.at(0);
+    //recoSignalVtx = &recoVtxCollection_.at(0);
     //---get EK detailed time RecHits---
     Event.getByLabel(edm::InputTag("ecalDetailedTimeRecHit", "EcalRecHitsEK", "RECO"),
                       recSort_);
@@ -198,7 +195,9 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
     //---link the neutral particles to vtxs---
     AssignNeutralToVtxs(&neutralRefs);
     //---sort the vtxs by sumpt2---
-    sort(recoVtxCollection_.begin(), recoVtxCollection_.end());    
+    sort(recoVtxCollection_.begin(), recoVtxCollection_.end());
+    //---match gen and reco vtxs---
+    MatchGenVtx();
     //---compute vtxs times and fill the output tree---
     if(saveVertices_)
         ProcessVertices(gen_jet_pt, gen_jet_eta);
@@ -215,46 +214,71 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
 
 //**********Utils*************************************************************************
 
-void RecoFastTiming::FindGenVtxs()
+int RecoFastTiming::FindGenVtxs()
 {
-    //double min_time=100;
-    //int prev_evt_id=-1;
-    for(vector<TrackingVertex>::const_iterator it=genVtxsHandle_.product()->begin();
-        it != genVtxsHandle_.product()->end(); ++it)
+    for(unsigned int iGen=0; iGen<genVtxsHandle_.product()->getPileups().size(); ++iGen)
     {
-        if(it->nSourceTracks() != 0 || !it->inVolume())
-            continue;
-        genVtxsMap_[it->eventId().event()]=&(*it);
-        // double tmp_time = it->position().t(); // +
-        //     // math::XYZVector(it->position().x(),
-        //     //                 it->position().y(),
-        //     //                 it->position().z()).R()/(3E10);
-        // if(it->eventId().event() == prev_evt_id)
-        // {
-        //     genVtxsMap_[prev_evt_id]=&(*it);
-        //     maxTracks=it->nDaughterTracks();
-        // }
-        // if(it->eventId().event() != prev_evt_id)
-        // {
-        //     prev_evt_id = it->eventId().event();            
-        //     genVtxsMap_[prev_evt_id]=&(*it);
-        //     //min_time = tmp_time;
-        // }
+        if(genVtxsHandle_.product()->getPileups().at(iGen)->vertexId()==0)
+            genVtxsMap_[genVtxsHandle_.product()->getPileups().at(iGen)->eventId().event()+1]=
+                genVtxsHandle_.product()->getPileups().at(iGen);
     }
+    int n_merged=0;
+    for(map<int, const SimVertex*>::iterator itG=++genVtxsMap_.begin(); itG != genVtxsMap_.end(); ++itG)
+    {
+        map<int, const SimVertex*>::iterator itN = itG;
+        --itN;
+        if(fabs(itG->second->position().z() - itN->second->position().z()) < 0.05)
+            ++n_merged;
+    }
+    return n_merged;
 }
 
-void RecoFastTiming::MatchGenVtx(VertexWithFT* vtx)
+void RecoFastTiming::MatchGenVtx()
 {
-    float min_dist=100;
-    for(map<int, const TrackingVertex*>::iterator it=genVtxsMap_.begin(); it != genVtxsMap_.end(); ++it)
+    for(vector<VertexWithFT>::iterator itR = recoVtxCollection_.begin(); itR != recoVtxCollection_.end(); ++itR)
     {
-        float tmp_dist = math::XYZVector(vtx->x() - it->second->position().x(),
-                                         vtx->y() - it->second->position().y(),
-                                         vtx->z() - it->second->position().z()).R();
-        if(tmp_dist < min_dist)
+        if(!itR->hasSeed())
+            continue;
+        float min_Zdist=100;
+        float min_Tdist=100;
+        int matchedGenId=-1;
+        int matchedZGenId=-1;
+        int matchedTGenId=-1;
+        for(map<int, const SimVertex*>::iterator itG=genVtxsMap_.begin(); itG != genVtxsMap_.end(); ++itG)
         {
-            min_dist = tmp_dist;
-            vtx->SetGenVtxRef(it->second->position(), it->first);
+            float tmp_Zdist = fabs(itR->z() - itG->second->position().z());
+            float tmp_Tdist = fabs(itR->GetSeedRef()->GetVtxTime(tRes_) - itG->second->position().t()*1E9);
+            if(tmp_Zdist < min_Zdist && tmp_Zdist<0.1)
+            {
+                min_Zdist = tmp_Zdist;
+                //itR->SetGenVtxRef(itG->second->position(), itG->second->eventId().event());
+                matchedZGenId = itG->first;
+            }
+            if(tmp_Tdist < min_Tdist && tmp_Tdist<0.1)
+            {
+                min_Tdist = tmp_Tdist;
+                //itR->SetGenVtxRef(itG->second->position(), itG->second->eventId().event());
+                matchedTGenId = itG->first;
+            }
+        }
+        if(matchedZGenId != -1 && matchedTGenId != -1 && matchedTGenId!=matchedZGenId)
+        {
+            if(fabs(genVtxsMap_[matchedZGenId]->position().z()-
+                    genVtxsMap_[matchedTGenId]->position().z()) < 0.05)
+            {
+                cout << "merged found" << endl;
+                matchedGenId = matchedTGenId;
+            }
+            else
+                matchedGenId = matchedZGenId;
+        }
+        else
+            matchedGenId = matchedZGenId==-1 ? matchedTGenId : matchedZGenId;
+        if(matchedGenId != -1)
+        {
+            itR->SetGenVtxRef(genVtxsMap_[matchedGenId]->position(),
+                              genVtxsMap_[matchedGenId]->eventId().event());            
+            genVtxsMap_.erase(matchedGenId);
         }
     }
 }
@@ -301,9 +325,10 @@ void RecoFastTiming::AssignChargedToVtxs(vector<PFCandidateWithFT*>* charged_can
             if(recoVtxCollection_.at(iVtx).hasSeed() && dz_tmp < dzCut_)
             {
                 (*it)->SetRecoVtx(&recoVtxCollection_.at(iVtx));
-                // float dt_tmp=0;
-                // dt_tmp = fabs((*it)->GetVtxTime(tRes_) - recoVtxCollection_.at(iVtx).ComputeTimeBottomUp(1, ptCut_, tRes_));
-                if(dz_tmp < dz_min)// && dt_tmp < tRes_*2)// && dt_tmp < dt_min)
+                float dt_tmp=0;
+                dt_tmp = fabs((*it)->GetVtxTime(tRes_) -
+                              recoVtxCollection_.at(iVtx).GetSeedRef()->GetVtxTime(tRes_));
+                if(dz_tmp < dz_min && dt_tmp < tRes_*2)// && dt_tmp < dt_min)
                 {
                     goodVtx=iVtx;
                     dz_min=dz_tmp;
@@ -365,15 +390,9 @@ void RecoFastTiming::ProcessVertices(float gen_jet_pt, float gen_jet_eta)
         advance(it, iVtx);
         //---fix references after sort
         it->FixVtxRefs();
-        MatchGenVtx(&(*it));
         outFile_->verticesTree.event_n = iEvent_;
         outFile_->verticesTree.gen_jet_pt = gen_jet_pt;
         outFile_->verticesTree.gen_jet_eta = gen_jet_eta;
-        outFile_->verticesTree.gen_vtx_id = it->GetGenVtxId();
-        outFile_->verticesTree.gen_vtx_x = it->GetGenVtxRef()->position().x();
-        outFile_->verticesTree.gen_vtx_y = it->GetGenVtxRef()->position().y();
-        outFile_->verticesTree.gen_vtx_z = it->GetGenVtxRef()->position().z();
-        outFile_->verticesTree.gen_vtx_t = it->GetGenVtxRef()->position().t();        
         outFile_->verticesTree.reco_vtx_index = iVtx;
         outFile_->verticesTree.reco_vtx_ndof = it->GetRecoVtxRef()->ndof();
         outFile_->verticesTree.reco_vtx_chi2 = it->GetRecoVtxRef()->chi2();
@@ -383,12 +402,22 @@ void RecoFastTiming::ProcessVertices(float gen_jet_pt, float gen_jet_eta)
         outFile_->verticesTree.reco_vtx_seed_t = it->GetSeedRef() ?
             it->GetSeedRef()->GetVtxTime(tRes_) : -100;
         outFile_->verticesTree.reco_vtx_z = it->z();
-        outFile_->verticesTree.reco_vtx_t = it->ComputeTime(0, ptCut_, tRes_);        
+        outFile_->verticesTree.reco_vtx_t = it->ComputeTime(1, ptCut_, tRes_);        
         outFile_->verticesTree.reco_vtx_n_part = it->GetNPart();
         outFile_->verticesTree.reco_vtx_cha_t = it->ComputeTimeBottomUp(1, ptCut_, tRes_);
         outFile_->verticesTree.reco_vtx_n_cha = it->GetNPart();
         outFile_->verticesTree.reco_vtx_neu_t = it->ComputeTime(2, ptCut_, tRes_);
         outFile_->verticesTree.reco_vtx_n_neu = it->GetNPart();
+        if(it->GetGenVtxRef())
+        {
+            outFile_->verticesTree.gen_vtx_id = it->GetGenVtxId();
+            outFile_->verticesTree.gen_vtx_x = it->GetGenVtxRef()->position().x();
+            outFile_->verticesTree.gen_vtx_y = it->GetGenVtxRef()->position().y();
+            outFile_->verticesTree.gen_vtx_z = it->GetGenVtxRef()->position().z();
+            outFile_->verticesTree.gen_vtx_t = it->GetGenVtxRef()->position().t();
+        }
+        else
+            outFile_->verticesTree.gen_vtx_id = -1;
         outFile_->verticesTree.Fill();
         if(saveParticles_)
         {
@@ -409,8 +438,11 @@ void RecoFastTiming::ProcessParticles(vector<PFCandidateWithFT*>* particles, int
         if((*it)->hasTime())
         {            
             //---fill gen vtx infos 
-            outFile_->particlesTree.gen_vtx_z = (*it)->GetRecoVtx()->GetGenVtxRef()->position().z();
-            outFile_->particlesTree.gen_vtx_t = (*it)->GetRecoVtx()->GetGenVtxRef()->position().t()*1E9;                
+            if((*it)->GetRecoVtx()->GetGenVtxRef())
+            {
+                outFile_->particlesTree.gen_vtx_z = (*it)->GetRecoVtx()->GetGenVtxRef()->position().z();
+                outFile_->particlesTree.gen_vtx_t = (*it)->GetRecoVtx()->GetGenVtxRef()->position().t();
+            }
             //---particle variables
             outFile_->particlesTree.particle_n = index;
             outFile_->particlesTree.particle_type = (*it)->particleId();
@@ -433,7 +465,8 @@ void RecoFastTiming::ProcessParticles(vector<PFCandidateWithFT*>* particles, int
             if((*it)->GetTrack())
             {
                 //---only for charged
-                outFile_->particlesTree.track_dz = (*it)->GetTrack()->dz((*it)->GetRecoVtx()->position());
+                //outFile_->particlesTree.track_dz = (*it)->GetTrack()->dz((*it)->GetRecoVtx()->position());
+                outFile_->particlesTree.track_dz = (*it)->GetTrack()->vz()-(*it)->GetRecoVtx()->position().z();
                 outFile_->particlesTree.track_dxy = (*it)->GetTrack()->dxy((*it)->GetRecoVtx()->position());            
                 outFile_->particlesTree.trackCluster_dr = (*it)->GetDrTrackCluster();
             }

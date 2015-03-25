@@ -10,9 +10,10 @@ PFCandidateWithFT::PFCandidateWithFT()
 PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<EcalRecHit>* ecalRecHits,
                                      const SimVertex* genVtx, VertexWithFT* recoVtx,
                                      const CaloGeometry* skGeometry, const MagneticField* magField):
-    reco::PFCandidate(*PFCand), clusterE_(0), maxRecHitE_(0), rawTime_(0), vtxTime_(genVtx->position().t()),
-    ecalPos_(0,0,0), genVtxPos_(0,0,0), recoVtxPos_(0,0,0), trackL_(-1), propagatedTrackL_(-1)
+    reco::PFCandidate(*PFCand), clusterE_(0), rawTime_(0),
+    ecalPos_(0,0,0), recoVtxPos_(0,0,0), trackL_(-1), propagatedTrackL_(-1)
 {
+    hasTime_ = false;
     pfCand_ = PFCand;
     magField_ = magField;
     skGeometry_ = skGeometry;
@@ -23,10 +24,6 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<Eca
     recoTrack_ = NULL;
     smearedRawTime_=0;
     tSmearing_=-1;
-    //---gen vtx info---
-    genVtxPos_ = math::XYZVector(genVtx_->position().x(),
-                                 genVtx_->position().y(),
-                                 genVtx_->position().z());
     //---reco vtx info---
     if(recoVtx_)
         recoVtxPos_ = math::XYZVector(recoVtx_->position().x(),
@@ -57,9 +54,13 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<Eca
         if(skGeometry_)
         {
             const CaloCellGeometry* cell=skGeometry_->getGeometry(ecalSeed_);
-            ecalPos_ = dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(3*0.4-0.075-0.25);
-            //---TODO change the next two lines for the central samples
-            rawTime_ = GetRecHitTimeMaxE().first + vtxTime_*1E9 + GetGenTOF();
+            // ecalPos_ = math::XYZVector(cell->getPosition().x(),
+            //                            cell->getPosition().y(),
+            //                            cell->getPosition().z()+13*0.4-0.075-0.25);
+            ecalPos_ = dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(3.5);
+            rawTime_ = GetRecHitTimeMaxE().first + GetGenTOF();// + genVtx_->position().t()*1E9;
+            if(GetRecHitTimeMaxE().second != -1)
+                hasTime_ = true;
             recoVtx_ = NULL;
         }
     }
@@ -80,8 +81,7 @@ pair<float, float> PFCandidateWithFT::GetRecHitTimeE(DetId id)
     {
         if(recHitColl_->at(iRec).id() == id)
         {
-                return make_pair(recHitColl_->at(iRec).time() - vtxTime_ * 1E9,
-                                 recHitColl_->at(iRec).energy());
+            return make_pair(recHitColl_->at(iRec).time(), recHitColl_->at(iRec).energy());
         }
     }
     //---if not found return time=0, energy=-1---
@@ -121,7 +121,7 @@ vector<pair<float, float> > PFCandidateWithFT::GetRecHitsTimeE()
 	    {
                 rh_start=iRec+1;
                 TandE_vect.push_back(make_pair(
-                                         recHitColl_->at(iRec).time() - vtxTime_ * 1E9,
+                                         recHitColl_->at(iRec).time(),
                                          recHitColl_->at(iRec).energy()));
                 break;
 	    }
@@ -130,11 +130,15 @@ vector<pair<float, float> > PFCandidateWithFT::GetRecHitsTimeE()
     return TandE_vect;
 }
 
-//----------TOF wrt sim vertex------------------------------------------------------------
+//----------TOF wrt nominal IP------------------------------------------------------------
 float PFCandidateWithFT::GetGenTOF()
 {
+    // const CaloCellGeometry* cell=skGeometry_->getGeometry(ecalSeed_);
+    // math::XYZVector ecalFacePos(dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(3+0.5));
+   
     //---(distance/c)*1E9
-    return (recoVtxPos_ - ecalPos_).R()/30;
+    //math::XYZVector simPos(genVtx_->position().x(), genVtx_->position().y(), genVtx_->position().z());
+    return ecalPos_.R()/30;
 }
 
 //----------Apply a time resolution smearing to the raw time------------------------------

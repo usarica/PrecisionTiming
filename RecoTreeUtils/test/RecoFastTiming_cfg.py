@@ -1,5 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 from FWCore.ParameterSet.VarParsing import VarParsing
+from Configuration.AlCa.GlobalTag import GlobalTag
 from FastTiming.RecoTreeUtils.RecoFastTiming_cfi import *
 
 options = VarParsing('analysis')
@@ -26,11 +27,13 @@ process = cms.Process("RecoFastTiming")
 
 ## load the SK geometry and magnetic field config
 process.load('Configuration.Geometry.GeometryExtended2023SHCalNoTaperReco_cff')
-process.load('Configuration.Geometry.GeometryExtended2023SHCalNoTaper_cff')
+##process.load('Configuration.Geometry.GeometryExtended2023SHCalNoTaper_cff')
 process.load('Configuration.StandardSequences.MagneticField_38T_PostLS1_cff')
-process.load('Configuration/EventContent/EventContent_cff')
+process.load('Configuration/StandardSequences/FrontierConditions_GlobalTag_cff')
 ## import standard RecoFT configurations
 process.load("FastTiming.RecoTreeUtils.RecoFastTiming_cff")
+
+process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:upgradePLS3', '')
 
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(options.maxEvents))
 

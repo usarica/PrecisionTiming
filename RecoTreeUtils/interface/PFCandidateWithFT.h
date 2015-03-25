@@ -47,7 +47,7 @@ public:
     //---ctors---
     PFCandidateWithFT();
     PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<EcalRecHit>* ecalRecHits,
-                      const SimVertex* genVtx, VertexWithFT* recoVtx=NULL,
+                      const SimVertex* genVtx=NULL, VertexWithFT* recoVtx=NULL,
                       const CaloGeometry* skGeometry=NULL, const MagneticField* magField=NULL);
     //---dtor---
     ~PFCandidateWithFT();
@@ -71,7 +71,7 @@ public:
     //---setters---
     void                            SetRecoVtx(VertexWithFT* recoVtx);
     //---utils---
-    inline bool                     hasTime() {if(pfCluster_) return true; return false;};
+    inline bool                     hasTime() {return hasTime_;};
     void                            TrackReconstruction();    
 
 private:
@@ -81,17 +81,15 @@ private:
     const CaloGeometry*      skGeometry_;
     const SimVertex*         genVtx_;
     VertexWithFT*            recoVtx_;
-    vector<EcalRecHit>*      recHitColl_;
+    vector<EcalRecHit>*      recHitColl_;    
     DetId                    ecalSeed_;
+    bool                     hasTime_;
     float                    clusterE_;
-    float                    maxRecHitE_;
     float                    rawTime_;
     float                    tSmearing_;
     float                    smearedRawTime_;
-    float                    vtxTime_;
     const reco::Track*       recoTrack_;
     math::XYZVector          ecalPos_;
-    math::XYZVector          genVtxPos_;
     math::XYZVector          recoVtxPos_;
     float                    trackPt_;
     float                    trackL_;

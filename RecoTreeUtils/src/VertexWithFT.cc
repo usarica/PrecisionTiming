@@ -55,16 +55,12 @@ void VertexWithFT::SetGenVtxRef(const SimVertex* genVtx, int id)
 }
 
 //----------Create gen vtx from position and set id---------------------------------------
-//---ATTENTION: for genVtx from the TrackingVertexs collection time is not the abs time
-//---           but is the raw_time - TOF(0,0,0)!
 void VertexWithFT::SetGenVtxRef(math::XYZTLorentzVector vp, int id)
 {
-    math::XYZVector vp3D(vp.x(), vp.y(), vp.z());
-    double raw_t = vp.t();// + vp3D.R()/(3E10);
     if(genVtxRef_)
         delete genVtxRef_;
     
-    genVtxRef_ = new SimVertex(vp3D, raw_t*1E9);
+    genVtxRef_ = new SimVertex(math::XYZVector(vp.x(), vp.y(), vp.z()), vp.t()*1E9);
     genVtxId_ = id;
 
     return;
