@@ -47,13 +47,14 @@ public:
     //---ctors---
     PFCandidateWithFT();
     PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<EcalRecHit>* ecalRecHits,
-                      const SimVertex* genVtx=NULL, VertexWithFT* recoVtx=NULL,
-                      const CaloGeometry* skGeometry=NULL, const MagneticField* magField=NULL);
+                      const CaloGeometry* skGeometry_, const MagneticField* magField,
+                      const SimVertex* genVtx=NULL, VertexWithFT* recoVtx=NULL);
     //---dtor---
     ~PFCandidateWithFT();
     //---getters---
+    inline const reco::PFCandidate* GetPFCandidateRef() const {return pfCand_;};
     inline const reco::PFCluster*   GetPFCluster() {return pfCluster_;};
-    inline const reco::PFCandidate* GetPFCandidateRef() const {return pfCand_;}; 
+    inline REPPoint                 GetPFClusterPos() {return pfClusterPos_;};                 
     inline VertexWithFT*            GetRecoVtx() {return recoVtx_;};
     inline math::XYZVector          GetRecoVtxPos() {return recoVtxPos_;};
     inline float                    GetDrTrackCluster() { return drTrackCluster_; };
@@ -72,16 +73,18 @@ public:
     void                            SetRecoVtx(VertexWithFT* recoVtx);
     //---utils---
     inline bool                     hasTime() {return hasTime_;};
+    DetId                           FindEcalSeed();
     void                            TrackReconstruction();    
 
 private:
     const reco::PFCandidate* pfCand_;
-    const reco::PFCluster*   pfCluster_;
+    const reco::PFCluster*   pfCluster_;    
     const MagneticField*     magField_;
     const CaloGeometry*      skGeometry_;
     const SimVertex*         genVtx_;
     VertexWithFT*            recoVtx_;
-    vector<EcalRecHit>*      recHitColl_;    
+    vector<EcalRecHit>*      recHitColl_;
+    REPPoint                 pfClusterPos_;    
     DetId                    ecalSeed_;
     bool                     hasTime_;
     float                    clusterE_;

@@ -32,6 +32,9 @@ public:
     float particle_pt;
     float particle_eta;
     float particle_phi;
+    float cluster_E;
+    float cluster_eta;
+    float cluster_phi;
     float maxE_time;
     float maxE_energy;
     int reco_vtx_index;
@@ -64,6 +67,9 @@ FTParticlesTree::FTParticlesTree()
     particle_pt=0;
     particle_eta=0;
     particle_phi=0;
+    cluster_E=0;
+    cluster_eta=0;
+    cluster_phi=0;
     maxE_time=0;
     maxE_energy=0;
     reco_vtx_index=0;
@@ -85,6 +91,9 @@ FTParticlesTree::FTParticlesTree()
     tree_->Branch("particle_pt", &particle_pt, "particle_pt/F");
     tree_->Branch("particle_eta", &particle_eta, "particle_eta/F");
     tree_->Branch("particle_phi", &particle_phi, "particle_phi/F");
+    tree_->Branch("cluster_E", &cluster_E, "cluster_E/F");
+    tree_->Branch("cluster_eta", &cluster_eta, "cluster_eta/F");
+    tree_->Branch("cluster_phi", &cluster_phi, "cluster_phi/F");
     tree_->Branch("maxE_time", &maxE_time, "maxE_time/F");
     tree_->Branch("maxE_energy", &maxE_energy, "maxE_energy/F");
     tree_->Branch("reco_vtx_index", &reco_vtx_index, "reco_vtx_index/I");

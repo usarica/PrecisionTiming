@@ -118,9 +118,9 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
     Setup.get<CaloGeometryRecord>().get(geoHandle_);
     skGeometry_ = geoHandle_.product();
     //---get gen jets---
-    Event.getByLabel("ak5GenJets", genJetsHandle_);
-    float gen_jet_pt = genJetsHandle_.product()->at(0).pt();
-    float gen_jet_eta = genJetsHandle_.product()->at(0).eta();
+    Event.getByLabel("ak5GenJets", genJetsHandle_);    
+    float gen_jet_pt = 0;//genJetsHandle_.product()->at(0).pt();
+    float gen_jet_eta = 0;//genJetsHandle_.product()->at(0).eta();
     //---get signal gen vertex time---
     const SimVertex* genSignalVtx=NULL;
     Event.getByLabel("g4SimHits", genSigVtxHandle_);
@@ -161,7 +161,7 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
     for(unsigned int iCand=0; iCand<candHandle_.product()->size(); ++iCand)
     {
         particle = PFCandidateWithFT(&candHandle_.product()->at(iCand), recVect,
-                                     genSignalVtx, recoSignalVtx, skGeometry_, magField_);
+                                     skGeometry_, magField_, genSignalVtx, recoSignalVtx);
         particlesCollection_.push_back(particle);
     }
     //---search for seeds particles---
@@ -263,13 +263,13 @@ void RecoFastTiming::MatchGenVtx()
         }
         if(matchedZGenId != -1 && matchedTGenId != -1 && matchedTGenId!=matchedZGenId)
         {
-            if(fabs(genVtxsMap_[matchedZGenId]->position().z()-
-                    genVtxsMap_[matchedTGenId]->position().z()) < 0.05)
-            {
-                cout << "merged found" << endl;
-                matchedGenId = matchedTGenId;
-            }
-            else
+            // if(fabs(genVtxsMap_[matchedZGenId]->position().z()-
+            //         genVtxsMap_[matchedTGenId]->position().z()) < 0.05)
+            // {
+            //     cout << "merged found" << endl;
+            //     matchedGenId = matchedTGenId;
+            // }
+            // else
                 matchedGenId = matchedZGenId;
         }
         else
@@ -325,10 +325,10 @@ void RecoFastTiming::AssignChargedToVtxs(vector<PFCandidateWithFT*>* charged_can
             if(recoVtxCollection_.at(iVtx).hasSeed() && dz_tmp < dzCut_)
             {
                 (*it)->SetRecoVtx(&recoVtxCollection_.at(iVtx));
-                float dt_tmp=0;
-                dt_tmp = fabs((*it)->GetVtxTime(tRes_) -
-                              recoVtxCollection_.at(iVtx).GetSeedRef()->GetVtxTime(tRes_));
-                if(dz_tmp < dz_min && dt_tmp < tRes_*2)// && dt_tmp < dt_min)
+                // float dt_tmp=0;
+                // dt_tmp = fabs((*it)->GetVtxTime(tRes_) -
+                //               recoVtxCollection_.at(iVtx).GetSeedRef()->GetVtxTime(tRes_));
+                if(dz_tmp < dz_min)// && dt_tmp < tRes_*2)// && dt_tmp < dt_min)
                 {
                     goodVtx=iVtx;
                     dz_min=dz_tmp;
@@ -450,7 +450,10 @@ void RecoFastTiming::ProcessParticles(vector<PFCandidateWithFT*>* particles, int
             outFile_->particlesTree.particle_pt = (*it)->pt();
             outFile_->particlesTree.particle_eta = (*it)->eta();
             outFile_->particlesTree.particle_phi = (*it)->phi();
-            //---ecal time variables
+            //---ecal/time variables
+            outFile_->particlesTree.cluster_E = (*it)->GetPFCluster()->energy();
+            outFile_->particlesTree.cluster_eta = (*it)->GetPFClusterPos().eta();
+            outFile_->particlesTree.cluster_phi = (*it)->GetPFClusterPos().phi();
             outFile_->particlesTree.maxE_time = (*it)->GetRecHitTimeMaxE().first;
             outFile_->particlesTree.maxE_energy = (*it)->GetRecHitTimeMaxE().second;
             outFile_->particlesTree.all_time.clear();
@@ -465,8 +468,7 @@ void RecoFastTiming::ProcessParticles(vector<PFCandidateWithFT*>* particles, int
             if((*it)->GetTrack())
             {
                 //---only for charged
-                //outFile_->particlesTree.track_dz = (*it)->GetTrack()->dz((*it)->GetRecoVtx()->position());
-                outFile_->particlesTree.track_dz = (*it)->GetTrack()->vz()-(*it)->GetRecoVtx()->position().z();
+                outFile_->particlesTree.track_dz = (*it)->GetTrack()->dz((*it)->GetRecoVtx()->position());
                 outFile_->particlesTree.track_dxy = (*it)->GetTrack()->dxy((*it)->GetRecoVtx()->position());            
                 outFile_->particlesTree.trackCluster_dr = (*it)->GetDrTrackCluster();
             }

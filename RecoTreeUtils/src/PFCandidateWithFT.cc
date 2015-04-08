@@ -8,10 +8,10 @@ PFCandidateWithFT::PFCandidateWithFT()
 {}
 
 PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<EcalRecHit>* ecalRecHits,
-                                     const SimVertex* genVtx, VertexWithFT* recoVtx,
-                                     const CaloGeometry* skGeometry, const MagneticField* magField):
-    reco::PFCandidate(*PFCand), clusterE_(0), rawTime_(0),
-    ecalPos_(0,0,0), recoVtxPos_(0,0,0), trackL_(-1), propagatedTrackL_(-1)
+                                     const CaloGeometry* skGeometry, const MagneticField* magField,
+                                     const SimVertex* genVtx, VertexWithFT* recoVtx):
+    reco::PFCandidate(*PFCand), clusterE_(0), rawTime_(0), ecalPos_(0,0,0),
+    recoVtxPos_(0,0,0), trackL_(-1), propagatedTrackL_(-1), drTrackCluster_(-1)
 {
     hasTime_ = false;
     pfCand_ = PFCand;
@@ -39,8 +39,9 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<Eca
         {
             reco::PFCluster tmpCluster = *blockElement.clusterRef().get();	 
             tmpCluster.calculatePositionREP();
-            REPPoint pfClusterPos = tmpCluster.positionREP();
-            float tmp_dist=deltaR(pfClusterPos.Eta(), pfClusterPos.Phi(), eta(), phi());
+            pfClusterPos_ = tmpCluster.positionREP();
+            float tmp_dist=deltaR(pfClusterPos_.Eta(), pfClusterPos_.Phi(),
+                                  positionAtECALEntrance().eta(), positionAtECALEntrance().phi());
             if(tmp_dist < min_dist_cluster)
             {
                 min_dist_cluster = tmp_dist;
@@ -50,19 +51,15 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<Eca
     }
     if(pfCluster_)
     {
-        ecalSeed_ = pfCluster_->seed();
-        if(skGeometry_)
-        {
-            const CaloCellGeometry* cell=skGeometry_->getGeometry(ecalSeed_);
-            // ecalPos_ = math::XYZVector(cell->getPosition().x(),
-            //                            cell->getPosition().y(),
-            //                            cell->getPosition().z()+13*0.4-0.075-0.25);
-            ecalPos_ = dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(3.5);
-            rawTime_ = GetRecHitTimeMaxE().first + GetGenTOF();// + genVtx_->position().t()*1E9;
-            if(GetRecHitTimeMaxE().second != -1)
-                hasTime_ = true;
-            recoVtx_ = NULL;
-        }
+        FindEcalSeed();
+        const CaloCellGeometry* cell=skGeometry_->getGeometry(ecalSeed_);
+        ecalPos_ = dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(10*0.4-0.075-0.25);
+        rawTime_ = GetRecHitTimeE(ecalSeed_).first + GetGenTOF();
+        // if(ecalSeed_ != pfCluster_->seed() && fabs(pfClusterPos_.Eta())>1.5)
+        //     cout << "difference found  " << pfClusterPos_.Eta() << endl;
+        if(GetRecHitTimeMaxE().second != -1)
+            hasTime_ = true;
+        recoVtx_ = NULL;
     }
 }
 
@@ -84,8 +81,8 @@ pair<float, float> PFCandidateWithFT::GetRecHitTimeE(DetId id)
             return make_pair(recHitColl_->at(iRec).time(), recHitColl_->at(iRec).energy());
         }
     }
-    //---if not found return time=0, energy=-1---
-    return make_pair(0, -1);
+    //---if not found return time=-1, energy=-1---
+    return make_pair(-1, -1);
 }
 
 //----------Return <time, enegy> of all the ecal cluster recHits--------------------------
@@ -131,14 +128,15 @@ vector<pair<float, float> > PFCandidateWithFT::GetRecHitsTimeE()
 }
 
 //----------TOF wrt nominal IP------------------------------------------------------------
+//---NOTE: the position wrt the TOF is calculated in CMSSW is wrong!
+//---      3+0.5 is for the standard EE not SK
 float PFCandidateWithFT::GetGenTOF()
 {
-    // const CaloCellGeometry* cell=skGeometry_->getGeometry(ecalSeed_);
-    // math::XYZVector ecalFacePos(dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(3+0.5));
-   
+    const CaloCellGeometry* cell=skGeometry_->getGeometry(ecalSeed_);
+    math::XYZVector ecalBadPos(dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(3+0.5));
+    
     //---(distance/c)*1E9
-    //math::XYZVector simPos(genVtx_->position().x(), genVtx_->position().y(), genVtx_->position().z());
-    return ecalPos_.R()/30;
+    return ecalBadPos.R()/30;
 }
 
 //----------Apply a time resolution smearing to the raw time------------------------------
@@ -184,6 +182,9 @@ const reco::Track* PFCandidateWithFT::GetTrack()
                 min_dist_track = tmp_dist;
         }
     }
+    if(recoTrack_ && pfCluster_)
+        drTrackCluster_ = deltaR(recoTrack_->outerEta(), recoTrack_->outerPhi(),
+                                 pfClusterPos_.Eta(), pfClusterPos_.Phi());
     return recoTrack_;
 }
 
@@ -208,13 +209,11 @@ float PFCandidateWithFT::GetPropagatedTrackLength()
         if(recoTrack_)
         {
             GlobalPoint startingPoint(recoVtxPos_.x(), recoVtxPos_.y(), recoVtxPos_.z());
-            GlobalVector startingMomentum(recoTrack_->innerMomentum().x(),
-                                          recoTrack_->innerMomentum().y(),
-                                          recoTrack_->innerMomentum().z());
+            GlobalVector startingMomentum(px(), py(), pz());
             GlobalPoint endPoint(ecalPos_.x(), ecalPos_.y(), ecalPos_.z());
             FreeTrajectoryState trajectory(startingPoint, startingMomentum, recoTrack_->charge(), magField_);
             SteppingHelixPropagator propagator(magField_);
-            propagatedTrackL_ = propagator.propagateWithPath(trajectory, endPoint).second;
+            propagatedTrackL_ = propagator.propagateWithPath(trajectory, endPoint).second;            
         }
     }
     //---if neutral return the lenght of the straight line
@@ -240,6 +239,26 @@ void PFCandidateWithFT::SetRecoVtx(VertexWithFT* recoVtx)
 }
 
 //**********Utils*************************************************************************
+
+//----------Search for the impact RecHit--------------------------------------------------
+DetId PFCandidateWithFT::FindEcalSeed()
+{
+    ecalSeed_ = pfCluster_->seed();
+    float maxE=0;
+    vector<pair<DetId, float> > detIdMap = pfCluster_->hitsAndFractions();
+    
+    for(vector<pair<DetId, float> >::iterator it=detIdMap.begin(); it!=detIdMap.end(); ++it)
+    {
+        float tmpE = GetRecHitTimeE(it->first).second;
+        if(tmpE > maxE) 
+        {
+            maxE = tmpE;
+            ecalSeed_ = it->first;
+        }
+    }
+
+    return ecalSeed_;    
+}
 
 //----------Track reconstruction----------------------------------------------------------
 void PFCandidateWithFT::TrackReconstruction()
