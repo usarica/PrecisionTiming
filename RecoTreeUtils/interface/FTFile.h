@@ -28,7 +28,8 @@ public:
     float gen_vtx_t;
     int particle_n;
     int particle_type;
-    float particle_E;
+    float particle_p;
+    float particle_pz;
     float particle_pt;
     float particle_eta;
     float particle_phi;
@@ -63,7 +64,8 @@ FTParticlesTree::FTParticlesTree()
     gen_vtx_t=0;
     particle_n=0;
     particle_type=0;
-    particle_E=0;
+    particle_p=0;
+    particle_pz=0;
     particle_pt=0;
     particle_eta=0;
     particle_phi=0;
@@ -87,7 +89,8 @@ FTParticlesTree::FTParticlesTree()
     tree_->Branch("gen_vtx_t", &gen_vtx_t, "gen_vtx_t/F");
     tree_->Branch("particle_n", &particle_n, "particle_n/I");
     tree_->Branch("particle_type", &particle_type, "particle_type/I");
-    tree_->Branch("particle_E", &particle_E, "particle_E/F");
+    tree_->Branch("particle_p", &particle_p, "particle_p/F");
+    tree_->Branch("particle_pz", &particle_pz, "particle_pz/F");
     tree_->Branch("particle_pt", &particle_pt, "particle_pt/F");
     tree_->Branch("particle_eta", &particle_eta, "particle_eta/F");
     tree_->Branch("particle_phi", &particle_phi, "particle_phi/F");

@@ -29,7 +29,9 @@ public:
     vector<PFCandidateWithFT*>               GetParticles();
     int                                      GetNPart() {return n_time_tracks_;};
     float                                    ComputeTime(int particle_type,
-                                                         float pt_cut=2, float smearing=0);
+                                                         float pt_cut=2,
+                                                         float pz2_cut=20,
+                                                         float smearing=0);
     float                                    ComputeTimeBottomUp(int particle_type,
                                                                  float pt_cut=2,
                                                                  float smearing=0);
@@ -40,7 +42,7 @@ public:
     void          SetSeed(PFCandidateWithFT* seed);
     
     //---utils---
-    float         sumPtSquared(float dz_cut=0.2, float pt_cut=1) const;
+    float         sumPtSquared(float dz_cut=0.2, float pt_cut=2) const;
     void          AddParticle(PFCandidateWithFT* particle, float dz=-1000);
     void          RemoveParticle(PFCandidateWithFT* particle);
     void          FixVtxRefs();

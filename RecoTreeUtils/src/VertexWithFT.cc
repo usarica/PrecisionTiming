@@ -102,7 +102,7 @@ PFCandidateWithFT* VertexWithFT::GetSeedRef()
 //---particle_type: 0 --> all
 //---               1 --> charged particle
 //---               2 --> neutral (photons)
-float VertexWithFT::ComputeTime(int particle_type, float pt_cut, float smearing)
+float VertexWithFT::ComputeTime(int particle_type, float pt_cut, float pz2_cut, float smearing)
 {
     time_ = 0;
     n_time_tracks_ = 0;
@@ -115,7 +115,8 @@ float VertexWithFT::ComputeTime(int particle_type, float pt_cut, float smearing)
             continue;
         //---loop over the selected particles
         float pt_tmp = particles_.at(iPart).first->pt();
-        if(pt_tmp > pt_cut && particles_.at(iPart).first->hasTime())
+        float pz2_tmp = pow(particles_.at(iPart).first->pz(), 2);
+        if(pt_tmp > pt_cut && pz2_tmp > pz2_cut && particles_.at(iPart).first->hasTime())
         {
             time_ += particles_.at(iPart).first->GetVtxTime(smearing);
             ++n_time_tracks_;

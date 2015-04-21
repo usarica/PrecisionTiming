@@ -73,7 +73,8 @@ private:
     //---Options---
     float tRes_;
     float dzCut_;       
-    float ptCut_;       
+    float ptCut_;
+    float pz2Cut_;       
     bool saveParticles_;
     bool saveAllRecHits_;
     bool saveVertices_;
@@ -84,6 +85,7 @@ RecoFastTiming::RecoFastTiming(const edm::ParameterSet& Config)
     tRes_ = Config.getUntrackedParameter<double>("timeResSmearing");
     dzCut_ = Config.getUntrackedParameter<double>("dzCut");
     ptCut_ = Config.getUntrackedParameter<double>("ptCut");
+    pz2Cut_ = Config.getUntrackedParameter<double>("pz2Cut");
     saveParticles_ = Config.getUntrackedParameter<bool>("saveParticles");
     saveAllRecHits_ = Config.getUntrackedParameter<bool>("saveAllRecHits");
     saveVertices_ = Config.getUntrackedParameter<bool>("saveVertices");
@@ -365,7 +367,8 @@ void RecoFastTiming::AssignNeutralToVtxs(vector<PFCandidateWithFT*>* neutral_can
             {
                 (*it)->SetRecoVtx(&recoVtxCollection_.at(iVtx));
                 float dt_tmp=0;
-                dt_tmp = fabs((*it)->GetVtxTime(tRes_) - recoVtxCollection_.at(iVtx).ComputeTime(1, ptCut_, tRes_));
+                dt_tmp = fabs((*it)->GetVtxTime(tRes_) -
+                              recoVtxCollection_.at(iVtx).ComputeTime(1, ptCut_, pz2Cut_, tRes_));
                 if(dt_tmp < dt_min)
                 {                    
                     goodVtx=iVtx;
@@ -402,11 +405,11 @@ void RecoFastTiming::ProcessVertices(float gen_jet_pt, float gen_jet_eta)
         outFile_->verticesTree.reco_vtx_seed_t = it->GetSeedRef() ?
             it->GetSeedRef()->GetVtxTime(tRes_) : -100;
         outFile_->verticesTree.reco_vtx_z = it->z();
-        outFile_->verticesTree.reco_vtx_t = it->ComputeTime(1, ptCut_, tRes_);        
+        outFile_->verticesTree.reco_vtx_t = it->ComputeTime(1, ptCut_, pz2Cut_, tRes_);        
         outFile_->verticesTree.reco_vtx_n_part = it->GetNPart();
         outFile_->verticesTree.reco_vtx_cha_t = it->ComputeTimeBottomUp(1, ptCut_, tRes_);
         outFile_->verticesTree.reco_vtx_n_cha = it->GetNPart();
-        outFile_->verticesTree.reco_vtx_neu_t = it->ComputeTime(2, ptCut_, tRes_);
+        outFile_->verticesTree.reco_vtx_neu_t = it->ComputeTime(2, ptCut_, pz2Cut_, tRes_);
         outFile_->verticesTree.reco_vtx_n_neu = it->GetNPart();
         if(it->GetGenVtxRef())
         {
@@ -446,7 +449,8 @@ void RecoFastTiming::ProcessParticles(vector<PFCandidateWithFT*>* particles, int
             //---particle variables
             outFile_->particlesTree.particle_n = index;
             outFile_->particlesTree.particle_type = (*it)->particleId();
-            outFile_->particlesTree.particle_E = (*it)->energy();
+            outFile_->particlesTree.particle_p = (*it)->p();
+            outFile_->particlesTree.particle_pz = (*it)->pz();
             outFile_->particlesTree.particle_pt = (*it)->pt();
             outFile_->particlesTree.particle_eta = (*it)->eta();
             outFile_->particlesTree.particle_phi = (*it)->phi();
@@ -472,17 +476,15 @@ void RecoFastTiming::ProcessParticles(vector<PFCandidateWithFT*>* particles, int
                 outFile_->particlesTree.track_dxy = (*it)->GetTrack()->dxy((*it)->GetRecoVtx()->position());            
                 outFile_->particlesTree.trackCluster_dr = (*it)->GetDrTrackCluster();
             }
-            vector<pair<float, float> > TandE;
+            vector<EcalRecHit*> recHits_vect;
             if(saveAllRecHits_)
-                TandE = (*it)->GetRecHitsTimeE();
-            else
-                TandE.push_back(make_pair(0, 0));
-            if(TandE.size() != 0)
+                recHits_vect = (*it)->GetRecHits();
+            if(recHits_vect.size() != 0)
             {
-                for(unsigned int iRec=0; iRec<TandE.size(); ++iRec)
+                for(auto recHit : recHits_vect)
                 {
-                    outFile_->particlesTree.all_time.push_back(TandE.at(iRec).first);
-                    outFile_->particlesTree.all_energy.push_back(TandE.at(iRec).second);
+                    outFile_->particlesTree.all_time.push_back(recHit->time());
+                    outFile_->particlesTree.all_energy.push_back(recHit->energy());
                 }
             }
             outFile_->particlesTree.Fill();

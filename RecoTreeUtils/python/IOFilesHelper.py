@@ -1,8 +1,8 @@
 import FWCore.ParameterSet.Config as cms
 
-def GetSampleFiles(sampleName, filesOpt):
+def GetSampleFiles(sampleName, nameMod, filesOpt):
     if sampleName == 'QCD_noPU' :
-        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/QCD_noPU.root")
+        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/QCD_noPU"+nameMod+".root")
         
         #filesOpt.inputFiles = cms.untracked.vstring("file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/PR_CMSSW620_SLHC23/outfiles4test/PhoJet_RAWRECO_noPU_bugfix.root")
 
@@ -13,7 +13,7 @@ def GetSampleFiles(sampleName, filesOpt):
             "root://eoscms//eos/cms/store/relval/CMSSW_6_2_0_SLHC25_patch3/RelValQCDForPF_14TeV/GEN-SIM-RECO/DES23_62_V1_UPGFastTime-v1/00000/DEF24673-15DD-E411-BB52-0025905A6076.root")
         
     if sampleName == "QCD_140PU" :        
-        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/QCD_140PU.root")
+        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/QCD_140PU"+nameMod+".root")
 
         filesOpt.inputFiles = cms.untracked.vstring(*(
             "root://eoscms//eos/cms/store/user/amartell/fastTiming/QCD_Pt_15to500_Tune4C_RAWRECO_PU140inTime/QCD_14TeV_upgradePLS3_RAWRECO_1.root",
@@ -218,7 +218,7 @@ def GetSampleFiles(sampleName, filesOpt):
             "root://eoscms//eos/cms/store/user/amartell/fastTiming/QCD_Pt_15to500_Tune4C_RAWRECO_PU140inTime/QCD_14TeV_upgradePLS3_RAWRECO_99.root"))    
 
     if sampleName == "H125GG_noPU" :
-        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/H125GG_noPU.root")
+        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/H125GG_noPU"+nameMod+".root")
             
         filesOpt.inputFiles = cms.untracked.vstring(
             "root://eoscms//eos/cms/store/relval/CMSSW_6_2_0_SLHC25_patch3/RelValH130GGgluonfusion_14TeV/GEN-SIM-RECO/DES23_62_V1_UPGFastTime-v1/00000/96E49372-15DD-E411-B452-0025905B858E.root",
@@ -226,14 +226,14 @@ def GetSampleFiles(sampleName, filesOpt):
             "root://eoscms//eos/cms/store/relval/CMSSW_6_2_0_SLHC25_patch3/RelValH130GGgluonfusion_14TeV/GEN-SIM-RECO/DES23_62_V1_UPGFastTime-v1/00000/DEC52010-08DD-E411-B622-0025905A60B2.root")
 
     if sampleName == "MinBias" :
-        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/MinBias.root")
+        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/MinBias"+nameMod+".root")
         
         filesOpt.inputFiles = cms.untracked.vstring(
             "root://eoscms//eos/cms/store/relval/CMSSW_6_2_0_SLHC25_patch3/RelValMinBias_TuneZ2star_14TeV/GEN-SIM-RECO/DES23_62_V1_UPGFastTime-v1/00000/3E875ECC-05DD-E411-82A7-003048FFCBFC.root",
             "root://eoscms//eos/cms/store/relval/CMSSW_6_2_0_SLHC25_patch3/RelValMinBias_TuneZ2star_14TeV/GEN-SIM-RECO/DES23_62_V1_UPGFastTime-v1/00000/A6E3B9A7-05DD-E411-A9E0-0025905A60A6.root")
         
     if sampleName == "PhoJet_140PU" :
-        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/PhoJet_140PU.root")
+        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/PhoJet_140PU"+nameMod+".root")
             
         filesOpt.inputFiles = cms.untracked.vstring(
             "file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC25_patch1/MC_samples/PhoJet/nRAWRECO_140PU_0_numEvent50.root",
@@ -246,4 +246,10 @@ def GetSampleFiles(sampleName, filesOpt):
             "file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC25_patch1/MC_samples/PhoJet/nRAWRECO_140PU_7_numEvent50.root",
             "file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC25_patch1/MC_samples/PhoJet/nRAWRECO_140PU_8_numEvent50.root",
             "file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC25_patch1/MC_samples/PhoJet/nRAWRECO_140PU_9_numEvent50.root")
-    
+
+    if sampleName == "SingleGamma_E50" :
+        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/SingleGamma_E50"+nameMod+".root")
+                
+        filesOpt.inputFiles = cms.untracked.vstring(
+            "file:/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC25_patch1/MC_samples/PhotonGun/DIGI2RECO_noPU_1.root")
+

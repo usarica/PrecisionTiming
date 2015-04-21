@@ -55,8 +55,6 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<Eca
         const CaloCellGeometry* cell=skGeometry_->getGeometry(ecalSeed_);
         ecalPos_ = dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(10*0.4-0.075-0.25);
         rawTime_ = GetRecHitTimeE(ecalSeed_).first + GetGenTOF();
-        // if(ecalSeed_ != pfCluster_->seed() && fabs(pfClusterPos_.Eta())>1.5)
-        //     cout << "difference found  " << pfClusterPos_.Eta() << endl;
         if(GetRecHitTimeMaxE().second != -1)
             hasTime_ = true;
         recoVtx_ = NULL;
@@ -86,9 +84,9 @@ pair<float, float> PFCandidateWithFT::GetRecHitTimeE(DetId id)
 }
 
 //----------Return <time, enegy> of all the ecal cluster recHits--------------------------
-vector<pair<float, float> > PFCandidateWithFT::GetRecHitsTimeE()
+vector<EcalRecHit*> PFCandidateWithFT::GetRecHits()
 {
-    vector<pair<float, float> > TandE_vect;
+    vector<EcalRecHit*> recHits_vect;
     vector<pair<DetId, float> > detIdMap = pfCluster_->hitsAndFractions();
     //---Sort cluster rechits---
     vector<DetId> sortedDetId;
@@ -117,14 +115,12 @@ vector<pair<float, float> > PFCandidateWithFT::GetRecHitsTimeE()
 	    if(sortedDetId.at(iDet) == recHitColl_->at(iRec).id())
 	    {
                 rh_start=iRec+1;
-                TandE_vect.push_back(make_pair(
-                                         recHitColl_->at(iRec).time(),
-                                         recHitColl_->at(iRec).energy()));
+                recHits_vect.push_back(&recHitColl_->at(iRec));
                 break;
 	    }
 	}
     }
-    return TandE_vect;
+    return recHits_vect;
 }
 
 //----------TOF wrt nominal IP------------------------------------------------------------
@@ -160,7 +156,7 @@ float PFCandidateWithFT::GetVtxTime(float smearing)
     if(tSmearing_ == -1)
         GetECALTime(smearing);
 
-    return smearedRawTime_ - GetTOF();
+    return smearedRawTime_ - p()/(fabs(pz()))*fabs(ecalPos_.z()-recoVtxPos_.z())/30;//GetTOF();
 }
 
 //----------Get the right track ref from the PFBlock--------------------------------------

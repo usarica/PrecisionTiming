@@ -68,7 +68,7 @@ public:
     float                           GetECALTime(float smearing=0);
     float                           GetVtxTime(float smearing=0);
     pair<float, float>              GetRecHitTimeE(DetId id);
-    vector<pair<float, float> >     GetRecHitsTimeE();
+    vector<EcalRecHit*>             GetRecHits();
     //---setters---
     void                            SetRecoVtx(VertexWithFT* recoVtx);
     //---utils---

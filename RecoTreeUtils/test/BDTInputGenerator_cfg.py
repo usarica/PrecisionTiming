@@ -6,11 +6,16 @@ from FastTiming.RecoTreeUtils.IOFilesHelper import *
 options = VarParsing('analysis')
 
 options.register('sampleName',
-                 'SingleGammaE50_noPU',
+                 'SingleGamma_E50',
                  VarParsing.multiplicity.singleton,
                  VarParsing.varType.string,
                  "sample to process")
-options.maxEvents = 500
+options.register('nameMod',
+                 '_BDTInput',
+                 VarParsing.multiplicity.singleton,
+                 VarParsing.varType.string,
+                 "output file modifier")
+options.maxEvents = -1
 options.parseArguments()
 
 ## Get I/O files from the list given the sample name
@@ -19,19 +24,18 @@ filesOpt = cms.PSet(
     outputFile = cms.string("")
 )
 
-GetSampleFiles(options.sampleName, filesOpt)
+GetSampleFiles(options.sampleName, options.nameMod, filesOpt)
 
 ##------------------------------------------------------------------------------
 
-process = cms.Process("RecoFastTiming")
+process = cms.Process("BDTInputGenerator")
 
 ## load the SK geometry and magnetic field config
 process.load('Configuration.Geometry.GeometryExtended2023SHCalNoTaperReco_cff')
-##process.load('Configuration.Geometry.GeometryExtended2023SHCalNoTaper_cff')
 process.load('Configuration.StandardSequences.MagneticField_38T_PostLS1_cff')
 process.load('Configuration/StandardSequences/FrontierConditions_GlobalTag_cff')
 ## import standard RecoFT configurations
-process.load("FastTiming.RecoTreeUtils.RecoFastTiming_cff")
+process.load("FastTiming.RecoTreeUtils.BDTInputGenerator_cff")
 
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:upgradePLS3', '')
 
@@ -45,6 +49,6 @@ process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
 process.TFileService = cms.Service("TFileService",
                             fileName = filesOpt.outputFile)
 
-process.ft_path = cms.Sequence(process.RecoFastTiming)
+process.ft_path = cms.Sequence(process.BDTInputGenerator)
 
 process.path = cms.Path(process.ft_path)
