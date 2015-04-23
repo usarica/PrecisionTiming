@@ -1,0 +1,14 @@
+# Ignore everything in this directory
+
+# ROOT files
+*.root
+
+# tmp
+*~
+*\#*
+.\#*
+
+# SCRAM business
+__init__.py
+*.pyc
+

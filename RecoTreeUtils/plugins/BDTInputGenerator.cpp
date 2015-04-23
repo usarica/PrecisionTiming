@@ -22,7 +22,21 @@
 
 using namespace std;
 
-struct FTEcalRecHit {
+class FTEcalRecHit
+{
+public:
+    //---ctors---
+    FTEcalRecHit() {};
+    FTEcalRecHit(int c_ix, int c_iy, float c_z=0, float c_time=0, float c_energy=-1):
+        ix(c_ix), iy(c_iy), z(c_z), time(c_time), energy(c_energy) {};
+
+    //---dtor---
+    ~FTEcalRecHit() {};
+
+    //---utils---
+    bool operator>(const FTEcalRecHit& other) const {return energy>other.energy;};
+    bool operator<(const FTEcalRecHit& other) const {return energy<other.energy;};
+    
     int    ix;
     int    iy;
     double z;
@@ -54,6 +68,7 @@ private:
     float* energies_;
     float* pos_x_;
     float* pos_y_;
+    float pt_, pz_;
     float true_time_;
     //---objects interfaces---
     edm::ESHandle<MagneticField> magFieldHandle_;             
@@ -66,7 +81,7 @@ private:
     //---FT objects---
     vector<VertexWithFT> recoVtxCollection_;
     vector<PFCandidateWithFT> particlesCollection_;
-    map<int, FTEcalRecHit> recHitsMatrix_;
+    vector<FTEcalRecHit> eOrderedRecHits_;
     //---Options---
     int particleType_;
     int matrixSide_;
@@ -80,6 +95,8 @@ BDTInputGenerator::BDTInputGenerator(const edm::ParameterSet& Config)
     energies_ = new float[25]();
     pos_x_ = new float[25]();
     pos_y_ = new float[25]();
+    pt_ = 0;
+    pz_ = 0;
     true_time_ = 0;
 }
 
@@ -99,6 +116,8 @@ void BDTInputGenerator::beginJob()
         outTree_->Branch(posxBranch.Data(), &pos_x_[iRec], (posxBranch+"/F").Data());
         outTree_->Branch(posyBranch.Data(), &pos_y_[iRec], (posyBranch+"/F").Data());
     }
+    outTree_->Branch("pt", &pt_, "pt/F");
+    outTree_->Branch("pz", &pz_, "pz/F");
     outTree_->Branch("true_time", &true_time_, "true_time/F");
 }
 
@@ -139,26 +158,29 @@ void BDTInputGenerator::analyze(const edm::Event& Event, const edm::EventSetup& 
         PFCandidateWithFT particle(&candHandle_.product()->at(iCand), recVect,
                                    skGeometry_, magField_, genSignalVtx, recoSignalVtx);
 
-        if(particle.particleId() != particleType_ || !particle.hasTime())
+        if(particle.particleId() < particleType_ || !particle.hasTime() || particle.pt() < 1)
             continue;
         BuildRecHitsMatrix(particle.GetRecHits(), particle.GetPFCluster()->seed(), matrixSide_);
-        for(auto& mtxEle : recHitsMatrix_)
+        for(unsigned int iHit=0; iHit<eOrderedRecHits_.size(); ++iHit)
         {
-            times_[mtxEle.first] = mtxEle.second.energy!=-1 ? (mtxEle.second.time) : -1;
-            energies_[mtxEle.first] = mtxEle.second.energy!=-1 ? mtxEle.second.energy : -1;
-            pos_x_[mtxEle.first] = mtxEle.second.ix;
-            pos_y_[mtxEle.first] = mtxEle.second.iy;
-        }
-        float Dz = fabs(recHitsMatrix_[matrixSide_*matrixSide_/2].z - genSignalVtx->position().z());
+            times_[iHit] = eOrderedRecHits_[iHit].energy!=-1 ?
+                (gRandom->Gaus(eOrderedRecHits_[iHit].time, 0.03)) : -1;
+            energies_[iHit] = eOrderedRecHits_[iHit].energy!=-1 ?
+                eOrderedRecHits_[iHit].energy/particle.energy() : -1;
+            pos_x_[iHit] = eOrderedRecHits_[iHit].ix;
+            pos_y_[iHit] = eOrderedRecHits_[iHit].iy;
+        }        
+        pt_ = particle.pt();
+        pz_ = particle.pz();
+        float Dz = fabs(eOrderedRecHits_[0].z - genSignalVtx->position().z());
         true_time_ = genSignalVtx->position().t()*1E9 + particle.p()*Dz/(fabs(particle.pz())*30);
         outTree_->Fill();
-        return;
     }
 }
 
 void BDTInputGenerator::BuildRecHitsMatrix(vector<EcalRecHit*> recHits, DetId seed, int sqrt_n)
 {
-    recHitsMatrix_.clear();    
+    eOrderedRecHits_.clear();    
 
     int nRH=0;
     int seed_ix = EKDetId(seed).ix();
@@ -183,18 +205,20 @@ void BDTInputGenerator::BuildRecHitsMatrix(vector<EcalRecHit*> recHits, DetId se
             {
                 const CaloCellGeometry* cell=skGeometry_->getGeometry(recHit->id());
                 GlobalPoint recHitPos = dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(0);
-                FTEcalRecHit tmp = {ixs[nRH],
-                                    iys[nRH],
-                                    recHitPos.z(),
-                                    recHit->time()*1E9+recHitPos.mag()/30,
-                                    recHit->energy()};
-                recHitsMatrix_[nRH] = tmp;
+                FTEcalRecHit tmp(ixs[nRH],
+                                 iys[nRH],
+                                 recHitPos.z(),
+                                 recHit->time()+recHitPos.mag()/30,
+                                 recHit->energy());
+                eOrderedRecHits_.push_back(tmp);
             }
         }
-        if(recHitsMatrix_.find(nRH) == recHitsMatrix_.end())
-            recHitsMatrix_[nRH] = FTEcalRecHit{ixs[nRH], iys[nRH], 0, 0,-1};
-        ++nRH;                        
+        if(eOrderedRecHits_.size() < fabs(nRH+1))
+            eOrderedRecHits_.push_back(FTEcalRecHit(ixs[nRH], iys[nRH], 0, 0,-1));
+        ++nRH;        
     }
+    sort(eOrderedRecHits_.begin(), eOrderedRecHits_.end());
+    reverse(eOrderedRecHits_.begin(), eOrderedRecHits_.end());
 }    
 
 //define this as a plugin
