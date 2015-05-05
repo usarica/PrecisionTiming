@@ -132,13 +132,11 @@ void TMVARegression(TString myMethodList = "")
 
    // Read training and test data (see TMVAClassification for reading ASCII files)
    // load the signal and background event samples from ROOT trees
-   TFile* input0 = TFile::Open("ntuples/QCD_noPU_BDTInput.root");
-   TFile* input1 = TFile::Open("ntuples/MinBias_BDTInput.root");
+   TFile* input0 = TFile::Open("ntuples/SingleCharged_BDTInput.root");
    
    // --- Register the regression tree
    TTree *regTree[2];
    regTree[0] = (TTree*)input0->Get("ft_bdt_input");
-   regTree[1] = (TTree*)input1->Get("ft_bdt_input");
 
    // If you wish to modify default settings 
    // (please check "src/Config.h" to see all available global options)
@@ -166,8 +164,8 @@ void TMVARegression(TString myMethodList = "")
        }
        factory->AddVariable(energyBranch.Data(), energyBranch.Data(), "GeV", 'F');           
    }
-   factory->AddVariable("TMath::Abs(pt/pz)", "pt/pz", "units", 'F');
-   factory->AddVariable("TMath::Abs(pz)", "pz", "GeV", 'F');
+   factory->AddVariable("tan_theta_:=TMath::Abs(pt/pz)", "pt/pz", "units", 'F');
+   factory->AddVariable("pz:=TMath::Abs(pz)", "pz", "GeV", 'F');
    // factory->AddVariable("EeOverEh", "EeOverEh", "units", 'F');
 
    // Add the variable carrying the regression target
@@ -175,7 +173,6 @@ void TMVARegression(TString myMethodList = "")
 
    // You can add an arbitrary number of regression trees
    factory->AddRegressionTree(regTree[0], 1);
-   factory->AddRegressionTree(regTree[1], 1);
 
    // Apply additional cuts on the signal and background samples (can be different)
    TCut mycut = ""; // for example: TCut mycut = "abs(var1)<0.5 && abs(var2-0.5)<1";
