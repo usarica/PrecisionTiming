@@ -6,7 +6,7 @@ from FastTiming.RecoTreeUtils.IOFilesHelper import *
 options = VarParsing('analysis')
 
 options.register('sampleName',
-                 'SingleGamma_E50',
+                 'SingleCharged',
                  VarParsing.multiplicity.singleton,
                  VarParsing.varType.string,
                  "sample to process")

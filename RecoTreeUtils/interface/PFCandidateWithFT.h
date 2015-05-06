@@ -23,6 +23,8 @@
 #include "DataFormats/ParticleFlowReco/interface/PFBlock.h"
 #include "DataFormats/ParticleFlowReco/interface/PFBlockElement.h"
 #include "DataFormats/ParticleFlowReco/interface/PFBlockElementTrack.h"
+#include "DataFormats/EcalDetId/interface/EKDetId.h"
+#include "DataFormats/EcalDetId/interface/EBDetId.h"
 #include "Geometry/CaloGeometry/interface/CaloGeometry.h"
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
 #include "Geometry/CaloGeometry/interface/TruncatedPyramid.h"
@@ -31,6 +33,7 @@
 #include "TrackingTools/TrajectoryState/interface/FreeTrajectoryState.h"
 
 #include "FastTiming/RecoTreeUtils/interface/VertexWithFT.h"
+#include "FastTiming/RecoTreeUtils/interface/MVATimeComputer.h"
 
 typedef edm::RefToBase<reco::Track> TrackBaseRef;
 typedef ROOT::Math::PositionVector3D<ROOT::Math::CylindricalEta3D<Double32_t> > REPPoint;
@@ -38,6 +41,11 @@ typedef ROOT::Math::PositionVector3D<ROOT::Math::CylindricalEta3D<Double32_t> > 
 using namespace std;
 
 class VertexWithFT;
+
+typedef enum tof_algo{
+    propagatedTrack,
+    pzTOF,
+} tof_algo;
 
 //****************************************************************************************
 
@@ -59,18 +67,20 @@ public:
     inline math::XYZVector          GetRecoVtxPos() {return recoVtxPos_;};
     inline float                    GetDrTrackCluster() { return drTrackCluster_; };
     inline float                    GetRawTime() {return rawTime_;};
-    inline float                    GetTOF() { return GetPropagatedTrackLength()/3E10*1E9; };
     inline pair<float, float>       GetRecHitTimeMaxE() {return GetRecHitTimeE(ecalSeed_);};
     const reco::Track*              GetTrack();
     float                           GetTrackLength();
     float                           GetPropagatedTrackLength();
     float                           GetGenTOF();
+    float                           GetTOF(tof_algo method);
     float                           GetECALTime(float smearing=0);
-    float                           GetVtxTime(float smearing=0);
+    float                           GetECALTimeMVA(float smearing=0);
+    float                           GetVtxTime(float smearing=0, bool mva=false, tof_algo tof_method=pzTOF);
     pair<float, float>              GetRecHitTimeE(DetId id);
-    vector<EcalRecHit*>             GetRecHits();
+    vector<FTEcalRecHit>*           GetRecHits();
     //---setters---
     void                            SetRecoVtx(VertexWithFT* recoVtx);
+    void                            SetMVAComputer(MVATimeComputer* mvaComputer) {mvaComputer_ = mvaComputer;};
     //---utils---
     inline bool                     hasTime() {return hasTime_;};
     DetId                           FindEcalSeed();
@@ -84,13 +94,16 @@ private:
     const SimVertex*         genVtx_;
     VertexWithFT*            recoVtx_;
     vector<EcalRecHit>*      recHitColl_;
+    vector<FTEcalRecHit>     ftRecHits_;
     REPPoint                 pfClusterPos_;    
     DetId                    ecalSeed_;
     bool                     hasTime_;
     float                    clusterE_;
     float                    rawTime_;
     float                    tSmearing_;
+    float                    tSmearingMVA_;
     float                    smearedRawTime_;
+    float                    mvaRawTime_;
     const reco::Track*       recoTrack_;
     math::XYZVector          ecalPos_;
     math::XYZVector          recoVtxPos_;
@@ -98,6 +111,7 @@ private:
     float                    trackL_;
     float                    propagatedTrackL_;
     float                    drTrackCluster_;
+    MVATimeComputer*         mvaComputer_;
 };
 
 #endif

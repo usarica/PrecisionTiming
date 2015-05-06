@@ -41,6 +41,8 @@ public:
     int reco_vtx_index;
     float reco_vtx_z;
     float reco_vtx_t;
+    float sumEt_nocut;
+    float sumEt_t_cut;
     float track_length;
     float track_length_helix;
     float track_dz;
@@ -77,6 +79,8 @@ FTParticlesTree::FTParticlesTree()
     reco_vtx_index=0;
     reco_vtx_z=0;
     reco_vtx_t=0;
+    sumEt_nocut=0;
+    sumEt_t_cut=0;
     track_length=0;
     track_length_helix=0;
     track_dz=0;
@@ -126,8 +130,6 @@ public:
     
     //---branches variables---
     int event_n;
-    float gen_jet_pt;
-    float gen_jet_eta;
     int gen_vtx_id;
     float gen_vtx_x;
     float gen_vtx_y;
@@ -158,8 +160,6 @@ FTVerticesTree::FTVerticesTree()
     tree_ = new TTree();
     //---init
     event_n=0;    
-    gen_jet_pt=0;
-    gen_jet_eta=0;
     gen_vtx_id=-1;
     gen_vtx_x=0;
     gen_vtx_y=0;
@@ -181,8 +181,6 @@ FTVerticesTree::FTVerticesTree()
 
     //---create branches
     tree_->Branch("event", &event_n, "event/I");
-    tree_->Branch("gen_jet_pt", &gen_jet_pt, "gen_jet_pt/F");
-    tree_->Branch("gen_jet_eta", &gen_jet_eta, "gen_jet_eta/F");
     tree_->Branch("gen_vtx_id", &gen_vtx_id, "gen_vtx_id/I");
     tree_->Branch("gen_vtx_x", &gen_vtx_x, "gen_vtx_x/F");
     tree_->Branch("gen_vtx_y", &gen_vtx_y, "gen_vtx_y/F");
@@ -203,6 +201,160 @@ FTVerticesTree::FTVerticesTree()
     tree_->Branch("reco_vtx_neu_t", &reco_vtx_neu_t, "reco_vtx_neu_t/F");
 }
 
+class FTGlobalTree
+{
+public: 
+
+    //---ctors---
+    FTGlobalTree();
+    //---dtor---
+    ~FTGlobalTree() {};
+    //---wrappers
+    inline void Fill() {tree_->Fill();};
+    inline void Write(const char* name) {tree_->Write(name);};
+    inline void Write(string name) {tree_->Write(name.c_str());};
+    
+    //---branches variables---
+    float sumEt_nocut;
+    float sumEt_t_cut;
+    float sumEt_gen;
+    
+private:
+
+    TTree* tree_;
+    
+};
+
+FTGlobalTree::FTGlobalTree()
+{
+    tree_ = new TTree();
+    
+    //---init
+    sumEt_nocut=0;
+    sumEt_t_cut=0;
+    sumEt_gen=0;
+
+    //---create branches
+    tree_->Branch("sumEt_nocut", &sumEt_nocut, "sumEt_nocut/F");
+    tree_->Branch("sumEt_t_cut", &sumEt_t_cut, "sumEt_t_cut/F");
+    tree_->Branch("sumEt_gen", &sumEt_gen, "sumEt_gen/F");
+}
+
+class FTJetsTree
+{
+public: 
+
+    //---ctors---
+    FTJetsTree();
+    //---dtor---
+    ~FTJetsTree() {};
+    //---wrappers
+    inline void Fill() {tree_->Fill();};
+    inline void Write(const char* name) {tree_->Write(name);};
+    inline void Write(string name) {tree_->Write(name.c_str());};
+    
+    //---branches variables---
+    int gen_n;
+    float gen_j1_pt;
+    float gen_j2_pt;
+    float gen_j1_eta;
+    float gen_j2_eta;
+    float gen_j1_E;
+    float gen_j2_E;
+    float gen_jj_m;
+    int chs_n;
+    float chs_j1_pt;
+    float chs_j2_pt;
+    float chs_j1_eta;
+    float chs_j2_eta;
+    float chs_j1_E;
+    float chs_j2_E;
+    float chs_j1_dR;
+    float chs_j2_dR;
+    float chs_jj_m;
+    int tcut_n;
+    float tcut_j1_pt;
+    float tcut_j2_pt;
+    float tcut_j1_eta;
+    float tcut_j2_eta;
+    float tcut_j1_E;
+    float tcut_j2_E;
+    float tcut_j1_dR;
+    float tcut_j2_dR;
+    float tcut_jj_m;
+    
+private:
+
+    TTree* tree_;
+    
+};
+
+FTJetsTree::FTJetsTree()
+{
+    tree_ = new TTree();
+    
+    //---init
+    gen_n=0;
+    gen_j1_pt=0;
+    gen_j2_pt=0;
+    gen_j1_eta=0;
+    gen_j2_eta=0;
+    gen_j1_E=0;
+    gen_j2_E=0;
+    gen_jj_m=0;
+    chs_n=0;
+    chs_j1_pt=0;
+    chs_j2_pt=0;
+    chs_j1_eta=0;
+    chs_j2_eta=0;
+    chs_j1_E=0;
+    chs_j2_E=0;
+    chs_j1_dR=0;
+    chs_j2_dR=0;
+    chs_jj_m=0;
+    tcut_n=0;
+    tcut_j1_pt=0;
+    tcut_j2_pt=0;
+    tcut_j1_eta=0;
+    tcut_j2_eta=0;
+    tcut_j1_E=0;
+    tcut_j2_E=0;
+    tcut_j1_dR=0;
+    tcut_j2_dR=0;
+    tcut_jj_m=0;
+
+    //---create branches
+    tree_->Branch("gen_n", &gen_n, "gen_n/I");
+    tree_->Branch("gen_j1_pt", &gen_j1_pt, "gen_j1_pt/F");
+    tree_->Branch("gen_j2_pt", &gen_j2_pt, "gen_j2_pt/F");    
+    tree_->Branch("gen_j1_eta", &gen_j1_eta, "gen_j1_eta/F");
+    tree_->Branch("gen_j2_eta", &gen_j2_eta, "gen_j2_eta/F");
+    tree_->Branch("gen_j1_E", &gen_j1_E, "gen_j1_E/F");
+    tree_->Branch("gen_j2_E", &gen_j2_E, "gen_j2_E/F");
+    tree_->Branch("gen_jj_m", &gen_jj_m, "gen_jj_m/F");
+    tree_->Branch("chs_n", &chs_n, "chs_n/I");
+    tree_->Branch("chs_j1_pt", &chs_j1_pt, "chs_j1_pt/F");
+    tree_->Branch("chs_j2_pt", &chs_j2_pt, "chs_j2_pt/F");    
+    tree_->Branch("chs_j1_eta", &chs_j1_eta, "chs_j1_eta/F");
+    tree_->Branch("chs_j2_eta", &chs_j2_eta, "chs_j2_eta/F");
+    tree_->Branch("chs_j1_E", &chs_j1_E, "chs_j1_E/F");
+    tree_->Branch("chs_j2_E", &chs_j2_E, "chs_j2_E/F");
+    tree_->Branch("chs_j1_dR", &chs_j1_dR, "chs_j1_dR/F");
+    tree_->Branch("chs_j2_dR", &chs_j2_dR, "chs_j2_dR/F");
+    tree_->Branch("chs_jj_m", &chs_jj_m, "chs_jj_m/F");
+    tree_->Branch("tcut_n", &tcut_n, "tcut_n/I");
+    tree_->Branch("tcut_j1_pt", &tcut_j1_pt, "tcut_j1_pt/F");
+    tree_->Branch("tcut_j2_pt", &tcut_j2_pt, "tcut_j2_pt/F");    
+    tree_->Branch("tcut_j1_eta", &tcut_j1_eta, "tcut_j1_eta/F");
+    tree_->Branch("tcut_j2_eta", &tcut_j2_eta, "tcut_j2_eta/F");
+    tree_->Branch("tcut_j1_E", &tcut_j1_E, "tcut_j1_E/F");
+    tree_->Branch("tcut_j2_E", &tcut_j2_E, "tcut_j2_E/F");
+    tree_->Branch("tcut_j1_dR", &tcut_j1_dR, "tcut_j1_dR/F");
+    tree_->Branch("tcut_j2_dR", &tcut_j2_dR, "tcut_j2_dR/F");
+    tree_->Branch("tcut_jj_m", &tcut_jj_m, "tcut_jj_m/F");                                                                                                                                                                           
+}
+
+
 class FTFile
 {
 public:    
@@ -215,6 +367,8 @@ public:
 
     FTParticlesTree particlesTree;
     FTVerticesTree  verticesTree;
+    FTGlobalTree    globalTree;
+    FTJetsTree      jetsTree;
     
 private:
     

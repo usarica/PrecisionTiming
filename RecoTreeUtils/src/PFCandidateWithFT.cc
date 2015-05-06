@@ -23,7 +23,9 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<Eca
     pfCluster_ = NULL;
     recoTrack_ = NULL;
     smearedRawTime_=0;
+    mvaRawTime_=0;
     tSmearing_=-1;
+    tSmearingMVA_=-1;
     //---reco vtx info---
     if(recoVtx_)
         recoVtxPos_ = math::XYZVector(recoVtx_->position().x(),
@@ -53,7 +55,10 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<Eca
     {
         FindEcalSeed();
         const CaloCellGeometry* cell=skGeometry_->getGeometry(ecalSeed_);
-        ecalPos_ = dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(10*0.4-0.075-0.25);
+        // if(pfCluster_->isEB()
+        //     ecalPos_ = dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(3.5);
+        // else
+            ecalPos_ = dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(10*0.4-0.075-0.25);
         rawTime_ = GetRecHitTimeE(ecalSeed_).first + GetGenTOF();
         if(GetRecHitTimeMaxE().second != -1)
             hasTime_ = true;
@@ -84,43 +89,57 @@ pair<float, float> PFCandidateWithFT::GetRecHitTimeE(DetId id)
 }
 
 //----------Return <time, enegy> of all the ecal cluster recHits--------------------------
-vector<EcalRecHit*> PFCandidateWithFT::GetRecHits()
+vector<FTEcalRecHit>* PFCandidateWithFT::GetRecHits()
 {
-    vector<EcalRecHit*> recHits_vect;
-    vector<pair<DetId, float> > detIdMap = pfCluster_->hitsAndFractions();
-    //---Sort cluster rechits---
-    vector<DetId> sortedDetId;
-    sortedDetId.push_back(detIdMap.at(0).first);
-    for(unsigned int i=1; i<detIdMap.size(); i++)        
+    if(ftRecHits_.size() == 0)
     {
-        bool inserted=false;
-        for(unsigned int j=0; j<sortedDetId.size(); j++)
+        vector<pair<DetId, float> > detIdMap = pfCluster_->hitsAndFractions();
+        //---Sort cluster rechits---
+        vector<DetId> sortedDetId;
+        sortedDetId.push_back(detIdMap.at(0).first);
+        for(unsigned int i=1; i<detIdMap.size(); i++)        
         {
-            if(detIdMap.at(i).first.rawId() < sortedDetId.at(j).rawId())
+            bool inserted=false;
+            for(unsigned int j=0; j<sortedDetId.size(); j++)
             {
-                sortedDetId.insert(sortedDetId.begin()+j, detIdMap.at(i).first);
-                inserted=true;
-                break;
+                if(detIdMap.at(i).first.rawId() < sortedDetId.at(j).rawId())
+                {
+                    sortedDetId.insert(sortedDetId.begin()+j, detIdMap.at(i).first);
+                    inserted=true;
+                    break;
+                }
+            }
+            if(!inserted)
+                sortedDetId.push_back(detIdMap.at(i).first);
+        }
+        //---search for the right rechits
+        unsigned int rh_start=0;
+        for(unsigned int iDet=0; iDet<sortedDetId.size(); iDet++)
+        {
+            for(unsigned int iRec=rh_start; iRec<recHitColl_->size(); iRec++)
+            {
+                if(sortedDetId.at(iDet) == recHitColl_->at(iRec).id())
+                {
+                    rh_start=iRec+1;
+                    const CaloCellGeometry* cell=skGeometry_->getGeometry(sortedDetId.at(iDet));
+                    GlobalPoint recHitPos = dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(0);
+                    FTEcalRecHit tmp(sortedDetId.at(iDet).rawId(),
+                                     EKDetId(sortedDetId.at(iDet)).ix(),
+                                     EKDetId(sortedDetId.at(iDet)).iy(),
+                                     recHitPos.z(),
+                                     recHitColl_->at(iRec).time()+recHitPos.mag()/30,
+                                     recHitColl_->at(iRec).energy());
+                    ftRecHits_.push_back(tmp);
+                    break;
+                }
             }
         }
-        if(!inserted)
-            sortedDetId.push_back(detIdMap.at(i).first);
     }
-    //---search for the right rechits
-    unsigned int rh_start=0;
-    for(unsigned int iDet=0; iDet<sortedDetId.size(); iDet++)
-    {
-        for(unsigned int iRec=rh_start; iRec<recHitColl_->size(); iRec++)
-        {
-	    if(sortedDetId.at(iDet) == recHitColl_->at(iRec).id())
-	    {
-                rh_start=iRec+1;
-                recHits_vect.push_back(&recHitColl_->at(iRec));
-                break;
-	    }
-	}
-    }
-    return recHits_vect;
+    //---prepare the FTRecHits for the MVA
+    sort(ftRecHits_.begin(), ftRecHits_.end());
+    reverse(ftRecHits_.begin(), ftRecHits_.end());
+
+    return &ftRecHits_;
 }
 
 //----------TOF wrt nominal IP------------------------------------------------------------
@@ -135,6 +154,14 @@ float PFCandidateWithFT::GetGenTOF()
     return ecalBadPos.R()/30;
 }
 
+float PFCandidateWithFT::GetTOF(tof_algo method)
+{
+    if(method == pzTOF)
+        return p()/(fabs(pz()))*fabs(ecalPos_.z()-recoVtxPos_.z())/30;
+    
+    return GetPropagatedTrackLength()/3E10*1E9;
+};
+
 //----------Apply a time resolution smearing to the raw time------------------------------
 //---NOTE: smearing must be in ns
 float PFCandidateWithFT::GetECALTime(float smearing)
@@ -147,16 +174,34 @@ float PFCandidateWithFT::GetECALTime(float smearing)
         tSmearing_ = smearing;
         smearedRawTime_ = rndm.Gaus(rawTime_, smearing);
     }
+    
     return smearedRawTime_;
 }
 
-//----------Get TOF corrected vtx time----------------------------------------------------
-float PFCandidateWithFT::GetVtxTime(float smearing)
+//----------Get the time smeared and evaluated from the mva-------------------------------
+float PFCandidateWithFT::GetECALTimeMVA(float smearing)
 {
-    if(tSmearing_ == -1)
-        GetECALTime(smearing);
+    //---compute ecal time from the mva
+    if(mvaComputer_ && tSmearingMVA_ == -1)
+    {
+        tSmearingMVA_ = smearing;
+        mvaRawTime_ = mvaComputer_->GetMVATime(GetRecHits(), energy(), pt(), pz(), smearing);
+    }
+    
+    return mvaRawTime_;
+}
 
-    return smearedRawTime_ - p()/(fabs(pz()))*fabs(ecalPos_.z()-recoVtxPos_.z())/30;//GetTOF();
+//----------Get TOF corrected vtx time----------------------------------------------------
+float PFCandidateWithFT::GetVtxTime(float smearing, bool mva, tof_algo tof_method)
+{
+    if(mva)
+    {
+        GetECALTimeMVA(smearing);
+        float tof_from_face = p()/(fabs(pz()))*fabs(GetRecHits()->at(0).z-recoVtxPos_.z())/30;
+        return mvaRawTime_ - tof_from_face;
+    }
+    else
+        return GetECALTime(smearing) - GetTOF(tof_method);
 }
 
 //----------Get the right track ref from the PFBlock--------------------------------------

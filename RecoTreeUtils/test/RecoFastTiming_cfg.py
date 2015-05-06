@@ -10,7 +10,7 @@ options.register('sampleName',
                  VarParsing.multiplicity.singleton,
                  VarParsing.varType.string,
                  "sample to process")
-options.maxEvents = 500
+options.maxEvents = -1
 options.parseArguments()
 
 ## Get I/O files from the list given the sample name
@@ -19,7 +19,7 @@ filesOpt = cms.PSet(
     outputFile = cms.string("")
 )
 
-GetSampleFiles(options.sampleName, filesOpt)
+GetSampleFiles(options.sampleName, "", filesOpt)
 
 ##------------------------------------------------------------------------------
 

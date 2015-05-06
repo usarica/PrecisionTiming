@@ -104,6 +104,7 @@ PFCandidateWithFT* VertexWithFT::GetSeedRef()
 //---               2 --> neutral (photons)
 float VertexWithFT::ComputeTime(int particle_type, float pt_cut, float pz2_cut, float smearing)
 {
+    float seed_time=0;
     time_ = 0;
     n_time_tracks_ = 0;
     for(unsigned int iPart=0; iPart<particles_.size(); ++iPart)
@@ -118,8 +119,17 @@ float VertexWithFT::ComputeTime(int particle_type, float pt_cut, float pz2_cut, 
         float pz2_tmp = pow(particles_.at(iPart).first->pz(), 2);
         if(pt_tmp > pt_cut && pz2_tmp > pz2_cut && particles_.at(iPart).first->hasTime())
         {
-            time_ += particles_.at(iPart).first->GetVtxTime(smearing);
-            ++n_time_tracks_;
+            if(n_time_tracks_ == 0)
+            {
+                seed_time = particles_.at(iPart).first->GetVtxTime(smearing, false);
+                time_ += seed_time;
+                ++n_time_tracks_;
+            }
+            else if(fabs(particles_.at(iPart).first->GetVtxTime(smearing, false) - seed_time) < smearing*2)
+            {
+                time_ += particles_.at(iPart).first->GetVtxTime(smearing, false);
+                ++n_time_tracks_;
+            }
         }
     }
     if(n_time_tracks_ == 0)
@@ -134,7 +144,7 @@ float VertexWithFT::ComputeTimeBottomUp(int particle_type, float pt_cut, float s
 {
     time_ = 0;
     n_time_tracks_ = 0;
-    vector<int> used_index;
+    vector<float> used_times;
     for(unsigned int iPart=0; iPart<particles_.size(); ++iPart)
     {
         //---select the particles type used to compute the vtx time
@@ -146,8 +156,9 @@ float VertexWithFT::ComputeTimeBottomUp(int particle_type, float pt_cut, float s
         float pt_tmp = particles_.at(iPart).first->pt();
         if(pt_tmp > pt_cut && particles_.at(iPart).first->hasTime())
         {
-            time_ += particles_.at(iPart).first->GetVtxTime(smearing);
-            used_index.push_back(iPart);
+            float tmp_time = particles_.at(iPart).first->GetVtxTime(smearing);
+            used_times.push_back(tmp_time);
+            time_ += tmp_time;
             ++n_time_tracks_;
         }
     }
@@ -156,40 +167,40 @@ float VertexWithFT::ComputeTimeBottomUp(int particle_type, float pt_cut, float s
     if(n_time_tracks_ < 3)
         return time_;
 
-    int bad_particle=-1;
-    float new_time=time_;            
-    do
-    {
-        time_ = new_time;
-        float minDeltaRMS=100;
-        for(unsigned int i=0; i<used_index.size(); ++i)
-        {
-            float tRMS=0;
-            float sRMS=0;
-            float tmp_time=((time_*n_time_tracks_) -
-                            particles_.at(used_index.at(i)).first->GetVtxTime(smearing))/(n_time_tracks_-1);
-            for(unsigned int j=0; j<used_index.size(); ++j)
-            {
-                tRMS += pow(time_ - particles_.at(used_index.at(j)).first->GetVtxTime(smearing), 2);
-                if(j != i)
-                    sRMS += pow(tmp_time - particles_.at(used_index.at(j)).first->GetVtxTime(smearing), 2);
-            }
-            tRMS = sqrt(1/(n_time_tracks_-1)*tRMS);
-            sRMS = sqrt(1/(n_time_tracks_-2)*sRMS);
-            float tmpDeltaRMS=tRMS*(sqrt(n_time_tracks_/(n_time_tracks_-1))) - sRMS;
-            if(tmpDeltaRMS > 0 && tmpDeltaRMS < minDeltaRMS)
-            {
-                new_time = tmp_time;
-                bad_particle = i;
-            }
-        }
-        if(bad_particle != -1)
-        {
-            used_index.erase(used_index.begin()+bad_particle);
-            --n_time_tracks_;
-        }
-    }
-    while(n_time_tracks_ > 2 && bad_particle!=-1);
+    // int bad_particle=-1;
+    // float new_time=time_;            
+    // do
+    // {
+    //     time_ = new_time;
+    //     float minDeltaRMS=100;
+    //     for(unsigned int i=0; i<used_index.size(); ++i)
+    //     {
+    //         float tRMS=0;
+    //         float sRMS=0;
+    //         float tmp_time=((time_*n_time_tracks_) -
+    //                         particles_.at(used_index.at(i)).first->GetVtxTime(smearing))/(n_time_tracks_-1);
+    //         for(unsigned int j=0; j<used_index.size(); ++j)
+    //         {
+    //             tRMS += pow(time_ - particles_.at(used_index.at(j)).first->GetVtxTime(smearing), 2);
+    //             if(j != i)
+    //                 sRMS += pow(tmp_time - particles_.at(used_index.at(j)).first->GetVtxTime(smearing), 2);
+    //         }
+    //         tRMS = sqrt(1/(n_time_tracks_-1)*tRMS);
+    //         sRMS = sqrt(1/(n_time_tracks_-2)*sRMS);
+    //         float tmpDeltaRMS=tRMS*(sqrt(n_time_tracks_/(n_time_tracks_-1))) - sRMS;
+    //         if(tmpDeltaRMS > 0 && tmpDeltaRMS < minDeltaRMS)
+    //         {
+    //             new_time = tmp_time;
+    //             bad_particle = i;
+    //         }
+    //     }
+    //     if(bad_particle != -1)
+    //     {
+    //         used_index.erase(used_index.begin()+bad_particle);
+    //         --n_time_tracks_;
+    //     }
+    // }
+    // while(n_time_tracks_ > 2 && bad_particle!=-1);
 
     return time_;
 }                      

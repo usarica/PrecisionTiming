@@ -15,34 +15,11 @@
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 #include "DataFormats/Common/interface/SortedCollection.h"
-#include "DataFormats/EcalDetId/interface/EKDetId.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 
 #include "FastTiming/RecoTreeUtils/interface/PFCandidateWithFT.h"
 
 using namespace std;
-
-class FTEcalRecHit
-{
-public:
-    //---ctors---
-    FTEcalRecHit() {};
-    FTEcalRecHit(int c_ix, int c_iy, float c_z=0, float c_time=0, float c_energy=-1):
-        ix(c_ix), iy(c_iy), z(c_z), time(c_time), energy(c_energy) {};
-
-    //---dtor---
-    ~FTEcalRecHit() {};
-
-    //---utils---
-    bool operator>(const FTEcalRecHit& other) const {return energy>other.energy;};
-    bool operator<(const FTEcalRecHit& other) const {return energy<other.energy;};
-    
-    int    ix;
-    int    iy;
-    double z;
-    double time;
-    double energy;
-};
 
 class BDTInputGenerator : public edm::EDAnalyzer
 {
@@ -51,7 +28,7 @@ public:
     ~BDTInputGenerator() {};
 
     //---utils---
-    void BuildRecHitsMatrix(vector<EcalRecHit*> recHits, DetId seed, int sqrt_n);
+    void BuildRecHitsMatrix(vector<FTEcalRecHit> recHits, DetId seed, int sqrt_n);
         
 private:
     virtual void beginJob();
@@ -91,10 +68,10 @@ BDTInputGenerator::BDTInputGenerator(const edm::ParameterSet& Config)
 {
     particleType_ = Config.getUntrackedParameter<int>("particleType", 4);
     matrixSide_ = Config.getUntrackedParameter<int>("matrixSide", 5);
-    times_ = new float[25]();
-    energies_ = new float[25]();
-    pos_x_ = new float[25]();
-    pos_y_ = new float[25]();
+    times_ = new float[matrixSide_]();
+    energies_ = new float[matrixSide_]();
+    pos_x_ = new float[matrixSide_]();
+    pos_y_ = new float[matrixSide_]();
     pt_ = 0;
     pz_ = 0;
     true_time_ = 0;
@@ -158,9 +135,9 @@ void BDTInputGenerator::analyze(const edm::Event& Event, const edm::EventSetup& 
         PFCandidateWithFT particle(&candHandle_.product()->at(iCand), recVect,
                                    skGeometry_, magField_, genSignalVtx, recoSignalVtx);
 
-        if(particle.particleId() < particleType_ || !particle.hasTime() || particle.pt() < 1)
+        if(particle.particleId() >= particleType_ || !particle.hasTime() || particle.pt() < 1)
             continue;
-        BuildRecHitsMatrix(particle.GetRecHits(), particle.GetPFCluster()->seed(), matrixSide_);
+        BuildRecHitsMatrix(*particle.GetRecHits(), particle.GetPFCluster()->seed(), matrixSide_);
         for(unsigned int iHit=0; iHit<eOrderedRecHits_.size(); ++iHit)
         {
             times_[iHit] = eOrderedRecHits_[iHit].energy!=-1 ?
@@ -178,7 +155,7 @@ void BDTInputGenerator::analyze(const edm::Event& Event, const edm::EventSetup& 
     }
 }
 
-void BDTInputGenerator::BuildRecHitsMatrix(vector<EcalRecHit*> recHits, DetId seed, int sqrt_n)
+void BDTInputGenerator::BuildRecHitsMatrix(vector<FTEcalRecHit> recHits, DetId seed, int sqrt_n)
 {
     eOrderedRecHits_.clear();    
 
@@ -201,20 +178,11 @@ void BDTInputGenerator::BuildRecHitsMatrix(vector<EcalRecHit*> recHits, DetId se
     {
         for(auto& recHit : recHits)
         {
-            if(EKDetId(recHit->id()).ix() == ixs[nRH] && EKDetId(recHit->id()).iy() == iys[nRH])
-            {
-                const CaloCellGeometry* cell=skGeometry_->getGeometry(recHit->id());
-                GlobalPoint recHitPos = dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(0);
-                FTEcalRecHit tmp(ixs[nRH],
-                                 iys[nRH],
-                                 recHitPos.z(),
-                                 recHit->time()+recHitPos.mag()/30,
-                                 recHit->energy());
-                eOrderedRecHits_.push_back(tmp);
-            }
+            if(recHit.ix == ixs[nRH] && recHit.iy == iys[nRH])
+                eOrderedRecHits_.push_back(recHit);
         }
         if(eOrderedRecHits_.size() < fabs(nRH+1))
-            eOrderedRecHits_.push_back(FTEcalRecHit(ixs[nRH], iys[nRH], 0, 0,-1));
+            eOrderedRecHits_.push_back(FTEcalRecHit(0, ixs[nRH], iys[nRH], 0, 0,-1));
         ++nRH;        
     }
     sort(eOrderedRecHits_.begin(), eOrderedRecHits_.end());
