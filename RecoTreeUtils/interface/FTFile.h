@@ -210,14 +210,19 @@ public:
     //---dtor---
     ~FTGlobalTree() {};
     //---wrappers
-    inline void Fill() {tree_->Fill();};
+    inline void Fill() {tree_->Fill();};    
     inline void Write(const char* name) {tree_->Write(name);};
     inline void Write(string name) {tree_->Write(name.c_str());};
+    void        Reset();
     
     //---branches variables---
     float sumEt_nocut;
-    float sumEt_t_cut;
+    float sumEt_t_cut[200];
     float sumEt_gen;
+    int   nEEplus[200];
+    int   nEEminus[200];
+    int   n_vtx;
+    int   vtx_id[200];
     
 private:
 
@@ -228,16 +233,32 @@ private:
 FTGlobalTree::FTGlobalTree()
 {
     tree_ = new TTree();
-    
-    //---init
-    sumEt_nocut=0;
-    sumEt_t_cut=0;
-    sumEt_gen=0;
 
+    //---init
+    Reset();
+    
     //---create branches
     tree_->Branch("sumEt_nocut", &sumEt_nocut, "sumEt_nocut/F");
-    tree_->Branch("sumEt_t_cut", &sumEt_t_cut, "sumEt_t_cut/F");
+    tree_->Branch("sumEt_t_cut", &sumEt_t_cut, "sumEt_t_cut[200]/F");
     tree_->Branch("sumEt_gen", &sumEt_gen, "sumEt_gen/F");
+    tree_->Branch("nEEplus", &nEEplus, "nEEplus[200]/I");
+    tree_->Branch("nEEminus", &nEEminus, "nEEminus[200]/I");
+    tree_->Branch("n_vtx", &n_vtx, "n_vtx/I");
+    tree_->Branch("vtx_id", &vtx_id, "vtx_id[200]/I");
+}
+
+void FTGlobalTree::Reset()
+{
+    //---reset
+    sumEt_nocut=0;
+    sumEt_gen=0;
+    for(unsigned int i=0; i<200; ++i)
+    {
+        sumEt_t_cut[i]=0;
+        nEEplus[i]=0;
+        nEEminus[i]=0;
+        vtx_id[i]=0;
+    }
 }
 
 class FTJetsTree

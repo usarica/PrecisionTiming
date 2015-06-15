@@ -25,7 +25,7 @@ class BDTInputGenerator : public edm::EDAnalyzer
 {
 public:
     explicit BDTInputGenerator(const edm::ParameterSet&);
-    ~BDTInputGenerator() {};
+    ~BDTInputGenerator();
 
     //---utils---
     void BuildRecHitsMatrix(vector<FTEcalRecHit> recHits, DetId seed, int sqrt_n);
@@ -75,6 +75,14 @@ BDTInputGenerator::BDTInputGenerator(const edm::ParameterSet& Config)
     pt_ = 0;
     pz_ = 0;
     true_time_ = 0;
+}
+
+BDTInputGenerator::~BDTInputGenerator()
+{
+    delete[] times_;
+    delete[] energies_;
+    delete[] pos_x_;
+    delete[] pos_y_;
 }
 
 void BDTInputGenerator::beginJob()

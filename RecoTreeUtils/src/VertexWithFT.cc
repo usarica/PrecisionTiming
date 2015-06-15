@@ -7,10 +7,10 @@ VertexWithFT::VertexWithFT()
 
 VertexWithFT::VertexWithFT(const reco::Vertex* recoVtx):
     reco::Vertex(recoVtx->position(), recoVtx->error(), recoVtx->chi2(), recoVtx->ndof(), recoVtx->tracksSize()),
-    hasSeed_(false), time_(-1000), n_time_tracks_(-1)
+    hasSeed_(false), isGhost_(false), time_(-1000), n_time_tracks_(-1)
 {
     genVtxRef_ = NULL;
-    recoVtxRef_ = recoVtx;
+    recoVtxRef_ = recoVtx;    
 }
 
 //----------Get particles container with dz info------------------------------------------
@@ -92,7 +92,7 @@ void VertexWithFT::RemoveParticle(PFCandidateWithFT* particle)
 //----------Get a reference to the seed particle------------------------------------------
 PFCandidateWithFT* VertexWithFT::GetSeedRef()
 {
-    if(hasSeed())
+    if(hasSeed() && !isGhost())
         return particles_.at(0).first;
 
     return NULL;
@@ -104,6 +104,10 @@ PFCandidateWithFT* VertexWithFT::GetSeedRef()
 //---               2 --> neutral (photons)
 float VertexWithFT::ComputeTime(int particle_type, float pt_cut, float pz2_cut, float smearing)
 {
+    //---return gen time if ghost
+    if(isGhost())
+        return time_;
+            
     float seed_time=0;
     time_ = 0;
     n_time_tracks_ = 0;

@@ -1,9 +1,12 @@
 import FWCore.ParameterSet.Config as cms
 
 RecoFastTiming = cms.EDAnalyzer("RecoFastTiming",
-    genVtxTag       = cms.untracked.InputTag("psimVertexFilter", "", "DIGI2RAW"),
+    genVtxTag       = cms.untracked.InputTag("mix", "InitialVertices", "DIGI2RAW"),
+    ghostVtxTag     = cms.untracked.InputTag("VtxSmeared", "", "RecoFastTiming"),
     genJetsTag      = cms.untracked.InputTag('ak5GenJets', '', 'SIM'),
     recoJetsTag     = cms.untracked.InputTag('ak5PFJetsCHS', '', 'RECO'),
+    ## add fake PU vtxs
+    makeGhosts      = cms.untracked.bool(False),
     ## raw time smearing in ns
     timeResSmearing = cms.untracked.double(0.03),
     ## cut on the impact parameter (assing track to vertex) in cm

@@ -1,6 +1,8 @@
+import time
 import FWCore.ParameterSet.Config as cms
 from FWCore.ParameterSet.VarParsing import VarParsing
 from Configuration.AlCa.GlobalTag import GlobalTag
+from IOMC.RandomEngine.RandomServiceHelper import RandomNumberServiceHelper
 from FastTiming.RecoTreeUtils.IOFilesHelper import *
 
 options = VarParsing('analysis')
@@ -25,13 +27,26 @@ GetSampleFiles(options.sampleName, "", filesOpt)
 
 process = cms.Process("RecoFastTiming")
 
+# randomness
+process.RandomNumberGeneratorService = cms.Service("RandomNumberGeneratorService",
+                                                   VtxSmeared = cms.PSet(
+                                                       initialSeed = cms.untracked.uint32(1),#int(time.time()%100000//1)),
+                                                       engineName = cms.untracked.string('TRandom3')
+                                                   )
+)
+
+randHelper = RandomNumberServiceHelper(process.RandomNumberGeneratorService)
+randHelper.populate()
+
 ## load the SK geometry and magnetic field config
 process.load('Configuration.Geometry.GeometryExtended2023SHCalNoTaperReco_cff')
-##process.load('Configuration.Geometry.GeometryExtended2023SHCalNoTaper_cff')
 process.load('Configuration.StandardSequences.MagneticField_38T_PostLS1_cff')
 process.load('Configuration/StandardSequences/FrontierConditions_GlobalTag_cff')
 ## import standard RecoFT configurations
+process.load("IOMC.EventVertexGenerators.GhostVtxSmearedHLLHC_cfi")
 process.load("FastTiming.RecoTreeUtils.RecoFastTiming_cff")
+
+#process.RecoFastTiming.makeGhosts = cms.untracked.bool(True);
 
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:upgradePLS3', '')
 
@@ -45,6 +60,17 @@ process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
 process.TFileService = cms.Service("TFileService",
                             fileName = filesOpt.outputFile)
 
-process.ft_path = cms.Sequence(process.RecoFastTiming)
+process.ft_path = cms.Sequence(process.VtxSmeared+process.RecoFastTiming)
 
 process.path = cms.Path(process.ft_path)
+
+process.schedule = cms.Schedule(process.path)#, process.FEVTDEBUGoutput_step)
+
+# process.FEVTDEBUGoutput = cms.OutputModule("PoolOutputModule",
+#                                            splitLevel = cms.untracked.int32(0),
+#                                            eventAutoFlushCompressedSize = cms.untracked.int32(5242880),
+#                                            outputCommands = cms.untracked.vstring("keep *"),
+#                                            fileName = cms.untracked.string("test.root"),
+# )
+
+# process.FEVTDEBUGoutput_step = cms.EndPath(process.FEVTDEBUGoutput)
