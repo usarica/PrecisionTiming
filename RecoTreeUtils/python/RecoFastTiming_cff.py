@@ -17,5 +17,6 @@ RecoFastTiming = cms.EDAnalyzer("RecoFastTiming",
     ## output file collections option
     saveParticles   = cms.untracked.bool(True),
     saveAllRecHits  = cms.untracked.bool(False),
-    saveVertices    = cms.untracked.bool(True)
+    saveVertices    = cms.untracked.bool(True),
+    readMVA         = cms.untracked.bool(False)
 )

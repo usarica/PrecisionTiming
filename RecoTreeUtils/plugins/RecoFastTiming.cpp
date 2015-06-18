@@ -94,6 +94,7 @@ private:
     bool saveParticles_;
     bool saveAllRecHits_;
     bool saveVertices_;
+    bool readMVA_;
 };
 
 RecoFastTiming::RecoFastTiming(const edm::ParameterSet& Config)
@@ -111,7 +112,9 @@ RecoFastTiming::RecoFastTiming(const edm::ParameterSet& Config)
     saveAllRecHits_ = Config.getUntrackedParameter<bool>("saveAllRecHits");
     saveVertices_ = Config.getUntrackedParameter<bool>("saveVertices");
 
-    mvaComputer_ = new MVATimeComputer("/afs/cern.ch/user/s/spigazzi/work/FastTiming_TP/CMSSW_6_2_0_SLHC25_patch1/src/FastTiming/RecoTreeUtils/weights/TMVARegression_BDTG.weights.xml");
+    readMVA_ = Config.getUntrackedParameter<bool>("readMVA");
+    if(readMVA_)
+    mvaComputer_ = new MVATimeComputer("weights/TMVARegression_BDTG.weights.xml");
 }
 
 void RecoFastTiming::beginJob()
@@ -257,7 +260,7 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
         ProcessParticles(&allParticlesRefs, -1);
     }
 
-    //ProcessJets(recVectEK);
+    ProcessJets(recVectEK);
     ComputeSumEt();
 
     return;
@@ -543,34 +546,59 @@ void RecoFastTiming::ProcessJets(vector<EcalRecHit>* recVectEK)
     TLorentzVector j1,j2,gj1,gj2;
 
     //---GEN
+    
     for(auto& gen_jet : *genJetsHandle_.product())
     {
-        if(fabs(gen_jet.eta())>1.5 && fabs(gen_jet.eta())<3 && gen_jet.isJet())
+      if(gen_jet.isJet()) 
+	// std::cout << " gen_jet.eta() = " << gen_jet.eta()                                                                                                                  
+	//           << " gen_jet.pt() = " << gen_jet.pt() << std::endl;
+
+	//      if(fabs(gen_jet.eta())>1.5 && fabs(gen_jet.eta())<4 && gen_jet.isJet())
+      if(gen_jet.isJet())
         {
-            if(goodGJ1 == -1)
+	  if(goodGJ1 == -1)
                 goodGJ1 = countGJ;
             else if(goodGJ2 == -1)
                 goodGJ2 = countGJ;
+
+	  // std::cout << " gen_jet.eta() = " << gen_jet.eta() 
+	  // 	    << " gen_jet.pt() = " << gen_jet.pt()
+	  // 	    << " goodGJ1 = " << goodGJ1
+	  // 	    << " goodGJ2 = " << goodGJ2
+	  // 	    << " countGJ = " << countGJ << std::endl;
+
         }
         ++countGJ;
     }
+    //    std::cout << " >>> *genJetsHandle_.size() = " << countGJ << std::endl;
+
     if(goodGJ1!=-1 && genJetsHandle_.product()->at(goodGJ1).pt())
     {
         gj1 = TLorentzVector(genJetsHandle_.product()->at(goodGJ1).px(),
                              genJetsHandle_.product()->at(goodGJ1).py(),
                              genJetsHandle_.product()->at(goodGJ1).pz(),
                              genJetsHandle_.product()->at(goodGJ1).energy());
+
+	// std::cout << " caso jet1 goodGJ1 = " << goodGJ1
+	// 	  << " gj1.Pt() = " << gj1.Pt() << std::endl;
+
         outFile_->jetsTree.gen_j1_pt = gj1.Pt();
         outFile_->jetsTree.gen_j1_eta = gj1.Eta();
         outFile_->jetsTree.gen_j1_E = gj1.E();
         outFile_->jetsTree.gen_n = 1;
     }
+
+
     if(goodGJ2!=-1 && genJetsHandle_.product()->at(goodGJ2).pt())
     {
         gj2 = TLorentzVector(genJetsHandle_.product()->at(goodGJ2).px(),
                              genJetsHandle_.product()->at(goodGJ2).py(),
                              genJetsHandle_.product()->at(goodGJ2).pz(),
                              genJetsHandle_.product()->at(goodGJ2).energy());
+
+      // std::cout << " caso jet2 goodGJ2 = " << goodGJ2
+      // 		<< " gj2.Pt() = " << gj2.Pt() << std::endl;
+
         outFile_->jetsTree.gen_j2_pt = gj2.Pt();    
         outFile_->jetsTree.gen_j2_eta = gj2.Eta();    
         outFile_->jetsTree.gen_j2_E = gj2.E();
@@ -581,18 +609,33 @@ void RecoFastTiming::ProcessJets(vector<EcalRecHit>* recVectEK)
     //---RECO CHS
     for(auto& chs_jet : *recoJetsHandle_.product())
     {
-        if(fabs(chs_jet.eta())>1.5 && fabs(chs_jet.eta())<3 && chs_jet.isJet())
+      //        if(fabs(chs_jet.eta())>1.5 && fabs(chs_jet.eta())<4 && chs_jet.isJet())
+        if(chs_jet.isJet())
         {
-            if(goodJ1 == -1)
+	  if(goodJ1 == -1){
                 goodJ1 = countJ;
-            else if(goodJ2 == -1)
+		//		std::cout << " salva good1 " << countJ << std::endl;
+	  }
+	  else if(goodJ2 == -1){
                 goodJ2 = countJ;
+		//		std::cout << " salva good2 " << countJ << std::endl;
+	  }
             JetWithFT timeJet(&chs_jet, &recoVtxCollection_[0], tRes_,
                               recVectEK, skGeometry_, magField_);
             timeCorrJets.push_back(timeJet);
+
+
+	    // std::cout << " chs_jet.eta() = " << chs_jet.eta() 
+	    // 	      << " chs_jet.pt() = " << chs_jet.pt()
+	    // 	      << " goodJ1 = " << goodJ1
+	    // 	      << " goodJ2 = " << goodJ2
+	    // 	      << " countJ = " << countJ << std::endl;
+
         }
         ++countJ;
     }
+    //    std::cout << " >>> *recoJetsHandle_.size() = " << countJ << std::endl;
+
     sort(timeCorrJets.begin(), timeCorrJets.end());
     reverse(timeCorrJets.begin(), timeCorrJets.end());
 
@@ -602,18 +645,31 @@ void RecoFastTiming::ProcessJets(vector<EcalRecHit>* recVectEK)
                             recoJetsHandle_.product()->at(goodJ1).py(),
                             recoJetsHandle_.product()->at(goodJ1).pz(),
                             recoJetsHandle_.product()->at(goodJ1).energy());
+
+      // std::cout << " reco caso jet1 goodJ1 = " << goodJ1
+      // 		<< " j1.Pt() = " << j1.Pt() << std::endl;
+
         outFile_->jetsTree.chs_j1_pt = j1.Pt();
         outFile_->jetsTree.chs_j1_eta = j1.Eta();
         outFile_->jetsTree.chs_j1_E = j1.E();
         outFile_->jetsTree.tcut_j1_dR = deltaR(j1.Eta(), j1.Phi(), gj1.Eta(), gj1.Phi());
         outFile_->jetsTree.chs_n = 1;
     }
+
+    // std::cout << " goodJ2 = " << goodJ2 
+    // 	      << " recoJetsHandle_.product()->size() = " << recoJetsHandle_.product()->size() 
+    //   	      << " recoJetsHandle_.product()->at(10).pt() = " << recoJetsHandle_.product()->at(10).pt() << std::endl;
+
     if(goodJ2!=-1 && goodGJ2!=-1 && recoJetsHandle_.product()->at(goodJ2).pt()!=0)
     {
         j2 = TLorentzVector(recoJetsHandle_.product()->at(goodJ2).px(),
                             recoJetsHandle_.product()->at(goodJ2).py(),
                             recoJetsHandle_.product()->at(goodJ2).pz(),
                             recoJetsHandle_.product()->at(goodJ2).energy());
+
+      // std::cout << " reco caso jet2 goodJ2 = " << goodJ2
+      // 		<< " j2.Pt() = " << j2.Pt() << std::endl;
+
         outFile_->jetsTree.chs_j2_pt = j2.Pt();    
         outFile_->jetsTree.chs_j2_eta = j2.Eta();    
         outFile_->jetsTree.chs_j2_E = j2.E();
@@ -624,9 +680,12 @@ void RecoFastTiming::ProcessJets(vector<EcalRecHit>* recVectEK)
     //---time CUT jets
     if(timeCorrJets.size() > 0 && goodGJ1!=-1 && timeCorrJets.at(0).GetCorrMomentum()->Pt()!=0)
     {
-        outFile_->jetsTree.chs_j1_pt = timeCorrJets.at(0).GetCorrMomentum()->Pt();
-        outFile_->jetsTree.chs_j1_eta = timeCorrJets.at(0).GetCorrMomentum()->Eta();
-        outFile_->jetsTree.chs_j1_E = timeCorrJets.at(0).GetCorrMomentum()->E();
+
+      //      std::cout << " reco Tcut 1 = " << timeCorrJets.at(0).GetCorrMomentum()->Pt() << std::endl;
+
+        outFile_->jetsTree.tcut_j1_pt = timeCorrJets.at(0).GetCorrMomentum()->Pt();
+        outFile_->jetsTree.tcut_j1_eta = timeCorrJets.at(0).GetCorrMomentum()->Eta();
+        outFile_->jetsTree.tcut_j1_E = timeCorrJets.at(0).GetCorrMomentum()->E();
         outFile_->jetsTree.tcut_j1_dR = deltaR(outFile_->jetsTree.tcut_j1_eta,
                                                timeCorrJets.at(0).GetCorrMomentum()->Phi(),
                                                gj1.Eta(), gj1.Phi());
@@ -634,9 +693,13 @@ void RecoFastTiming::ProcessJets(vector<EcalRecHit>* recVectEK)
     }
     if(timeCorrJets.size() > 1 && goodGJ2!=-1 && timeCorrJets.at(1).GetCorrMomentum()->Pt()!=0)
     {
-        outFile_->jetsTree.chs_j2_pt = timeCorrJets.at(0).GetCorrMomentum()->Pt();
-        outFile_->jetsTree.chs_j2_eta = timeCorrJets.at(0).GetCorrMomentum()->Eta();
-        outFile_->jetsTree.chs_j2_E = timeCorrJets.at(0).GetCorrMomentum()->E();
+
+      // std::cout << " reco Tcut 2 = " << timeCorrJets.at(1).GetCorrMomentum()->Pt() << std::endl;
+      // std::cout << " reco Tcut 2 = " << timeCorrJets.at(0).GetCorrMomentum()->Pt() << std::endl;
+
+        outFile_->jetsTree.tcut_j2_pt = timeCorrJets.at(1).GetCorrMomentum()->Pt();
+        outFile_->jetsTree.tcut_j2_eta = timeCorrJets.at(1).GetCorrMomentum()->Eta();
+        outFile_->jetsTree.tcut_j2_E = timeCorrJets.at(1).GetCorrMomentum()->E();
         outFile_->jetsTree.tcut_j2_dR = deltaR(outFile_->jetsTree.tcut_j2_eta,
                                                timeCorrJets.at(1).GetCorrMomentum()->Phi(),
                                                gj2.Eta(), gj2.Phi());
