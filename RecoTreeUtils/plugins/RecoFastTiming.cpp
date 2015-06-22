@@ -652,7 +652,7 @@ void RecoFastTiming::ProcessJets(vector<EcalRecHit>* recVectEK)
         outFile_->jetsTree.chs_j1_pt = j1.Pt();
         outFile_->jetsTree.chs_j1_eta = j1.Eta();
         outFile_->jetsTree.chs_j1_E = j1.E();
-        outFile_->jetsTree.tcut_j1_dR = deltaR(j1.Eta(), j1.Phi(), gj1.Eta(), gj1.Phi());
+        outFile_->jetsTree.chs_j1_dR = deltaR(j1.Eta(), j1.Phi(), gj1.Eta(), gj1.Phi());
         outFile_->jetsTree.chs_n = 1;
     }
 
@@ -673,7 +673,7 @@ void RecoFastTiming::ProcessJets(vector<EcalRecHit>* recVectEK)
         outFile_->jetsTree.chs_j2_pt = j2.Pt();    
         outFile_->jetsTree.chs_j2_eta = j2.Eta();    
         outFile_->jetsTree.chs_j2_E = j2.E();
-        outFile_->jetsTree.tcut_j2_dR = deltaR(j2.Eta(), j2.Phi(), gj2.Eta(), gj2.Phi());
+        outFile_->jetsTree.chs_j2_dR = deltaR(j2.Eta(), j2.Phi(), gj2.Eta(), gj2.Phi());
         outFile_->jetsTree.chs_jj_m = (j1 + j2).M();
         outFile_->jetsTree.chs_n = 2;
     }
