@@ -1,9 +1,12 @@
 #include "FastTiming/RecoTreeUtils/interface/JetWithFT.h"
 
+JetWithFT::JetWithFT()
+{}
+
 JetWithFT::JetWithFT(const reco::PFJet* pfJet, VertexWithFT* pV, float smearing,
                      vector<EcalRecHit>* recVectEK, const CaloGeometry* skGeometry,
                      const MagneticField* magField):
-    reco::PFJet(*pfJet), tRes_(smearing)
+  reco::PFJet(*pfJet), tRes_(smearing)
 {
     primaryVtx_=pV;
     corrMomentum_=TLorentzVector(0,0,0,0);

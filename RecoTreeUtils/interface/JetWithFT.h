@@ -22,6 +22,10 @@ public:
 
     //---getters---
     const TLorentzVector* GetCorrMomentum() const {return &corrMomentum_;};
+    inline float  GetPrimaryVtxSeedEta() {return primaryVtx_->GetSeedRef()->eta();};
+    inline float  GetPrimaryVtxNPart() {return primaryVtx_->GetNPart();};
+    inline float  GetPrimaryVtxNPartEE() {return primaryVtx_->GetNPartEE();};
+
 
 private:
     TLorentzVector corrMomentum_;
