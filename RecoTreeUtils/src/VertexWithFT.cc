@@ -7,7 +7,8 @@ VertexWithFT::VertexWithFT()
 
 VertexWithFT::VertexWithFT(const reco::Vertex* recoVtx):
     reco::Vertex(recoVtx->position(), recoVtx->error(), recoVtx->chi2(), recoVtx->ndof(), recoVtx->tracksSize()),
-    hasSeed_(false), isGhost_(false), time_(-1000), n_time_tracks_(-1)
+    hasSeed_(false), isGhost_(false), time_(-1000), time_EB_(-1000), time_EE_(-1000),
+    n_time_tracks_(-1), n_time_tracks_EE_(-1), n_time_tracks_EB_(-1)
 {
     genVtxRef_ = NULL;
     recoVtxRef_ = recoVtx;    
@@ -109,8 +110,15 @@ float VertexWithFT::ComputeTime(int particle_type, float pt_cut, float pz2_cut, 
         return time_;
             
     float seed_time=0;
+    float seed_time_EB_=0;
+    float seed_time_EE_=0;
     time_ = 0;
+    time_EB_ = 0;
+    time_EE_ = 0;
     n_time_tracks_ = 0;
+    n_time_tracks_EB_ = 0;
+    n_time_tracks_EE_ = 0;
+
     for(unsigned int iPart=0; iPart<particles_.size(); ++iPart)
     {
         //---select the particles type used to compute the vtx time
@@ -118,6 +126,7 @@ float VertexWithFT::ComputeTime(int particle_type, float pt_cut, float pz2_cut, 
             continue;
         if(particle_type == 2 && particles_.at(iPart).first->particleId() < 4)
             continue;
+
         //---loop over the selected particles
         float pt_tmp = particles_.at(iPart).first->pt();
         float pz2_tmp = pow(particles_.at(iPart).first->pz(), 2);
@@ -134,12 +143,41 @@ float VertexWithFT::ComputeTime(int particle_type, float pt_cut, float pz2_cut, 
                 time_ += particles_.at(iPart).first->GetVtxTime(smearing, false);
                 ++n_time_tracks_;
             }
+	    //EB
+	    if(fabs(particles_.at(iPart).first->eta()) < 1.47 ){
+	      if(n_time_tracks_EB_ == 0)
+		{
+		  seed_time_EB_ = particles_.at(iPart).first->GetVtxTime(smearing, false);
+		  time_EB_ += seed_time;
+		  ++n_time_tracks_EB_;
+		}
+	      else if(fabs(particles_.at(iPart).first->GetVtxTime(smearing, false) - seed_time_EB_) < smearing*2)
+		{
+		  time_EB_ += particles_.at(iPart).first->GetVtxTime(smearing, false);
+		  ++n_time_tracks_EB_;
+		}
+	    }//EB
+	    else{
+	      if(n_time_tracks_EE_ == 0)
+		{
+		  seed_time_EE_ = particles_.at(iPart).first->GetVtxTime(smearing, false);
+		  time_EE_ += seed_time;
+		  ++n_time_tracks_EE_;
+		}
+	      else if(fabs(particles_.at(iPart).first->GetVtxTime(smearing, false) - seed_time_EE_) < smearing*2)
+		{
+		  time_EE_ += particles_.at(iPart).first->GetVtxTime(smearing, false);
+		  ++n_time_tracks_EE_;
+		}
+	    }//EE
         }
     }
     if(n_time_tracks_ == 0)
         return -100;
 
     time_ = time_ / n_time_tracks_;
+    time_EB_ = time_EB_ / n_time_tracks_EB_;
+    time_EE_ = time_EE_ / n_time_tracks_EE_;
     
     return time_;
 }
@@ -210,15 +248,19 @@ float VertexWithFT::ComputeTimeBottomUp(int particle_type, float pt_cut, float s
 }                      
 
 //----------compute sumpt2 using all the particles related to the vtx---------------------
-float VertexWithFT::sumPtSquared(float dz_cut, float pt_cut) const
+float VertexWithFT::sumPtSquared(float dz_cut, float pt_cut, int EB) const
 {
     double sum = 0.;
     double pT;
     for(unsigned int iPart=0; iPart<particles_.size(); ++iPart)
     {
+      if((EB == 1 && fabs(particles_.at(iPart).first->eta()) < 1.47) ||
+	 (EB == 0 && fabs(particles_.at(iPart).first->eta()) >= 1.47) ||
+	 EB == -1){
         pT = particles_.at(iPart).first->pt();
         if(fabs(particles_.at(iPart).second) < dz_cut && pT > pt_cut)           
-            sum += pT*pT;
+	  sum += pT*pT;
+      }
     }
     return sum;
 }
