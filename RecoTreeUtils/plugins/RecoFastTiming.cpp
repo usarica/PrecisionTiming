@@ -778,42 +778,7 @@ void RecoFastTiming::ComputeSumEt()
                     }
                 }
             }//EE
-	    {
-
-	      if(iVtx==0 && 
-		 (!recoVtxCollection_[iVtx].GetSeedRef()->hasTime() || 
-		  fabs(recoVtxCollection_[iVtx].GetSeedRef()->GetVtxTime(tRes_, false)) > 0.8)){
-outFile_->globalTree.Vtx
-
-		if((particle.particleId() < 4 && particle.GetRecoVtx() == &recoVtxCollection_[iVtx])
-		   || particle.particleId() == 4)
-                    {
-                        outFile_->globalTree.sumEt_nocut += particle.ecalEnergy()/cosh(particle.eta());
-                        outFile_->globalTree.sumEt_t_cut[iVtx] += particle.ecalEnergy()/cosh(particle.eta());
-                    }
-                }
-                else
-                {
-                    if(particle.particleId() <= 4)
-                    {
-                        if(iVtx == 0)
-                            outFile_->globalTree.sumEt_nocut += particle.ecalEnergy()/cosh(particle.eta());
-                        if(particle.hasTime() && (particle.GetRecoVtx() == &recoVtxCollection_[iVtx]))
-                                                  // || (particle.GetRecoVtx()==NULL && recoVtxCollection_[iVtx].hasSeed() &&
-                                                  //     fabs(particle.GetVtxTime(tRes_) - recoVtxCollection_[iVtx].GetSeedRef()->GetVtxTime(tRes_))>tRes_*2)))
-                        {
-                            outFile_->globalTree.sumEt_t_cut[iVtx] += particle.ecalEnergy()/cosh(particle.eta());
-                            if(particle.pz() > 0 && particle.particleId() == 4)
-                                outFile_->globalTree.nEEplus[iVtx]++;
-                            if(particle.pz() < 0 && particle.particleId() == 4)
-                                outFile_->globalTree.nEEminus[iVtx]++;
-                        }
-                    }
-                }
-
-	    }
-
-
+	    
         }
     }
     for(auto& gen_part : *genPartHandle_.product())
