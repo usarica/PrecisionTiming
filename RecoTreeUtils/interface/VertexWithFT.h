@@ -49,7 +49,7 @@ public:
     inline bool   hasSeed() {return hasSeed_;};
     inline float  GetTimeEE() {return time_EE_;};
     inline float  GetTimeEB() {return time_EB_;};
-    float         sumPtSquared(float dz_cut=0.2, float pt_cut=2, int EB=0) const;
+    float         sumPtSquared(float dz_cut=0.2, float pt_cut=2, int EB=-1) const;
     void          AddParticle(PFCandidateWithFT* particle, float dz=-1000);
     void          RemoveParticle(PFCandidateWithFT* particle);
     void          FixVtxRefs();
