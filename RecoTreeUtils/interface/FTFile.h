@@ -41,8 +41,21 @@ public:
     int reco_vtx_index;
     float reco_vtx_z;
     float reco_vtx_t;
+
     float sumEt_nocut;
     float sumEt_t_cut;
+    float sumEt_seed_eta;
+    float sumEt_seed_E;
+    /* float sumEt_nPart; */
+    /* float sumEt_dTvtx; */
+
+    float sumEt_nocut_EE;
+    float sumEt_t_cut_EE;
+    float sumEt_seed_eta_EE;
+    float sumEt_seed_E_EE;
+    /* float sumEt_nPart_EE; */
+    /* float sumEt_dTvtx_EE; */
+
     float track_length;
     float track_length_helix;
     float track_dz;
@@ -79,8 +92,21 @@ FTParticlesTree::FTParticlesTree()
     reco_vtx_index=0;
     reco_vtx_z=0;
     reco_vtx_t=0;
+
     sumEt_nocut=0;
     sumEt_t_cut=0;
+    sumEt_seed_eta=0;
+    sumEt_seed_E=0;
+    /* sumEt_nPart = 0; */
+    /* sumEt_dTvtx = 0; */
+
+    sumEt_nocut_EE = 0;
+    sumEt_t_cut_EE = 0;
+    sumEt_seed_eta_EE = 0;
+    sumEt_seed_E_EE = 0;
+    /* sumEt_nPart_EE = 0 ; */
+    /* sumEt_dTvtx_EE= 0 ; */
+
     track_length=0;
     track_length_helix=0;
     track_dz=0;
@@ -149,6 +175,7 @@ public:
     float reco_vtx_seed_pt;
     float reco_vtx_seed_eta;
     float reco_vtx_seed_t;
+    float reco_vtx_seed_E;
     float reco_vtx_z;
     float reco_vtx_t;
     float reco_vtx_cha_t;
@@ -187,6 +214,7 @@ FTVerticesTree::FTVerticesTree()
     reco_vtx_seed_pt=0;
     reco_vtx_seed_eta=0;
     reco_vtx_seed_t=0;
+    reco_vtx_seed_E=0;
     reco_vtx_z=0;
     reco_vtx_t=0;
     reco_vtx_cha_t=0;
@@ -216,6 +244,7 @@ FTVerticesTree::FTVerticesTree()
     tree_->Branch("reco_vtx_seed_pt", &reco_vtx_seed_pt, "reco_vtx_seed_pt/F");
     tree_->Branch("reco_vtx_seed_eta", &reco_vtx_seed_eta, "reco_vtx_seed_eta/F");
     tree_->Branch("reco_vtx_seed_t", &reco_vtx_seed_t, "reco_vtx_seed_t/F");
+    tree_->Branch("reco_vtx_seed_E", &reco_vtx_seed_E, "reco_vtx_seed_E/F");
     tree_->Branch("reco_vtx_z", &reco_vtx_z, "reco_vtx_z/F");
     tree_->Branch("reco_vtx_t", &reco_vtx_t, "reco_vtx_t/F");
     tree_->Branch("reco_vtx_cha_t", &reco_vtx_cha_t, "reco_vtx_cha_t/F");
@@ -242,6 +271,19 @@ public:
     //---branches variables---
     float sumEt_nocut;
     float sumEt_t_cut[200];
+    float sumEt_seed_eta[200];
+    float sumEt_seed_E[200];
+    /* float sumEt_nPart[200]; */
+    /* float sumEt_dTvtx[2000]; */
+
+    float sumEt_nocut_EE;
+    float sumEt_t_cut_EE[200];
+    float sumEt_seed_eta_EE[200];
+    float sumEt_seed_E_EE[200];
+    /* float sumEt_nPart_EE[200]; */
+    /* float sumEt_dTvtx_EE[2000]; */
+
+
     float sumEt_gen;
     int   nEEplus[200];
     int   nEEminus[200];
@@ -264,6 +306,18 @@ FTGlobalTree::FTGlobalTree()
     //---create branches
     tree_->Branch("sumEt_nocut", &sumEt_nocut, "sumEt_nocut/F");
     tree_->Branch("sumEt_t_cut", &sumEt_t_cut, "sumEt_t_cut[200]/F");
+    tree_->Branch("sumEt_seed_eta", &sumEt_seed_eta, "sumEt_seed_eta[200]/F");
+    tree_->Branch("sumEt_seed_E", &sumEt_seed_E, "sumEt_seed_E[200]/F");
+    /* tree_->Branch("sumEt_nPart", &sumEt_nPart, "sumEt_nPart[200]/F"); */
+    /* tree_->Branch("sumEt_dTvtx", &sumEt_dTvtx, "sumEt_dTvtx[2000]/F"); */
+
+    tree_->Branch("sumEt_nocut_EE", &sumEt_nocut_EE, "sumEt_nocut_EE/F");
+    tree_->Branch("sumEt_t_cut_EE", &sumEt_t_cut_EE, "sumEt_t_cut_EE[200]/F");
+    tree_->Branch("sumEt_seed_eta_EE", &sumEt_seed_eta_EE, "sumEt_seed_eta_EE[200]/F");
+    tree_->Branch("sumEt_seed_E_EE", &sumEt_seed_E_EE, "sumEt_seed_E_EE[200]/F");
+    /* tree_->Branch("sumEt_nPart_EE", &sumEt_nPart_EE, "sumEt_nPart_EE[200]/F"); */
+    /* tree_->Branch("sumEt_dTvtx_EE", &sumEt_dTvtx_EE, "sumEt_dTvtx_EE[2000]/F"); */
+
     tree_->Branch("sumEt_gen", &sumEt_gen, "sumEt_gen/F");
     tree_->Branch("nEEplus", &nEEplus, "nEEplus[200]/I");
     tree_->Branch("nEEminus", &nEEminus, "nEEminus[200]/I");
@@ -275,13 +329,29 @@ void FTGlobalTree::Reset()
 {
     //---reset
     sumEt_nocut=0;
+    sumEt_nocut_EE=0;
     sumEt_gen=0;
-    for(unsigned int i=0; i<200; ++i)
+    for(unsigned int i=0; i<2000; ++i)
+      //    for(unsigned int i=0; i<200; ++i)
     {
+      if(i < 200){
         sumEt_t_cut[i]=0;
-        nEEplus[i]=0;
+        sumEt_seed_eta[i]=0;
+        sumEt_seed_E[i]=0;
+	//	sumEt_nPart[i] = 0;
+
+        sumEt_t_cut_EE[i]=0;
+        sumEt_seed_eta_EE[i]=0;
+        sumEt_seed_E_EE[i]=0;
+	//	sumEt_nPart_EE[i] = 0;
+
+	nEEplus[i]=0;
         nEEminus[i]=0;
         vtx_id[i]=0;
+      }
+      /* sumEt_dTvtx[i] = 0; */
+      /* sumEt_dTvtx_EE[i] = 0; */
+
     }
 }
 
