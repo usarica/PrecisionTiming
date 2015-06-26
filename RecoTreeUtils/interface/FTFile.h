@@ -139,15 +139,23 @@ public:
     int reco_vtx_n_part;
     int reco_vtx_n_cha;
     int reco_vtx_n_neu;
+    int reco_vtx_n_part_EE;
+    int reco_vtx_n_cha_EE;
+    int reco_vtx_n_neu_EE;
     float reco_vtx_ndof;
     float reco_vtx_chi2;
     float reco_vtx_sumpt2;
+    float reco_vtx_sumpt2_EE;
     float reco_vtx_seed_pt;
+    float reco_vtx_seed_eta;
     float reco_vtx_seed_t;
     float reco_vtx_z;
     float reco_vtx_t;
     float reco_vtx_cha_t;
     float reco_vtx_neu_t;
+    float reco_vtx_t_EE;
+    float reco_vtx_cha_t_EE;
+    float reco_vtx_neu_t_EE;
 
 private:
 
@@ -169,15 +177,23 @@ FTVerticesTree::FTVerticesTree()
     reco_vtx_n_part=0;
     reco_vtx_n_cha=0;
     reco_vtx_n_neu=0;
+    reco_vtx_n_part_EE=0;
+    reco_vtx_n_cha_EE=0;
+    reco_vtx_n_neu_EE=0;
     reco_vtx_ndof=0;
     reco_vtx_chi2=0;
     reco_vtx_sumpt2=0;
+    reco_vtx_sumpt2_EE=0;
     reco_vtx_seed_pt=0;
+    reco_vtx_seed_eta=0;
     reco_vtx_seed_t=0;
     reco_vtx_z=0;
     reco_vtx_t=0;
     reco_vtx_cha_t=0;
     reco_vtx_neu_t=0;
+    reco_vtx_t_EE=0;
+    reco_vtx_cha_t_EE=0;
+    reco_vtx_neu_t_EE=0;
 
     //---create branches
     tree_->Branch("event", &event_n, "event/I");
@@ -190,15 +206,23 @@ FTVerticesTree::FTVerticesTree()
     tree_->Branch("reco_vtx_n_part", &reco_vtx_n_part, "reco_vtx_n_part/I");
     tree_->Branch("reco_vtx_n_cha", &reco_vtx_n_cha, "reco_vtx_n_cha/I");
     tree_->Branch("reco_vtx_n_neu", &reco_vtx_n_neu, "reco_vtx_n_neu/I");
+    tree_->Branch("reco_vtx_n_part_EE", &reco_vtx_n_part_EE, "reco_vtx_n_part_EE/I");
+    tree_->Branch("reco_vtx_n_cha_EE", &reco_vtx_n_cha_EE, "reco_vtx_n_cha_EE/I");
+    tree_->Branch("reco_vtx_n_neu_EE", &reco_vtx_n_neu_EE, "reco_vtx_n_neu_EE/I");
     tree_->Branch("reco_vtx_ndof", &reco_vtx_ndof, "reco_vtx_ndof/F");
     tree_->Branch("reco_vtx_chi2", &reco_vtx_chi2, "reco_vtx_chi2/F");
     tree_->Branch("reco_vtx_sumpt2", &reco_vtx_sumpt2, "reco_vtx_sumpt2/F");
+    tree_->Branch("reco_vtx_sumpt2_EE", &reco_vtx_sumpt2_EE, "reco_vtx_sumpt2_EE/F");
     tree_->Branch("reco_vtx_seed_pt", &reco_vtx_seed_pt, "reco_vtx_seed_pt/F");
+    tree_->Branch("reco_vtx_seed_eta", &reco_vtx_seed_eta, "reco_vtx_seed_eta/F");
     tree_->Branch("reco_vtx_seed_t", &reco_vtx_seed_t, "reco_vtx_seed_t/F");
     tree_->Branch("reco_vtx_z", &reco_vtx_z, "reco_vtx_z/F");
     tree_->Branch("reco_vtx_t", &reco_vtx_t, "reco_vtx_t/F");
     tree_->Branch("reco_vtx_cha_t", &reco_vtx_cha_t, "reco_vtx_cha_t/F");
     tree_->Branch("reco_vtx_neu_t", &reco_vtx_neu_t, "reco_vtx_neu_t/F");
+    tree_->Branch("reco_vtx_t_EE", &reco_vtx_t, "reco_vtx_t/F");
+    tree_->Branch("reco_vtx_cha_t_EE", &reco_vtx_cha_t_EE, "reco_vtx_cha_t_EE/F");
+    tree_->Branch("reco_vtx_neu_t_EE", &reco_vtx_neu_t_EE, "reco_vtx_neu_t_EE/F");
 }
 
 class FTGlobalTree
@@ -298,6 +322,14 @@ public:
     float tcut_j2_pt;
     float tcut_j1_eta;
     float tcut_j2_eta;
+
+    float tcut_j1_pVtx_SeedEta;
+    float tcut_j1_pVtx_NPart;
+    float tcut_j1_pVtx_NPartEE;
+    float tcut_j2_pVtx_SeedEta;
+    float tcut_j2_pVtx_NPart;
+    float tcut_j2_pVtx_NPartEE;
+
     float tcut_j1_E;
     float tcut_j2_E;
     float tcut_j1_dR;
@@ -338,6 +370,14 @@ FTJetsTree::FTJetsTree()
     tcut_j2_pt=0;
     tcut_j1_eta=0;
     tcut_j2_eta=0;
+
+    tcut_j1_pVtx_SeedEta = 0;
+    tcut_j1_pVtx_NPart = 0;
+    tcut_j1_pVtx_NPartEE = 0;
+    tcut_j2_pVtx_SeedEta = 0;
+    tcut_j2_pVtx_NPart = 0;
+    tcut_j2_pVtx_NPartEE = 0;
+
     tcut_j1_E=0;
     tcut_j2_E=0;
     tcut_j1_dR=0;
@@ -368,6 +408,12 @@ FTJetsTree::FTJetsTree()
     tree_->Branch("tcut_j2_pt", &tcut_j2_pt, "tcut_j2_pt/F");    
     tree_->Branch("tcut_j1_eta", &tcut_j1_eta, "tcut_j1_eta/F");
     tree_->Branch("tcut_j2_eta", &tcut_j2_eta, "tcut_j2_eta/F");
+    tree_->Branch("tcut_j1_pVtx_SeedEta", &tcut_j1_pVtx_SeedEta, "tcut_j1_pVtx_SeedEta/F");
+    tree_->Branch("tcut_j1_pVtx_NPart", &tcut_j1_pVtx_NPart, "tcut_j1_pVtx_NPart/I");
+    tree_->Branch("tcut_j1_pVtx_NPartEE", &tcut_j1_pVtx_NPartEE, "tcut_j1_pVtx_NPartEE/I");
+    tree_->Branch("tcut_j2_pVtx_SeedEta", &tcut_j2_pVtx_SeedEta, "tcut_j2_pVtx_SeedEta/F");
+    tree_->Branch("tcut_j2_pVtx_NPart", &tcut_j2_pVtx_NPart, "tcut_j2_pVtx_NPart/I");
+    tree_->Branch("tcut_j2_pVtx_NPartEE", &tcut_j2_pVtx_NPartEE, "tcut_j2_pVtx_NPartEE/I");
     tree_->Branch("tcut_j1_E", &tcut_j1_E, "tcut_j1_E/F");
     tree_->Branch("tcut_j2_E", &tcut_j2_E, "tcut_j2_E/F");
     tree_->Branch("tcut_j1_dR", &tcut_j1_dR, "tcut_j1_dR/F");

@@ -197,7 +197,7 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
                       recSortEB_);
     if(!recSortEB_.isValid())
         return;
-    //vector<EcalRecHit>* recVectEB = (vector<EcalRecHit>*)recSortEB_.product();
+    vector<EcalRecHit>* recVectEB = (vector<EcalRecHit>*)recSortEB_.product();
 
     //---convert all particles---
     Event.getByLabel("particleFlow", candHandle_);
@@ -205,14 +205,14 @@ void RecoFastTiming::analyze(const edm::Event& Event, const edm::EventSetup& Set
     particlesCollection_.clear();
     for(unsigned int iCand=0; iCand<candHandle_.product()->size(); ++iCand)
     {
-        // if(!candHandle_.product()->at(iCand).superClusterRef().isNull() &&
-        //    fabs(candHandle_.product()->at(iCand).superClusterRef().get()->eta())<1.47)
-        //     particle = PFCandidateWithFT(&candHandle_.product()->at(iCand), recVectEB,
-        //                                  ebGeometry_, magField_, genSignalVtx, recoSignalVtx);            
-        // else
+      if(!candHandle_.product()->at(iCand).superClusterRef().isNull() &&
+	 fabs(candHandle_.product()->at(iCand).superClusterRef().get()->eta())<1.47)
+	particle = PFCandidateWithFT(&candHandle_.product()->at(iCand), recVectEB,
+				     ebGeometry_, magField_, genSignalVtx, recoSignalVtx);            
+      else
         particle = PFCandidateWithFT(&candHandle_.product()->at(iCand), recVectEK,
                                      skGeometry_, magField_, genSignalVtx, recoSignalVtx);
-        particlesCollection_.push_back(particle);
+      particlesCollection_.push_back(particle);
     }
 
     //---search for seeds particles---
@@ -363,7 +363,8 @@ void RecoFastTiming::AssignChargedToVtxs(vector<PFCandidateWithFT*>* charged_can
         for(unsigned int iVtx=0; iVtx<recoVtxCollection_.size(); ++iVtx)
         {
             float dz_tmp = fabs((*it)->GetTrack()->dz(recoVtxCollection_.at(iVtx).position()));
-            if(/*recoVtxCollection_.at(iVtx).hasSeed() &&*/  dz_tmp < dzCut_)
+	    //            if(/*recoVtxCollection_.at(iVtx).hasSeed() &&*/  dz_tmp < dzCut_)
+            if(dz_tmp < dzCut_)
             {
                 (*it)->SetRecoVtx(&recoVtxCollection_.at(iVtx));
                 // float dt_tmp=0;
@@ -407,14 +408,14 @@ void RecoFastTiming::AssignNeutralToVtxs(vector<PFCandidateWithFT*>* neutral_can
                 fabs(recoVtxCollection_.at(iVtx).GetSeedRef()->GetVtxTime(tRes_, false)) < 0.5))
             {
                 (*it)->SetRecoVtx(&recoVtxCollection_.at(iVtx));
-                float dt_tmp=0;
-                // dt_tmp = fabs((*it)->GetVtxTime(tRes_) -
-                //               recoVtxCollection_.at(iVtx).ComputeTime(1, ptCut_, pz2Cut_, tRes_));
+		//                float dt_tmp=0;
+                float dt_tmp = fabs((*it)->GetVtxTime(tRes_) -
+                               recoVtxCollection_.at(iVtx).ComputeTime(1, ptCut_, pz2Cut_, tRes_));
                 if(dt_tmp < dt_min && dt_tmp<tRes_*2)
                 {                    
                     goodVtx=iVtx;
                     dt_min=dt_tmp;
-                    break;
+		    //                    break;
                 }
             }
         }
@@ -439,18 +440,38 @@ void RecoFastTiming::ProcessVertices()
         outFile_->verticesTree.reco_vtx_index = iVtx;
         outFile_->verticesTree.reco_vtx_ndof = it->GetRecoVtxRef()->ndof();
         outFile_->verticesTree.reco_vtx_chi2 = it->GetRecoVtxRef()->chi2();
+
         outFile_->verticesTree.reco_vtx_sumpt2 = it->sumPtSquared(dzCut_, ptCut_);
+        outFile_->verticesTree.reco_vtx_sumpt2_EE = it->sumPtSquared(dzCut_, ptCut_, 0);
+
         outFile_->verticesTree.reco_vtx_seed_pt = it->GetSeedRef() ?
             it->GetSeedRef()->pt() : -1;
+        outFile_->verticesTree.reco_vtx_seed_eta = it->GetSeedRef() ?
+            it->GetSeedRef()->eta() : -1;
         outFile_->verticesTree.reco_vtx_seed_t = it->GetSeedRef() && it->GetSeedRef()->hasTime() ?
             it->GetSeedRef()->GetVtxTime(tRes_, false) : -100;
+
+
         outFile_->verticesTree.reco_vtx_z = it->z();
+
         outFile_->verticesTree.reco_vtx_t = it->ComputeTime(0, ptCut_, pz2Cut_, tRes_);        
+        outFile_->verticesTree.reco_vtx_t_EE = it->GetTimeEE();        
+
         outFile_->verticesTree.reco_vtx_n_part = it->GetNPart();
+        outFile_->verticesTree.reco_vtx_n_part_EE = it->GetNPartEE();
+
         outFile_->verticesTree.reco_vtx_cha_t = it->ComputeTime(1, ptCut_, pz2Cut_, tRes_);
+        outFile_->verticesTree.reco_vtx_cha_t_EE = it->GetTimeEE();
+
         outFile_->verticesTree.reco_vtx_n_cha = it->GetNPart();
+        outFile_->verticesTree.reco_vtx_n_cha_EE = it->GetNPartEE();
+
         outFile_->verticesTree.reco_vtx_neu_t = it->ComputeTime(2, ptCut_, pz2Cut_, tRes_);
+        outFile_->verticesTree.reco_vtx_neu_t_EE = it->GetTimeEE();
+
         outFile_->verticesTree.reco_vtx_n_neu = it->GetNPart();
+        outFile_->verticesTree.reco_vtx_n_neu_EE = it->GetNPartEE();
+
         if(it->GetGenVtxRef())
         {
             outFile_->verticesTree.gen_vtx_id = it->GetGenVtxId();
@@ -549,26 +570,14 @@ void RecoFastTiming::ProcessJets(vector<EcalRecHit>* recVectEK)
     
     for(auto& gen_jet : *genJetsHandle_.product())
     {
-      if(gen_jet.isJet()) 
-	// std::cout << " gen_jet.eta() = " << gen_jet.eta()                                                                                                                  
-	//           << " gen_jet.pt() = " << gen_jet.pt() << std::endl;
-
-	//      if(fabs(gen_jet.eta())>1.5 && fabs(gen_jet.eta())<4 && gen_jet.isJet())
       if(gen_jet.isJet())
         {
 	  if(goodGJ1 == -1)
-                goodGJ1 = countGJ;
-            else if(goodGJ2 == -1)
-                goodGJ2 = countGJ;
-
-	  // std::cout << " gen_jet.eta() = " << gen_jet.eta() 
-	  // 	    << " gen_jet.pt() = " << gen_jet.pt()
-	  // 	    << " goodGJ1 = " << goodGJ1
-	  // 	    << " goodGJ2 = " << goodGJ2
-	  // 	    << " countGJ = " << countGJ << std::endl;
-
-        }
-        ++countGJ;
+	    goodGJ1 = countGJ;
+	  else if(goodGJ2 == -1)
+	    goodGJ2 = countGJ;
+      	}
+      ++countGJ;
     }
     //    std::cout << " >>> *genJetsHandle_.size() = " << countGJ << std::endl;
 
@@ -620,8 +629,15 @@ void RecoFastTiming::ProcessJets(vector<EcalRecHit>* recVectEK)
                 goodJ2 = countJ;
 		//		std::cout << " salva good2 " << countJ << std::endl;
 	  }
-            JetWithFT timeJet(&chs_jet, &recoVtxCollection_[0], tRes_,
-                              recVectEK, skGeometry_, magField_);
+	  JetWithFT timeJet;
+	  if(fabs(chs_jet.eta()) < 1.47)
+	    timeJet = JetWithFT(&chs_jet, &recoVtxCollection_[0], tRes_,
+				recVectEK, ebGeometry_, magField_);
+	  else
+	    timeJet = JetWithFT(&chs_jet, &recoVtxCollection_[0], tRes_,
+				recVectEK, skGeometry_, magField_);
+
+
             timeCorrJets.push_back(timeJet);
 
 
@@ -685,6 +701,9 @@ void RecoFastTiming::ProcessJets(vector<EcalRecHit>* recVectEK)
 
         outFile_->jetsTree.tcut_j1_pt = timeCorrJets.at(0).GetCorrMomentum()->Pt();
         outFile_->jetsTree.tcut_j1_eta = timeCorrJets.at(0).GetCorrMomentum()->Eta();
+        outFile_->jetsTree.tcut_j1_pVtx_SeedEta = timeCorrJets.at(0).GetPrimaryVtxSeedEta();
+        outFile_->jetsTree.tcut_j1_pVtx_NPart = timeCorrJets.at(0).GetPrimaryVtxNPart();
+        outFile_->jetsTree.tcut_j1_pVtx_NPartEE = timeCorrJets.at(0).GetPrimaryVtxNPartEE();
         outFile_->jetsTree.tcut_j1_E = timeCorrJets.at(0).GetCorrMomentum()->E();
         outFile_->jetsTree.tcut_j1_dR = deltaR(outFile_->jetsTree.tcut_j1_eta,
                                                timeCorrJets.at(0).GetCorrMomentum()->Phi(),
@@ -699,6 +718,9 @@ void RecoFastTiming::ProcessJets(vector<EcalRecHit>* recVectEK)
 
         outFile_->jetsTree.tcut_j2_pt = timeCorrJets.at(1).GetCorrMomentum()->Pt();
         outFile_->jetsTree.tcut_j2_eta = timeCorrJets.at(1).GetCorrMomentum()->Eta();
+        outFile_->jetsTree.tcut_j2_pVtx_SeedEta = timeCorrJets.at(1).GetPrimaryVtxSeedEta();
+        outFile_->jetsTree.tcut_j2_pVtx_NPart = timeCorrJets.at(1).GetPrimaryVtxNPart();
+        outFile_->jetsTree.tcut_j2_pVtx_NPartEE = timeCorrJets.at(1).GetPrimaryVtxNPartEE();
         outFile_->jetsTree.tcut_j2_E = timeCorrJets.at(1).GetCorrMomentum()->E();
         outFile_->jetsTree.tcut_j2_dR = deltaR(outFile_->jetsTree.tcut_j2_eta,
                                                timeCorrJets.at(1).GetCorrMomentum()->Phi(),
@@ -755,7 +777,43 @@ void RecoFastTiming::ComputeSumEt()
                         }
                     }
                 }
-            }
+            }//EE
+	    {
+
+	      if(iVtx==0 && 
+		 (!recoVtxCollection_[iVtx].GetSeedRef()->hasTime() || 
+		  fabs(recoVtxCollection_[iVtx].GetSeedRef()->GetVtxTime(tRes_, false)) > 0.8)){
+outFile_->globalTree.Vtx
+
+		if((particle.particleId() < 4 && particle.GetRecoVtx() == &recoVtxCollection_[iVtx])
+		   || particle.particleId() == 4)
+                    {
+                        outFile_->globalTree.sumEt_nocut += particle.ecalEnergy()/cosh(particle.eta());
+                        outFile_->globalTree.sumEt_t_cut[iVtx] += particle.ecalEnergy()/cosh(particle.eta());
+                    }
+                }
+                else
+                {
+                    if(particle.particleId() <= 4)
+                    {
+                        if(iVtx == 0)
+                            outFile_->globalTree.sumEt_nocut += particle.ecalEnergy()/cosh(particle.eta());
+                        if(particle.hasTime() && (particle.GetRecoVtx() == &recoVtxCollection_[iVtx]))
+                                                  // || (particle.GetRecoVtx()==NULL && recoVtxCollection_[iVtx].hasSeed() &&
+                                                  //     fabs(particle.GetVtxTime(tRes_) - recoVtxCollection_[iVtx].GetSeedRef()->GetVtxTime(tRes_))>tRes_*2)))
+                        {
+                            outFile_->globalTree.sumEt_t_cut[iVtx] += particle.ecalEnergy()/cosh(particle.eta());
+                            if(particle.pz() > 0 && particle.particleId() == 4)
+                                outFile_->globalTree.nEEplus[iVtx]++;
+                            if(particle.pz() < 0 && particle.particleId() == 4)
+                                outFile_->globalTree.nEEminus[iVtx]++;
+                        }
+                    }
+                }
+
+	    }
+
+
         }
     }
     for(auto& gen_part : *genPartHandle_.product())
