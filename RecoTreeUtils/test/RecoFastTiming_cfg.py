@@ -60,17 +60,10 @@ process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
 process.TFileService = cms.Service("TFileService",
                             fileName = filesOpt.outputFile)
 
-process.ft_path = cms.Sequence(process.VtxSmeared+process.RecoFastTiming)
+#process.ft_path = cms.Sequence(process.VtxSmeared+process.RecoFastTiming)
+process.ft_path = cms.Sequence(process.RecoFastTiming)
 
 process.path = cms.Path(process.ft_path)
 
 process.schedule = cms.Schedule(process.path)#, process.FEVTDEBUGoutput_step)
 
-# process.FEVTDEBUGoutput = cms.OutputModule("PoolOutputModule",
-#                                            splitLevel = cms.untracked.int32(0),
-#                                            eventAutoFlushCompressedSize = cms.untracked.int32(5242880),
-#                                            outputCommands = cms.untracked.vstring("keep *"),
-#                                            fileName = cms.untracked.string("test.root"),
-# )
-
-# process.FEVTDEBUGoutput_step = cms.EndPath(process.FEVTDEBUGoutput)

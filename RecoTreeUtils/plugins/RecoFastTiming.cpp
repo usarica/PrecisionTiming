@@ -429,12 +429,32 @@ void RecoFastTiming::AssignNeutralToVtxs(vector<PFCandidateWithFT*>* neutral_can
 
 void RecoFastTiming::ProcessVertices()
 {
+    int countGJ=0;
+    int goodGJ1=-1, goodGJ2=-1;
+
+    for(auto& gen_jet : *genJetsHandle_.product())
+    {
+        if(gen_jet.isJet()) 
+            if(gen_jet.isJet())
+            {
+                if(goodGJ1 == -1)
+                    goodGJ1 = countGJ;
+                else if(goodGJ2 == -1)
+                    goodGJ2 = countGJ;
+            }
+        ++countGJ;
+    }
+
     for(unsigned int iVtx=0; iVtx<recoVtxCollection_.size(); ++iVtx)
     {
         vector<VertexWithFT>::iterator it = recoVtxCollection_.begin();
         advance(it, iVtx);
         //---fix references after sort
         it->FixVtxRefs();
+        outFile_->verticesTree.gen_j1_pt = genJetsHandle_.product()->at(goodGJ1).pt();
+        outFile_->verticesTree.gen_j2_pt = genJetsHandle_.product()->at(goodGJ1).pt();
+        outFile_->verticesTree.gen_j1_eta = genJetsHandle_.product()->at(goodGJ1).eta();
+        outFile_->verticesTree.gen_j2_eta = genJetsHandle_.product()->at(goodGJ1).eta();
         outFile_->verticesTree.event_n = iEvent_;
         outFile_->verticesTree.reco_vtx_index = iVtx;
         outFile_->verticesTree.reco_vtx_ndof = it->GetRecoVtxRef()->ndof();
@@ -451,6 +471,7 @@ void RecoFastTiming::ProcessVertices()
         outFile_->verticesTree.reco_vtx_n_cha = it->GetNPart();
         outFile_->verticesTree.reco_vtx_neu_t = it->ComputeTime(2, ptCut_, pz2Cut_, tRes_);
         outFile_->verticesTree.reco_vtx_n_neu = it->GetNPart();
+        outFile_->verticesTree.reco_vtx_ntracks = it->GetNCharged();
         if(it->GetGenVtxRef())
         {
             outFile_->verticesTree.gen_vtx_id = it->GetGenVtxId();

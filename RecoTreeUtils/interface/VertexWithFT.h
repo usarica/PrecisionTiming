@@ -27,7 +27,8 @@ public:
     PFCandidateWithFT*                       GetSeedRef();
     vector<pair<PFCandidateWithFT*, float> > GetParticlesWithDZ();
     vector<PFCandidateWithFT*>               GetParticles();
-    int                                      GetNPart() {return n_time_tracks_;};
+    inline int                               GetNPart() {return n_time_tracks_;};
+    inline int                               GetNCharged() {return nCharged_;};
     float                                    ComputeTime(int particle_type,
                                                          float pt_cut=2,
                                                          float pz2_cut=20,
@@ -57,6 +58,7 @@ private:
     bool                                     isGhost_;
     float                                    time_;
     int                                      n_time_tracks_;
+    int                                      nCharged_;
     int                                      genVtxId_;
     const SimVertex*                         genVtxRef_;
     const reco::Vertex*                      recoVtxRef_;    

@@ -7,7 +7,7 @@ VertexWithFT::VertexWithFT()
 
 VertexWithFT::VertexWithFT(const reco::Vertex* recoVtx):
     reco::Vertex(recoVtx->position(), recoVtx->error(), recoVtx->chi2(), recoVtx->ndof(), recoVtx->tracksSize()),
-    hasSeed_(false), isGhost_(false), time_(-1000), n_time_tracks_(-1)
+    hasSeed_(false), isGhost_(false), time_(-1000), n_time_tracks_(-1), nCharged_(0)
 {
     genVtxRef_ = NULL;
     recoVtxRef_ = recoVtx;    
@@ -80,6 +80,8 @@ void VertexWithFT::AddParticle(PFCandidateWithFT* particle, float dz)
             dz_tmp = particle->GetTrack()->dz(this->position());
 
         particles_.push_back(make_pair(particle, dz_tmp));
+        if(particle->particleId() < 4 && particle->pt() > 2)
+            ++nCharged_;
     }
     return;
 }

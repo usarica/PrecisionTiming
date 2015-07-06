@@ -286,7 +286,7 @@ def GetSampleFiles(sampleName, nameMod, filesOpt):
             "root://eoscms//eos/cms/store/user/amartell/fastTiming/VBFH125toGG_CMSSW_6_2_0_SLHC25_patch3/crab_FastTiming_H125GGVBF_DIGIRECO_noPU/150505_134959/0000/DIGI2RECO_noPU_9.root")
 
     if sampleName == "VBFH125GG_140PU" :
-        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/GluGluToHToGG_140PU"+nameMod+".root")
+        filesOpt.outputFile = cms.string("$CMSSW_BASE/src/FastTiming/RecoTreeUtils/ntuples/VBFH125GG_140PU"+nameMod+".root")
 
         filesOpt.inputFiles = cms.untracked.vstring(
        'root://xrootd.unl.edu//store/mc/TP2023SHCALDR/VBF_HToGG_M-125_14TeV-powheg-pythia6/GEN-SIM-RECO/SHCALTIME_PU140BX25_SHCalTime_PH2_1K_FB_V6-v1/00000/06211C4B-E810-E511-82A0-002590200814.root',
