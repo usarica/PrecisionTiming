@@ -75,7 +75,7 @@ public:
     float                           GetTOF(tof_algo method);
     float                           GetECALTime(float smearing=0);
     float                           GetECALTimeMVA(float smearing=0);
-    float                           GetVtxTime(float smearing=0, bool mva=false, tof_algo tof_method=pzTOF);
+    float                           GetVtxTime(float smearing=0, bool mva=false, tof_algo tof_method=propagatedTrack);
     pair<float, float>              GetRecHitTimeE(DetId id);
     vector<FTEcalRecHit>*           GetRecHits();
     //---setters---

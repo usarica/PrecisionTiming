@@ -29,6 +29,8 @@ public:
     vector<PFCandidateWithFT*>               GetParticles();
     inline int                               GetNPart() {return n_time_tracks_;};
     inline int                               GetNCharged() {return nCharged_;};
+    inline int                               GetNPartEE() {return n_time_tracks_EE_;};
+    inline int                               GetNPartEB() {return n_time_tracks_EB_;};
     float                                    ComputeTime(int particle_type,
                                                          float pt_cut=2,
                                                          float pz2_cut=20,
@@ -46,7 +48,9 @@ public:
     //---utils---
     inline bool   isGhost() {return isGhost_;};
     inline bool   hasSeed() {return hasSeed_;};
-    float         sumPtSquared(float dz_cut=0.2, float pt_cut=2) const;
+    inline float  GetTimeEE() {return time_EE_;};
+    inline float  GetTimeEB() {return time_EB_;};
+    float         sumPtSquared(float dz_cut=0.2, float pt_cut=2, int EB=-1) const;
     void          AddParticle(PFCandidateWithFT* particle, float dz=-1000);
     void          RemoveParticle(PFCandidateWithFT* particle);
     void          FixVtxRefs();
@@ -57,8 +61,12 @@ private:
     bool                                     hasSeed_;
     bool                                     isGhost_;
     float                                    time_;
+    float                                    time_EB_;
+    float                                    time_EE_;
     int                                      n_time_tracks_;
     int                                      nCharged_;
+    int                                      n_time_tracks_EE_;
+    int                                      n_time_tracks_EB_;
     int                                      genVtxId_;
     const SimVertex*                         genVtxRef_;
     const reco::Vertex*                      recoVtxRef_;    
