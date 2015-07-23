@@ -63,8 +63,8 @@ private:
     float                                    time_;
     float                                    time_EB_;
     float                                    time_EE_;
-    int                                      n_time_tracks_;
     int                                      nCharged_;
+    int                                      n_time_tracks_;
     int                                      n_time_tracks_EE_;
     int                                      n_time_tracks_EB_;
     int                                      genVtxId_;

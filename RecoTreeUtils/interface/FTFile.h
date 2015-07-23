@@ -156,6 +156,10 @@ public:
     
     //---branches variables---
     int event_n;
+    float gen_j1_pt;
+    float gen_j2_pt;
+    float gen_j1_eta;
+    float gen_j2_eta;
     int gen_vtx_id;
     float gen_vtx_x;
     float gen_vtx_y;
@@ -194,8 +198,12 @@ FTVerticesTree::FTVerticesTree()
 {
     tree_ = new TTree();
     //---init
-    event_n=0;    
-    gen_vtx_id=-1;
+    event_n=0;
+    gen_j1_pt=0;
+    gen_j2_pt=0;
+    gen_j1_eta=0;
+    gen_j2_eta=0;
+    gen_vtx_id=0;
     gen_vtx_x=0;
     gen_vtx_y=0;
     gen_vtx_z=0;
@@ -225,6 +233,10 @@ FTVerticesTree::FTVerticesTree()
 
     //---create branches
     tree_->Branch("event", &event_n, "event/I");
+    tree_->Branch("gen_j1_pt", &gen_j1_pt, "gen_j1_pt/F");
+    tree_->Branch("gen_j2_pt", &gen_j2_pt, "gen_j2_pt/F");
+    tree_->Branch("gen_j1_eta", &gen_j1_eta, "gen_j1_eta/F");
+    tree_->Branch("gen_j2_eta", &gen_j2_eta, "gen_j2_eta/F");
     tree_->Branch("gen_vtx_id", &gen_vtx_id, "gen_vtx_id/I");
     tree_->Branch("gen_vtx_x", &gen_vtx_x, "gen_vtx_x/F");
     tree_->Branch("gen_vtx_y", &gen_vtx_y, "gen_vtx_y/F");

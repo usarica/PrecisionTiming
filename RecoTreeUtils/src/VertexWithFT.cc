@@ -7,8 +7,8 @@ VertexWithFT::VertexWithFT()
 
 VertexWithFT::VertexWithFT(const reco::Vertex* recoVtx):
     reco::Vertex(recoVtx->position(), recoVtx->error(), recoVtx->chi2(), recoVtx->ndof(), recoVtx->tracksSize()),
-    hasSeed_(false), isGhost_(false), time_(-1000), n_time_tracks_(-1), nCharged_(0),
-    time_EB_(-1000), time_EE_(-1000), n_time_tracks_(-1), n_time_tracks_EE_(-1), n_time_tracks_EB_(-1)
+    hasSeed_(false), isGhost_(false), time_(-1000), time_EB_(-1000), time_EE_(-1000) ,
+    nCharged_(0), n_time_tracks_(-1), n_time_tracks_EE_(-1), n_time_tracks_EB_(-1) 
 {
     genVtxRef_ = NULL;
     recoVtxRef_ = recoVtx;    

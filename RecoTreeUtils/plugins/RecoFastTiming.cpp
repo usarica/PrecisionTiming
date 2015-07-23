@@ -492,7 +492,6 @@ void RecoFastTiming::ProcessVertices()
         outFile_->verticesTree.reco_vtx_neu_t_EE = it->GetTimeEE();
 
         outFile_->verticesTree.reco_vtx_n_neu = it->GetNPart();
-        outFile_->verticesTree.reco_vtx_ntracks = it->GetNCharged();
         outFile_->verticesTree.reco_vtx_n_neu_EE = it->GetNPartEE();
 
         if(it->GetGenVtxRef())
