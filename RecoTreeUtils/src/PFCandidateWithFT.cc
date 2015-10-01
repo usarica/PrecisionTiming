@@ -58,7 +58,7 @@ PFCandidateWithFT::PFCandidateWithFT(const reco::PFCandidate* PFCand, vector<Eca
         // if(pfCluster_->isEB()
         //     ecalPos_ = dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(3.5);
         // else
-            ecalPos_ = dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(10*0.4-0.075-0.25);
+        ecalPos_ = dynamic_cast<const TruncatedPyramid*>(cell)->getPosition(10*0.4-0.075-0.25);
         rawTime_ = GetRecHitTimeE(ecalSeed_).first + GetGenTOF();
         if(GetRecHitTimeMaxE().second != -1)
             hasTime_ = true;

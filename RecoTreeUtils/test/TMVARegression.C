@@ -132,7 +132,7 @@ void TMVARegression(TString myMethodList = "")
 
    // Read training and test data (see TMVAClassification for reading ASCII files)
    // load the signal and background event samples from ROOT trees
-   TFile* input0 = TFile::Open("ntuples/SingleCharged_BDTInput.root");
+   TFile* input0 = TFile::Open("../ntuples/SingleCharged_BDTInput.root");
    
    // --- Register the regression tree
    TTree *regTree[2];
