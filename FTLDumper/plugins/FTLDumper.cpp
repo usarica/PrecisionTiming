@@ -69,6 +69,7 @@ void FTLDumper::analyze(edm::Event const& event, edm::EventSetup const& setup)
         outTree_.sc_energy->push_back(ele.superCluster()->energy());
         outTree_.r9->push_back(ele.r9());
         outTree_.sIeIe->push_back(ele.sigmaIetaIeta());
+        ++idx;
     }
     if(electrons.size() >= 2)
         outTree_.mass = (electrons[0].p4() + electrons[1].p4()).mass();
