@@ -2,6 +2,7 @@ import FWCore.ParameterSet.Config as cms
 from FWCore.ParameterSet.VarParsing import VarParsing
 
 process = cms.Process("FTLDumpZee")
+process.options = cms.untracked.PSet(allowUnscheduled = cms.untracked.bool(True))
 
 process.load('FWCore/MessageService/MessageLogger_cfi')
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
@@ -17,12 +18,12 @@ process.source = cms.Source("PoolSource",
                             )
 )                                
 
-process.load('PrecisionTiming.FTLDumper.FTLDumper_cfi')
+process.load('PrecisionTiming.FTLDumper.FTLDumpElectrons_cfi')
 
 # Output TFile
 process.TFileService = cms.Service("TFileService",
                                    fileName = cms.string("ftl_zee.root"))
 
-process.path = cms.Path(process.FTLDumper)
+process.path = cms.Path(process.FTLDumpElectrons)
 
 process.schedule = cms.Schedule(process.path)
