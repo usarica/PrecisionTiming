@@ -22,7 +22,8 @@ using namespace std;
     DATA(vector<float>, energy)                 \
     DATA(vector<float>, sc_energy)              \
     DATA(vector<float>, r9)                     \
-    DATA(vector<float>, sIeIe)                  
+    DATA(vector<float>, sIeIe)                  \
+    DATA(vector<float>, convRadius)                  
 
 #include "ExternalTools/DynamicTTree/interface/DynamicTTreeInterface.h"
 

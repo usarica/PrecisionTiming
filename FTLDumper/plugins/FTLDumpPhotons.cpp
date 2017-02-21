@@ -65,7 +65,7 @@ FTLDumpPhotons::FTLDumpPhotons(const edm::ParameterSet& pSet):
     simTkToken_(consumes<edm::SimTrackContainer>(pSet.getUntrackedParameter<edm::InputTag>("simTkTag"))),
     simVtxToken_(consumes<edm::SimVertexContainer>(pSet.getUntrackedParameter<edm::InputTag>("simVtxTag"))),
     photonsToken_(consumes<pat::PhotonCollection>(pSet.getUntrackedParameter<edm::InputTag>("photonsTag"))),
-    mcTruthPhoEtThr_(pSet.getUntrackedParameter<double>("mcTruthPhoEtThr")),    
+    mcTruthPhoEtThr_(pSet.getUntrackedParameter<double>("mcTruthPhoEtThr")),
     photonMCTruthFinder_()    
 {
     outTree_ = FTLPhotonsTree(pSet.getUntrackedParameter<string>("treeName").c_str(), "Photons tree for FTL studies");
@@ -98,18 +98,21 @@ void FTLDumpPhotons::analyze(edm::Event const& event, edm::EventSetup const& set
         auto mcTruthPhotons = photonMCTruthFinder_.find(*simTkHandle_.product(), *simVtxHandle_.product());
         PhotonMCTruth mcTruthPho;
         bool mcTruthExist=false;
+        float minDR=10;
         for(auto& mcpho : mcTruthPhotons)
         {
-            float minDR=10;
             if(mcpho.fourMomentum().et() > mcTruthPhoEtThr_  &&
-               deltaR(mcpho.fourMomentum().eta(), mcpho.fourMomentum().phi(), pho.eta(), pho.phi()))
+               deltaR(mcpho.fourMomentum().eta(), mcpho.fourMomentum().phi(), pho.eta(), pho.phi()) < minDR)
             {
+                minDR = deltaR(mcpho.fourMomentum().eta(), mcpho.fourMomentum().phi(), pho.eta(), pho.phi());
                 mcTruthPho = mcpho;
-                mcTruthPhoIdx = true;
+                mcTruthExist = true;
             }
         }        
-        if(mcTruthExist && mcTruthPho.vertex().vect().rho() < maxConvRadius_)
-            
+        if(mcTruthExist)
+            outTree_.convRadius->push_back(mcTruthPho.vertex().vect().rho());
+        else
+            outTree_.convRadius->push_back(-1);;
             
         ++idx;
     }
