@@ -27,6 +27,7 @@
 
 using namespace std;
 
+template<class PhotonCollectionT>
 class FTLDumpPhotons : public edm::EDAnalyzer
 {
 public:
@@ -47,8 +48,8 @@ private:
     edm::EDGetTokenT<edm::SimTrackContainer> simTkToken_;
     edm::Handle<edm::SimVertexContainer> simVtxHandle_;
     edm::EDGetTokenT<edm::SimVertexContainer> simVtxToken_;
-    edm::Handle<pat::PhotonCollection> photonsHandle_;
-    edm::EDGetTokenT<pat::PhotonCollection> photonsToken_;
+    edm::Handle<PhotonCollectionT> photonsHandle_;
+    edm::EDGetTokenT<PhotonCollectionT> photonsToken_;
 
     //---options
     float mcTruthPhoEtThr_;
@@ -61,18 +62,19 @@ private:
     edm::Service<TFileService> fs_;
 };
 
-FTLDumpPhotons::FTLDumpPhotons(const edm::ParameterSet& pSet):
+template<class PhotonCollectionT>
+FTLDumpPhotons<PhotonCollectionT>::FTLDumpPhotons(const edm::ParameterSet& pSet):
     simTkToken_(consumes<edm::SimTrackContainer>(pSet.getUntrackedParameter<edm::InputTag>("simTkTag"))),
     simVtxToken_(consumes<edm::SimVertexContainer>(pSet.getUntrackedParameter<edm::InputTag>("simVtxTag"))),
-    photonsToken_(consumes<pat::PhotonCollection>(pSet.getUntrackedParameter<edm::InputTag>("photonsTag"))),
+    photonsToken_(consumes<PhotonCollectionT>(pSet.getUntrackedParameter<edm::InputTag>("photonsTag"))),
     mcTruthPhoEtThr_(pSet.getUntrackedParameter<double>("mcTruthPhoEtThr")),
     photonMCTruthFinder_()    
 {
     outTree_ = FTLPhotonsTree(pSet.getUntrackedParameter<string>("treeName").c_str(), "Photons tree for FTL studies");
 }
 
-
-void FTLDumpPhotons::analyze(edm::Event const& event, edm::EventSetup const& setup)
+template<class PhotonCollectionT>
+void FTLDumpPhotons<PhotonCollectionT>::analyze(edm::Event const& event, edm::EventSetup const& setup)
 {
     outTree_.Reset();
     
@@ -123,7 +125,11 @@ void FTLDumpPhotons::analyze(edm::Event const& event, edm::EventSetup const& set
 
     outTree_.GetTTreePtr()->Fill();
 }
-    
-DEFINE_FWK_MODULE(FTLDumpPhotons);
+
+typedef FTLDumpPhotons<std::vector<reco::Photon> > FTLDumpPhotonsRECO;
+typedef FTLDumpPhotons<pat::PhotonCollection> FTLDumpPhotonsPAT;
+
+DEFINE_FWK_MODULE(FTLDumpPhotonsRECO);
+DEFINE_FWK_MODULE(FTLDumpPhotonsPAT);
 
 #endif

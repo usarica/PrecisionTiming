@@ -1,5 +1,24 @@
+import subprocess
 import FWCore.ParameterSet.Config as cms
 from FWCore.ParameterSet.VarParsing import VarParsing
+
+options = VarParsing('analysis')
+options.register('eosdirs',
+                 '',
+                 VarParsing.multiplicity.list,
+                 VarParsing.varType.string,
+                 "files location(s) on EOS")
+options.register('datatier',
+                 'RECO',
+                 VarParsing.multiplicity.singleton,
+                 VarParsing.varType.string,
+                 "")
+options.register('debug',
+                 False,
+                 VarParsing.multiplicity.singleton,
+                 VarParsing.varType.bool,
+                 "Print debug messages")
+options.parseArguments()
 
 process = cms.Process("FTLDumpHgg")
 process.options = cms.untracked.PSet(allowUnscheduled = cms.untracked.bool(True))
@@ -11,216 +30,30 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 1
 #process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff')
 #process.GlobalTag = GlobalTag(process.GlobalTag, '80X_dataRun2_Prompt_v10')
 
+for eosdir in options.eosdirs:
+    if eosdir[-1] != '/':
+        eosdir += '/'
+    print('>> Creating list of files from: \n'+eosdir)
+    lsCmd = subprocess.Popen(['eos', 'ls', eosdir+'*.root'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    str_files, err = lsCmd.communicate()
+    files = ['root://eoscms/'+eosdir+ifile for ifile in str_files.split("\n")]
+    files.pop()
+    if options.debug:
+        for ifile in files:
+            print(ifile)
+
 # Input source
 process.source = cms.Source("PoolSource",
-                            fileNames = cms.untracked.vstring(
-
-                                ### D8 geometry with FTL
-                                
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_1.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_10.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_11.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_12.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_13.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_14.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_15.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_16.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_17.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_18.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_19.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_2.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_20.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_21.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_22.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_23.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_24.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_25.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_26.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_27.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_28.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_29.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_3.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_30.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_31.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_32.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_33.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_34.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_35.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_36.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_37.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_38.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_39.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_4.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_40.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_41.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_42.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_43.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_44.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_45.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_46.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_47.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_48.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_49.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_5.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_50.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_51.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_52.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_53.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_54.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_55.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_56.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_57.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_58.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_59.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_6.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_60.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_61.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_62.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_63.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_64.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_65.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_66.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_67.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_68.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_69.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_7.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_70.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_71.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_72.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_73.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_74.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_75.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_76.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_77.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_78.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_79.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_8.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_80.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_81.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_82.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_83.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_84.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_85.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_86.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_87.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_88.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_89.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_9.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_90.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_91.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_92.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_93.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_94.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_95.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_96.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_97.root',
-                                # 'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D8FTL/170220_204422/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_98.root'
-
-                                ### D4 geometry no FTL
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_1.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_10.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_11.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_12.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_13.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_14.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_15.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_16.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_17.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_18.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_19.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_2.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_20.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_21.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_22.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_23.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_24.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_25.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_26.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_27.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_28.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_29.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_3.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_30.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_31.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_32.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_33.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_34.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_35.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_36.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_37.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_38.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_39.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_4.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_40.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_41.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_42.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_43.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_44.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_45.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_46.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_47.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_48.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_49.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_5.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_50.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_51.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_52.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_53.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_54.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_55.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_56.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_57.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_58.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_59.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_6.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_60.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_61.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_62.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_63.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_64.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_65.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_66.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_67.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_68.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_69.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_7.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_70.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_71.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_72.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_73.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_74.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_75.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_76.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_77.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_78.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_79.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_8.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_80.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_81.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_82.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_83.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_84.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_85.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_86.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_87.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_88.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_89.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_9.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_90.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_91.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_92.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_93.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_94.root',
-                                'root://cms-xrd-global.cern.ch//store/group/upgrade/timing/Hgg130_GluGlu_14TeV/crab_H130GGgluonfusion_14TeV_TuneCUETP8M1_RECO_D4noFTL/170221_071437/0000/step3_RAW2DIGI_L1Reco_RECO_PAT_95.root'
-                            )
-)                                
-
+                            fileNames = cms.untracked.vstring(files)
+)
+                            
 process.load('PrecisionTiming.FTLDumper.FTLDumpPhotons_cfi')
+FTLDumper = process.FTLDumpPhotonsRECO if options.datatier == 'RECO' else process.FTLDumpPhotonsPAT
 
 # Output TFile
 process.TFileService = cms.Service("TFileService",
                                    fileName = cms.string("ftl_hgg.root"))
 
-process.path = cms.Path(process.FTLDumpPhotons)
+process.path = cms.Path(FTLDumper)
 
 process.schedule = cms.Schedule(process.path)
