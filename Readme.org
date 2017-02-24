@@ -12,7 +12,7 @@
 
 ** Dumper
 *** simple workflow:
-   : cmsRun test/runOnHgg_cfg.py test/runOnHgg_cfg.py eosdirs=/eos/cms/store/group/upgrade/timing/simstudies/Feb21material/hgg125d8/RECOSIM
+   : cmsRun test/runOnHgg_cfg.py eosdirs=/eos/cms/store/group/upgrade/timing/simstudies/Feb21material/hgg125d8/RECOSIM
     - The =datatier= option can be set to RECO (default) or PAT in order to process RECOSIM and MINIAODSIM dataformat.
     - The =eosdirs= option can be used to let python get the list of files to be processed (multiple path can be passed as option).
    
