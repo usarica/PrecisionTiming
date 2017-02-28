@@ -13,6 +13,11 @@ options.register('datatier',
                  VarParsing.multiplicity.singleton,
                  VarParsing.varType.string,
                  "")
+options.register('hasftl',
+                 True,
+                 VarParsing.multiplicity.singleton,
+                 VarParsing.varType.bool,
+                 "Has FTL geometry and RecHit collections")
 options.register('debug',
                  False,
                  VarParsing.multiplicity.singleton,
@@ -49,6 +54,7 @@ process.source = cms.Source("PoolSource",
                             
 process.load('PrecisionTiming.FTLDumper.FTLDumpPhotons_cfi')
 FTLDumper = process.FTLDumpPhotonsRECO if options.datatier == 'RECO' else process.FTLDumpPhotonsPAT
+FTLDumper.readFTLRecHits = options.hasftl
 
 # Output TFile
 process.TFileService = cms.Service("TFileService",

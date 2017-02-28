@@ -1,6 +1,8 @@
 #ifndef _FTL_DUMP_PHOTONS_
 #define _FTL_DUMP_PHOTONS_
 
+#include "TMath.h"
+
 #include "FWCore/Utilities/interface/BranchType.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
@@ -15,8 +17,15 @@
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 
 #include "DataFormats/PatCandidates/interface/Photon.h"
+#include "DataFormats/ForwardDetId/interface/FastTimeDetId.h"
+#include "DataFormats/EcalDetId/interface/EBDetId.h"
+#include "DataFormats/FTLRecHit/interface/FTLRecHit.h"
+#include "DataFormats/FTLRecHit/interface/FTLRecHitCollections.h"
 #include "SimDataFormats/Track/interface/SimTrackContainer.h"
 #include "SimDataFormats/Vertex/interface/SimVertexContainer.h"
+
+#include "Geometry/Records/interface/FastTimeGeometryRecord.h"
+#include "Geometry/HGCalGeometry/interface/FastTimeGeometry.h"
 
 #include "RecoEgamma/EgammaMCTools/interface/ElectronMCTruthFinder.h"
 #include "RecoEgamma/EgammaMCTools/interface/ElectronMCTruth.h"
@@ -48,11 +57,14 @@ private:
     edm::EDGetTokenT<edm::SimTrackContainer> simTkToken_;
     edm::Handle<edm::SimVertexContainer> simVtxHandle_;
     edm::EDGetTokenT<edm::SimVertexContainer> simVtxToken_;
+    edm::Handle<FTLRecHitCollection> ftlRecHitsHandle_;
+    edm::EDGetTokenT<FTLRecHitCollection> ftlRecHitsToken_;    
     edm::Handle<PhotonCollectionT> photonsHandle_;
-    edm::EDGetTokenT<PhotonCollectionT> photonsToken_;
-
+    edm::EDGetTokenT<PhotonCollectionT> photonsToken_;    
+    
     //---options
     float mcTruthPhoEtThr_;
+    bool readFTLrecHits_;
     
     //---workers
     PhotonMCTruthFinder photonMCTruthFinder_;
@@ -66,8 +78,10 @@ template<class PhotonCollectionT>
 FTLDumpPhotons<PhotonCollectionT>::FTLDumpPhotons(const edm::ParameterSet& pSet):
     simTkToken_(consumes<edm::SimTrackContainer>(pSet.getUntrackedParameter<edm::InputTag>("simTkTag"))),
     simVtxToken_(consumes<edm::SimVertexContainer>(pSet.getUntrackedParameter<edm::InputTag>("simVtxTag"))),
+    ftlRecHitsToken_(consumes<FTLRecHitCollection>(pSet.getUntrackedParameter<edm::InputTag>("ftlRecHitsTag"))),
     photonsToken_(consumes<PhotonCollectionT>(pSet.getUntrackedParameter<edm::InputTag>("photonsTag"))),
     mcTruthPhoEtThr_(pSet.getUntrackedParameter<double>("mcTruthPhoEtThr")),
+    readFTLrecHits_(pSet.getUntrackedParameter<bool>("readFTLRecHits")),
     photonMCTruthFinder_()    
 {
     outTree_ = FTLPhotonsTree(pSet.getUntrackedParameter<string>("treeName").c_str(), "Photons tree for FTL studies");
@@ -77,11 +91,21 @@ template<class PhotonCollectionT>
 void FTLDumpPhotons<PhotonCollectionT>::analyze(edm::Event const& event, edm::EventSetup const& setup)
 {
     outTree_.Reset();
-    
+
+    //---load the photons
     event.getByToken(photonsToken_, photonsHandle_);
+    auto photons = *photonsHandle_.product();
+
+    //---load the mc-truth tracker collections
     event.getByToken(simTkToken_, simTkHandle_);
     event.getByToken(simVtxToken_, simVtxHandle_);
-    auto photons = *photonsHandle_.product();
+
+    //---load the FTL collection if present in the EventContent (avoid crash with standard geometry)
+    auto ftlRecHits = FTLRecHitCollection();
+    if(readFTLrecHits_)
+        event.getByToken(ftlRecHitsToken_, ftlRecHitsHandle_);
+    if(ftlRecHitsHandle_.isValid())
+        ftlRecHits = *ftlRecHitsHandle_.product();
 
     int idx=0;
     for(auto& pho : photons)
@@ -112,10 +136,59 @@ void FTLDumpPhotons<PhotonCollectionT>::analyze(edm::Event const& event, edm::Ev
             }
         }        
         if(mcTruthExist)
+        {
             outTree_.convRadius->push_back(mcTruthPho.vertex().vect().rho());
+            outTree_.genEnergy->push_back(mcTruthPho.fourMomentum().e());
+            outTree_.genEta->push_back(mcTruthPho.fourMomentum().eta());
+            outTree_.genPhi->push_back(mcTruthPho.fourMomentum().phi());
+            outTree_.genPt->push_back(mcTruthPho.fourMomentum().et());
+        }
         else
+        {
             outTree_.convRadius->push_back(-1);;
-            
+            outTree_.genEnergy->push_back(-1);
+            outTree_.genEta->push_back(-1);
+            outTree_.genPhi->push_back(-1);
+            outTree_.genPt->push_back(-1);
+        }
+        
+        //---find ftl associated hits
+        for(auto ftl_hit : ftlRecHits)
+        {
+            outTree_.ftlHitsPhoIdx->resize(idx+1);
+            outTree_.ftlHitsEnergy->resize(idx+1);
+            outTree_.ftlHitsTime->resize(idx+1);
+            outTree_.ftlHitsEta->resize(idx+1);
+            outTree_.ftlHitsPhi->resize(idx+1);
+            outTree_.ftlHitsEnergySum->resize(idx+1);
+            outTree_.ftlNHits->resize(idx+1);
+            outTree_.ftlHits3x3Sum->resize(idx+1);
+            outTree_.ftlNHits3x3->resize(idx+1);
+            FastTimeDetId id = ftl_hit.id();
+            float hit_eta = -log(tan(atan(1189/(id.iz()*10-0.5))/2))*id.zside();
+            float hit_phi = id.iphi()<=360 ? id.iphi()/360.*TMath::Pi() : (id.iphi()-720)/360.*TMath::Pi();
+            if(fabs(pho.eta()-hit_eta) < pho.superCluster()->etaWidth() &&
+               fabs(deltaPhi(pho.phi(), hit_phi)) < pho.superCluster()->phiWidth())
+            {
+                outTree_.ftlHitsPhoIdx->at(idx).push_back(idx);
+                outTree_.ftlHitsEnergy->at(idx).push_back(ftl_hit.energy());
+                outTree_.ftlHitsTime->at(idx).push_back(ftl_hit.time());
+                outTree_.ftlHitsEta->at(idx).push_back(hit_eta);
+                outTree_.ftlHitsPhi->at(idx).push_back(hit_phi);
+                outTree_.ftlHitsEnergySum->at(idx)+= ftl_hit.energy();
+                outTree_.ftlNHits->at(idx)++;
+            }
+            float seedEta = EBDetId(pho.superCluster()->seed()->seed()).approxEta();
+            float seedPhi = EBDetId(pho.superCluster()->seed()->seed()).iphi();
+            seedPhi = seedPhi<=180 ? seedPhi/180.*TMath::Pi() : (seedPhi-360)/180.*TMath::Pi();
+            if(fabs(seedEta-hit_eta) < 0.0175*1.5 &&
+               fabs(deltaPhi(seedPhi, hit_phi)) < 0.0175*1.5)
+            {
+                outTree_.ftlHits3x3Sum->at(idx)+= ftl_hit.energy();
+                outTree_.ftlNHits3x3->at(idx)++;
+            }
+        }
+        
         ++idx;
     }
     if(photons.size() >= 2)
