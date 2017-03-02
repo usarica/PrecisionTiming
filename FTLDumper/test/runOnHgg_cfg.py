@@ -53,13 +53,16 @@ process.source = cms.Source("PoolSource",
 )
                             
 process.load('PrecisionTiming.FTLDumper.FTLDumpPhotons_cfi')
-FTLDumper = process.FTLDumpPhotonsRECO if options.datatier == 'RECO' else process.FTLDumpPhotonsPAT
-FTLDumper.readFTLRecHits = options.hasftl
+process.load('PrecisionTiming.FTLDumper.FTLDumpJets_cfi')
+FTLDumperPhotons = process.FTLDumpPhotonsRECO if options.datatier == 'RECO' else process.FTLDumpPhotonsPAT
+FTLDumperPhotons.readFTLRecHits = options.hasftl
+
+FTLDumperJets = process.FTLDumpJets
 
 # Output TFile
 process.TFileService = cms.Service("TFileService",
                                    fileName = cms.string("ftl_hgg.root"))
 
-process.path = cms.Path(FTLDumper)
+process.path = cms.Path(FTLDumperJets)
 
 process.schedule = cms.Schedule(process.path)

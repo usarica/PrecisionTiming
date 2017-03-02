@@ -9,6 +9,7 @@
 <use   name="DataFormats/Provenance"/>
 <use   name="DataFormats/Math"/>
 <use   name="DataFormats/Common"/>
+<use   name="DataFormats/JetReco"/>
 <use   name="DataFormats/Candidate"/>
 <use   name="DataFormats/PatCandidates"/>
 <use   name="DataFormats/EcalDetId"/>
@@ -17,6 +18,7 @@
 <use   name="Geometry/HGCalGeometry"/>
 <use   name="RecoEcal/EgammaCoreTools"/>
 <use   name="RecoEgamma/EgammaMCTools"/>
+<use   name="PhysicsTools/UtilAlgos"/>
 <use   name="ExternalTools/DynamicTTree"/>
 <flags EDM_PLUGIN="1"/>
 <export>
