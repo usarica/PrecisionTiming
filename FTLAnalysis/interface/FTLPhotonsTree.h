@@ -12,7 +12,8 @@ using namespace std;
     DATA(int, event)                            \
     DATA(int, lumi)                             \
     DATA(int, run)                              \
-    DATA(float, mass)
+    DATA(float, mass)                           \
+    DATA(int, ftlTotHits)
 
 #define DATA_CLASS_TABLE                                \
     DATA(vector<int>, idx)                              \
@@ -24,6 +25,8 @@ using namespace std;
     DATA(vector<float>, r9)                             \
     DATA(vector<float>, sIeIe)                          \
     DATA(vector<float>, convRadius)                     \
+    DATA(vector<float>, convPhi)                        \
+    DATA(vector<float>, convZ)                          \
     DATA(vector<float>, genPt)                          \
     DATA(vector<float>, genEta)                         \
     DATA(vector<float>, genPhi)                         \
@@ -36,7 +39,8 @@ using namespace std;
     DATA(vector, ftlHitsEnergy, <vector<float> >)       \
     DATA(vector, ftlHitsTime, <vector<float> >)         \
     DATA(vector, ftlHitsEta, <vector<float> >)          \
-    DATA(vector, ftlHitsPhi, <vector<float> >)          
+    DATA(vector, ftlHitsPhi, <vector<float> >)          \
+    DATA(vector, ftlHitsZ, <vector<float> >)              
 
 #include "ExternalTools/DynamicTTree/interface/DynamicTTreeInterface.h"
 

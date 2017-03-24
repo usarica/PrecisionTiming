@@ -14,8 +14,12 @@
 <use   name="DataFormats/PatCandidates"/>
 <use   name="DataFormats/EcalDetId"/>
 <use   name="DataFormats/FTLRecHit"/>
+<use   name="DataFormats/GeometrySurface"/>
+<use   name="MagneticField/Records"/>
 <use   name="Geometry/Records"/>
 <use   name="Geometry/HGCalGeometry"/>
+<use   name="Geometry/CaloGeometry"/>
+<use   name="TrackPropagation/SteppingHelixPropagator"/>
 <use   name="RecoEcal/EgammaCoreTools"/>
 <use   name="RecoEgamma/EgammaMCTools"/>
 <use   name="PhysicsTools/UtilAlgos"/>

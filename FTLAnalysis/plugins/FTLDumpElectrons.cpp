@@ -21,18 +21,24 @@
 #include "DataFormats/EcalDetId/interface/EBDetId.h"
 #include "DataFormats/FTLRecHit/interface/FTLRecHit.h"
 #include "DataFormats/FTLRecHit/interface/FTLRecHitCollections.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
 #include "SimDataFormats/Track/interface/SimTrackContainer.h"
 #include "SimDataFormats/Vertex/interface/SimVertexContainer.h"
 
-#include "Geometry/Records/interface/FastTimeGeometryRecord.h"
+#include "Geometry/Records/interface/IdealGeometryRecord.h"
+#include "Geometry/Records/interface/CaloGeometryRecord.h"
 #include "Geometry/HGCalGeometry/interface/FastTimeGeometry.h"
+#include "Geometry/CaloGeometry/interface/CaloSubdetectorGeometry.h"
+#include "Geometry/CaloGeometry/interface/CaloCellGeometry.h"
+#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
 
 #include "RecoEgamma/EgammaMCTools/interface/ElectronMCTruthFinder.h"
 #include "RecoEgamma/EgammaMCTools/interface/ElectronMCTruth.h"
 #include "RecoEgamma/EgammaMCTools/interface/PhotonMCTruthFinder.h"
 #include "RecoEgamma/EgammaMCTools/interface/PhotonMCTruth.h"
 
-#include "PrecisionTiming/FTLDumper/interface/FTLElectronsTree.h"
+#include "PrecisionTiming/FTLAnalysis/interface/FTLElectronsTree.h"
 
 using namespace std;
 
@@ -53,6 +59,8 @@ public:
 
 private:
     //---inputs
+    edm::Handle<reco::GenParticleCollection> genParticlesHandle_;
+    edm::EDGetTokenT<reco::GenParticleCollection> genParticlesToken_;
     edm::Handle<edm::SimTrackContainer> simTkHandle_;
     edm::EDGetTokenT<edm::SimTrackContainer> simTkToken_;
     edm::Handle<edm::SimVertexContainer> simVtxHandle_;
@@ -76,6 +84,7 @@ private:
 
 template<class ElectronCollectionT>
 FTLDumpElectrons<ElectronCollectionT>::FTLDumpElectrons(const edm::ParameterSet& pSet):
+    genParticlesToken_(consumes<reco::GenParticleCollection>(pSet.getUntrackedParameter<edm::InputTag>("genParticlesTag"))),
     simTkToken_(consumes<edm::SimTrackContainer>(pSet.getUntrackedParameter<edm::InputTag>("simTkTag"))),
     simVtxToken_(consumes<edm::SimVertexContainer>(pSet.getUntrackedParameter<edm::InputTag>("simVtxTag"))),
     ftlRecHitsToken_(consumes<FTLRecHitCollection>(pSet.getUntrackedParameter<edm::InputTag>("ftlRecHitsTag"))),
@@ -92,6 +101,10 @@ void FTLDumpElectrons<ElectronCollectionT>::analyze(edm::Event const& event, edm
 {
     outTree_.Reset();
 
+    //---load gen particles
+    event.getByToken(genParticlesToken_, genParticlesHandle_);
+    auto genParticles = *genParticlesHandle_.product();
+
     //---load the electrons
     event.getByToken(electronsToken_, electronsHandle_);
     auto electrons = *electronsHandle_.product();
@@ -107,6 +120,24 @@ void FTLDumpElectrons<ElectronCollectionT>::analyze(edm::Event const& event, edm
     if(ftlRecHitsHandle_.isValid())
         ftlRecHits = *ftlRecHitsHandle_.product();
 
+    //---get the ecal geometry
+    const CaloSubdetectorGeometry* ecalBarrelGeometry = NULL;
+    if(readFTLrecHits_)
+    {
+        edm::ESHandle<CaloGeometry> caloGeoHandle;
+        setup.get<CaloGeometryRecord>().get(caloGeoHandle);
+        ecalBarrelGeometry = caloGeoHandle->getSubdetectorGeometry(DetId::Ecal, EcalBarrel);
+    }
+
+    //---get the FTL geometry
+    const FastTimeGeometry* ftlGeometry = NULL;
+    if(readFTLrecHits_)
+    {
+        edm::ESHandle<FastTimeGeometry> ftlGeoHandle;
+        setup.get<IdealGeometryRecord>().get("FastTimeBarrel", ftlGeoHandle);
+        ftlGeometry = &(*ftlGeoHandle);
+    }
+    
     int idx=0;
     for(auto& ele : electrons)
     {
@@ -126,31 +157,33 @@ void FTLDumpElectrons<ElectronCollectionT>::analyze(edm::Event const& event, edm
         //---MC truth conversion info (catch seg fault from EGammaTools)
         vector<ElectronMCTruth> mcTruthElectrons;
         //mcTruthElectrons = electronMCTruthFinder_.find(*simTkHandle_.product(), *simVtxHandle_.product());
-        ElectronMCTruth mcTruthEle;
+        reco::GenParticle mcTruthEle;
         bool mcTruthExist=false;
-        float minDR=10;
-        for(auto& mcele : mcTruthElectrons)
+        float minDR=100;
+        for(auto& mcele : genParticles)
         {
-            if(mcele.fourMomentum().et() > mcTruthEleEtThr_  &&
-               deltaR(mcele.fourMomentum().eta(), mcele.fourMomentum().phi(), ele.eta(), ele.phi()) < minDR)
+            if(mcele.status() != 1) continue;
+            if(std::abs(mcele.pdgId())!=11) continue;
+
+            if(deltaR(mcele.eta(), mcele.phi(), ele.eta(), ele.phi()) < minDR)
             {
-                minDR = deltaR(mcele.fourMomentum().eta(), mcele.fourMomentum().phi(), ele.eta(), ele.phi());
+                minDR = deltaR(mcele.eta(), mcele.phi(), ele.eta(), ele.phi());
                 mcTruthEle = mcele;
                 mcTruthExist = true;
             }
         }        
         if(mcTruthExist)
         {
-            float tot_brem=0;
-            for(auto& brem : mcTruthEle.eloss())
-                tot_brem+=brem;
-            outTree_.firstBremRadius->push_back(tot_brem > 0 ? mcTruthEle.bremVertices()[0].rho() : -1);
-            outTree_.genBrem->push_back(tot_brem);
-            outTree_.genNBrem->push_back(tot_brem > 0 ? mcTruthEle.eloss().size() : -1);            
-            outTree_.genEnergy->push_back(mcTruthEle.fourMomentum().e());
-            outTree_.genEta->push_back(mcTruthEle.fourMomentum().eta());
-            outTree_.genPhi->push_back(mcTruthEle.fourMomentum().phi());
-            outTree_.genPt->push_back(mcTruthEle.fourMomentum().et());
+            // float tot_brem=0;
+            // for(auto& brem : mcTruthEle.eloss())
+            //     tot_brem+=brem;
+            // outTree_.firstBremRadius->push_back(tot_brem > 0 ? mcTruthEle.bremVertices()[0].rho() : -1);
+            // outTree_.genBrem->push_back(tot_brem);
+            // outTree_.genNBrem->push_back(tot_brem > 0 ? mcTruthEle.eloss().size() : -1);            
+            outTree_.genEnergy->push_back(mcTruthEle.energy());
+            outTree_.genEta->push_back(mcTruthEle.eta());
+            outTree_.genPhi->push_back(mcTruthEle.phi());
+            outTree_.genPt->push_back(mcTruthEle.et());
         }
         else
         {
@@ -162,41 +195,58 @@ void FTLDumpElectrons<ElectronCollectionT>::analyze(edm::Event const& event, edm
             outTree_.genPhi->push_back(-1);
             outTree_.genPt->push_back(-1);
         }
-        
+
         //---find ftl associated hits
+        outTree_.ftlHitsEleIdx->resize(idx+1);
+        outTree_.ftlHitsEnergy->resize(idx+1);
+        outTree_.ftlHitsTime->resize(idx+1);
+        outTree_.ftlHitsEta->resize(idx+1);
+        outTree_.ftlHitsPhi->resize(idx+1);
+        outTree_.ftlHitsEnergySum->resize(idx+1);
+        outTree_.ftlNHits->resize(idx+1);
+        outTree_.ftlHits3x3Sum->resize(idx+1);
+        outTree_.ftlNHits3x3->resize(idx+1);
+        
+        //outTree_.ftlTotHits = ftlRecHits.size();
         for(auto ftl_hit : ftlRecHits)
         {
-            outTree_.ftlHitsEleIdx->resize(idx+1);
-            outTree_.ftlHitsEnergy->resize(idx+1);
-            outTree_.ftlHitsTime->resize(idx+1);
-            outTree_.ftlHitsEta->resize(idx+1);
-            outTree_.ftlHitsPhi->resize(idx+1);
-            outTree_.ftlHitsEnergySum->resize(idx+1);
-            outTree_.ftlNHits->resize(idx+1);
-            outTree_.ftlHits3x3Sum->resize(idx+1);
-            outTree_.ftlNHits3x3->resize(idx+1);
             FastTimeDetId id = ftl_hit.id();
-            float hit_eta = -log(tan(atan(1189/(id.iz()*10-0.5))/2))*id.zside();
-            float hit_phi = id.iphi()<=360 ? id.iphi()/360.*TMath::Pi() : (id.iphi()-720)/360.*TMath::Pi();
-            if(fabs(ele.eta()-hit_eta) < ele.superCluster()->etaWidth() &&
-               fabs(deltaPhi(ele.phi(), hit_phi)) < ele.superCluster()->phiWidth())
+            // float ftl_hit_eta = -log(tan(atan(1189/(id.iz()*10-0.5))/2))*id.zside();
+            // float ftl_hit_phi = id.iphi()<=360 ? id.iphi()/360.*TMath::Pi() : (id.iphi()-720)/360.*TMath::Pi();
+            float ftl_hit_eta = ftlGeometry->getPosition(id).eta();
+            float ftl_hit_phi = ftlGeometry->getPosition(id).phi();
+            
+            for(auto& ecal_hit : ele.superCluster()->hitsAndFractions())
             {
-                outTree_.ftlHitsEleIdx->at(idx).push_back(idx);
-                outTree_.ftlHitsEnergy->at(idx).push_back(ftl_hit.energy());
-                outTree_.ftlHitsTime->at(idx).push_back(ftl_hit.time());
-                outTree_.ftlHitsEta->at(idx).push_back(hit_eta);
-                outTree_.ftlHitsPhi->at(idx).push_back(hit_phi);
-                outTree_.ftlHitsEnergySum->at(idx)+= ftl_hit.energy();
-                outTree_.ftlNHits->at(idx)++;
-            }
-            float seedEta = EBDetId(ele.superCluster()->seed()->seed()).approxEta();
-            float seedPhi = EBDetId(ele.superCluster()->seed()->seed()).iphi();
-            seedPhi = seedPhi<=180 ? seedPhi/180.*TMath::Pi() : (seedPhi-360)/180.*TMath::Pi();
-            if(fabs(seedEta-hit_eta) < 0.0175*1.5 &&
-               fabs(deltaPhi(seedPhi, hit_phi)) < 0.0175*1.5)
-            {
-                outTree_.ftlHits3x3Sum->at(idx)+= ftl_hit.energy();
-                outTree_.ftlNHits3x3->at(idx)++;
+                //---match FTL hits to ECAL hits
+                //   (selection is loose: 0.0175 is the size of a barrel ECAL crystal in eta/phi)
+                const CaloCellGeometry *cellGeometry = ecalBarrelGeometry->getGeometry(EBDetId(ecal_hit.first));
+                float ecal_hit_eta = cellGeometry->getPosition().eta();
+                float ecal_hit_phi = cellGeometry->getPosition().phi();
+                if(fabs(ecal_hit_eta-ftl_hit_eta) < cellGeometry->etaSpan() &&
+                   fabs(deltaPhi(ecal_hit_phi, ftl_hit_phi)) < cellGeometry->phiSpan())
+                {
+                    outTree_.ftlHitsEleIdx->at(idx).push_back(idx);
+                    outTree_.ftlHitsEnergy->at(idx).push_back(ftl_hit.energy());
+                    outTree_.ftlHitsTime->at(idx).push_back(ftl_hit.time());
+                    outTree_.ftlHitsEta->at(idx).push_back(ftl_hit_eta);
+                    outTree_.ftlHitsPhi->at(idx).push_back(ftl_hit_phi);
+                    outTree_.ftlHitsEnergySum->at(idx)+= ftl_hit.energy();
+                    outTree_.ftlNHits->at(idx)++;
+
+                    float seedEta = EBDetId(ele.superCluster()->seed()->seed()).approxEta();
+                    float seedPhi = EBDetId(ele.superCluster()->seed()->seed()).iphi();
+                    seedPhi = seedPhi<=180 ? seedPhi/180.*TMath::Pi() : (seedPhi-360)/180.*TMath::Pi();
+                    if(fabs(seedEta-ftl_hit_eta) < 0.0175*1.5 &&
+                       fabs(deltaPhi(seedPhi, ftl_hit_phi)) < 0.0175*1.5)
+                    {
+                        outTree_.ftlHits3x3Sum->at(idx)+= ftl_hit.energy();
+                        outTree_.ftlNHits3x3->at(idx)++;
+                    }
+
+                    //---if ftl hit matches ECAL hit break to avoid double counting
+                    break;
+                }
             }
         }
         

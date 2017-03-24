@@ -2,6 +2,7 @@ import FWCore.ParameterSet.Config as cms
 
 FTLDumpElectronsRECO = cms.EDAnalyzer(
     "FTLDumpElectronsRECO",
+    genParticlesTag = cms.untracked.InputTag("genParticles", "", "HLT"),
     electronsTag = cms.untracked.InputTag("gedGsfElectrons", "", "RECO"),
     ftlRecHitsTag = cms.untracked.InputTag("ftlRecHits", "FTLBarrel", "RECO"),
     simTkTag = cms.untracked.InputTag("g4SimHits", "", "HLT"),

@@ -19,6 +19,7 @@
 
 #include "DataFormats/PatCandidates/interface/Photon.h"
 #include "DataFormats/JetReco/interface/PFJet.h"
+#include "DataFormats/JetReco/interface/GenJet.h"
 #include "DataFormats/ForwardDetId/interface/FastTimeDetId.h"
 #include "DataFormats/EcalDetId/interface/EBDetId.h"
 #include "DataFormats/FTLRecHit/interface/FTLRecHit.h"
@@ -34,7 +35,7 @@
 #include "RecoEgamma/EgammaMCTools/interface/PhotonMCTruthFinder.h"
 #include "RecoEgamma/EgammaMCTools/interface/PhotonMCTruth.h"
 
-#include "PrecisionTiming/FTLDumper/interface/FTLJetsTree.h"
+#include "PrecisionTiming/FTLAnalysis/interface/FTLJetsTree.h"
 
 using namespace std;
 
@@ -62,20 +63,18 @@ private:
     edm::EDGetTokenT<FTLRecHitCollection> ftlRecHitsToken_;    
     edm::Handle<vector<reco::PFJet> > jetsHandle_;
     edm::EDGetTokenT<vector<reco::PFJet> > jetsToken_;    
+    edm::Handle<vector<reco::GenJet> > genJetsHandle_;
+    edm::EDGetTokenT<vector<reco::GenJet> > genJetsToken_;    
     edm::Handle<std::vector<reco::Photon> > photonsHandle_;
     edm::EDGetTokenT<std::vector<reco::Photon> > photonsToken_;    
     
     //---options
-    float mcTruthPhoEtThr_;
     bool readFTLrecHits_;
-    
-    //---workers
-    PhotonMCTruthFinder photonMCTruthFinder_;
     
     //---outputs
     FTLJetsTree outTree_;
-    TH2F* hitsMapHisto_;
-    edm::Service<TFileService> fs_;
+    vector<TH2F*> hitsMapHistos_={5, NULL};
+    edm::Service<TFileService> fs_;    
 };
 
 FTLDumpJets::FTLDumpJets(const edm::ParameterSet& pSet):
@@ -83,44 +82,57 @@ FTLDumpJets::FTLDumpJets(const edm::ParameterSet& pSet):
     simVtxToken_(consumes<edm::SimVertexContainer>(pSet.getUntrackedParameter<edm::InputTag>("simVtxTag"))),
     ftlRecHitsToken_(consumes<FTLRecHitCollection>(pSet.getUntrackedParameter<edm::InputTag>("ftlRecHitsTag"))),
     jetsToken_(consumes<vector<reco::PFJet> >(pSet.getUntrackedParameter<edm::InputTag>("jetsTag"))),
+    genJetsToken_(consumes<vector<reco::GenJet> >(pSet.getUntrackedParameter<edm::InputTag>("genJetsTag"))),    
     photonsToken_(consumes<std::vector<reco::Photon> >(pSet.getUntrackedParameter<edm::InputTag>("photonsTag"))),    
-    mcTruthPhoEtThr_(pSet.getUntrackedParameter<double>("mcTruthPhoEtThr")),
-    readFTLrecHits_(pSet.getUntrackedParameter<bool>("readFTLRecHits")),
-    photonMCTruthFinder_()    
+    readFTLrecHits_(pSet.getUntrackedParameter<bool>("readFTLRecHits"))
 {
     outTree_ = FTLJetsTree(pSet.getUntrackedParameter<string>("treeName").c_str(), "Jets tree for FTL studies");
-    hitsMapHisto_ = fs_->make<TH2F>("hitsMapHisto", "", 720, -360.25, 360.25, 101, -50.5, 50.5);
+    //hitsMapHistos_.resize(5, new TH2F());
+    for(unsigned int i=0; i<hitsMapHistos_.size(); ++i)        
+        hitsMapHistos_[i] = fs_->make<TH2F>((string("hitsMapHisto_")+to_string(i)).c_str(), "",
+            720, -360.25, 360.25, 101, -50.5, 50.5);
 }
 
 void FTLDumpJets::analyze(edm::Event const& event, edm::EventSetup const& setup)
 {
     outTree_.Reset();
-
+    
     //---load the jets
     event.getByToken(jetsToken_, jetsHandle_);
     auto jets = *jetsHandle_.product();
 
+    //---load the gen jets
+    // event.getByToken(genJetsToken_, genJetsHandle_);
+    // auto genJets = *genJetsHandle_.product();
+    
     //---load the photons
-    event.getByToken(photonsToken_, photonsHandle_);
-    auto photons = *photonsHandle_.product();    
-
-    //---load the mc-truth tracker collections
-    event.getByToken(simTkToken_, simTkHandle_);
-    event.getByToken(simVtxToken_, simVtxHandle_);
+    // event.getByToken(photonsToken_, photonsHandle_);
+    // auto photons = *photonsHandle_.product();    
 
     //---load the FTL collection if present in the EventContent (avoid crash with standard geometry)
-    auto ftlRecHits = FTLRecHitCollection();
-    if(readFTLrecHits_)
-        event.getByToken(ftlRecHitsToken_, ftlRecHitsHandle_);
-    if(ftlRecHitsHandle_.isValid())
-        ftlRecHits = *ftlRecHitsHandle_.product();
+    // auto ftlRecHits = FTLRecHitCollection();
+    // if(readFTLrecHits_)
+    //     event.getByToken(ftlRecHitsToken_, ftlRecHitsHandle_);
+    // if(ftlRecHitsHandle_.isValid())
+    //     ftlRecHits = *ftlRecHitsHandle_.product();
 
     int idx=0;
+
+    // auto genJet1 = genJets[0];
+    // auto genJet2 = genJets[1];    
     for(auto& jet : jets)
-    {
+    {        
         //---skim
-        if(fabs(jet.eta())>1.5 || jet.pt()<30 || jet.getTrackRefs().size()<5)
+        if(fabs(jet.eta())>1.5 || jet.pt()<30 || jet.pt()>=1000)
+        {
+            ++idx;
             continue;
+        }
+        if(idx>1)
+            break;
+
+        auto tmpHitsHisto = (TH2F*)hitsMapHistos_[0]->Clone("tmp");
+        tmpHitsHisto->Reset();
         
         //---jet standard info
         outTree_.idx->push_back(idx);
@@ -128,33 +140,43 @@ void FTLDumpJets::analyze(edm::Event const& event, edm::EventSetup const& setup)
         outTree_.eta->push_back(jet.eta());
         outTree_.phi->push_back(jet.phi());
         outTree_.energy->push_back(jet.energy());
-        float minDR=1000;
-        for(auto& pho : photons)
-        {
-            if(pho.pt()<10)
-                break;
-            if(deltaR(pho.eta(), pho.phi(), jet.eta(), jet.phi()) < minDR)
-                minDR = deltaR(pho.eta(), pho.phi(), jet.eta(), jet.phi());
-        }
-        outTree_.phoEfrac->push_back(minDR);
+        // float minDR=1000;
+        // for(auto& pho : photons)
+        // {
+        //     if(pho.pt()<10)
+        //         break;
+        //     if(deltaR(pho.eta(), pho.phi(), jet.eta(), jet.phi()) < minDR)
+        //         minDR = deltaR(pho.eta(), pho.phi(), jet.eta(), jet.phi());
+        // }
+        outTree_.phoEfrac->push_back(jet.getTrackRefs().size());
 
-        if(minDR < 0.4)
-            continue;
+        // if(minDR < 0.4)
+        //     continue;
         
         //---tracks
+        map<int, int> filledBins;
+        map<int, double> timeDelta;
         for(auto& track : jet.getTrackRefs())
         {
-            if(deltaR(jet.eta(), track->eta(), jet.phi(), track->phi())<0.4)
-            {
-                float delta_phi = deltaPhi(track->outerPhi(), jet.phi())/TMath::Pi()*360;
-                float iz_jet = (jet.eta()/fabs(jet.eta())) * (1189/tan(2*atan(exp(fabs(jet.eta()))))-0.5)/10;
-                float iz_track = (track->outerEta()/fabs(track->outerEta())) * (1189/tan(2*atan(exp(fabs(track->outerEta()))))-0.5)/10;
-                float delta_iz = signbit(jet.eta()) == signbit(track->outerEta()) ?
-                    iz_track - iz_jet : iz_track - iz_jet -1;
-                hitsMapHisto_->Fill(delta_phi, delta_iz, 1);
-            }
+            float delta_phi = deltaPhi(track->outerPhi(), jet.phi())/TMath::Pi()*360;
+            float iz_jet = (jet.eta()/fabs(jet.eta())) * (1189/tan(2*atan(exp(fabs(jet.eta()))))-0.5)/10;
+            float iz_track = (track->outerEta()/fabs(track->outerEta())) * (1189/tan(2*atan(exp(fabs(track->outerEta()))))-0.5)/10;
+            float delta_iz = signbit(jet.eta()) == signbit(track->outerEta()) ?
+                iz_track - iz_jet : iz_track - iz_jet -1;
+            int cell = tmpHitsHisto->Fill(delta_phi, delta_iz, 1);
+            filledBins[cell]++;
+            // if(timeDelta.find(cell) != timeDelta.end())
+            //     timeDelta[cell] -= 
         }
+
         ++idx;
+        for(auto& ibin : filledBins)
+        {
+            if(ibin.second>1)
+                hitsMapHistos_[int(jet.pt()/200)]->SetBinContent(ibin.first,
+                                                                 hitsMapHistos_[int(jet.pt()/200)]->GetBinContent(ibin.first)+1);
+        }
+        tmpHitsHisto->Delete();
     }
 
     outTree_.GetTTreePtr()->Fill();

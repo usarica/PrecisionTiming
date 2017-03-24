@@ -24,15 +24,19 @@
 #include "SimDataFormats/Track/interface/SimTrackContainer.h"
 #include "SimDataFormats/Vertex/interface/SimVertexContainer.h"
 
-#include "Geometry/Records/interface/FastTimeGeometryRecord.h"
+#include "Geometry/Records/interface/IdealGeometryRecord.h"
+#include "Geometry/Records/interface/CaloGeometryRecord.h"
 #include "Geometry/HGCalGeometry/interface/FastTimeGeometry.h"
+#include "Geometry/CaloGeometry/interface/CaloSubdetectorGeometry.h"
+#include "Geometry/CaloGeometry/interface/CaloCellGeometry.h"
+#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
 
 #include "RecoEgamma/EgammaMCTools/interface/ElectronMCTruthFinder.h"
 #include "RecoEgamma/EgammaMCTools/interface/ElectronMCTruth.h"
 #include "RecoEgamma/EgammaMCTools/interface/PhotonMCTruthFinder.h"
 #include "RecoEgamma/EgammaMCTools/interface/PhotonMCTruth.h"
 
-#include "PrecisionTiming/FTLDumper/interface/FTLPhotonsTree.h"
+#include "PrecisionTiming/FTLAnalysis/interface/FTLPhotonsTree.h"
 
 using namespace std;
 
@@ -107,6 +111,22 @@ void FTLDumpPhotons<PhotonCollectionT>::analyze(edm::Event const& event, edm::Ev
     if(ftlRecHitsHandle_.isValid())
         ftlRecHits = *ftlRecHitsHandle_.product();
 
+    //---get the ecal geometry
+    edm::ESHandle<CaloGeometry> caloGeoHandle;
+    setup.get<CaloGeometryRecord>().get(caloGeoHandle);
+    const CaloSubdetectorGeometry* ecalBarrelGeometry =
+        caloGeoHandle->getSubdetectorGeometry(DetId::Ecal, EcalBarrel);
+
+    //---get the FTL geometry
+    edm::ESHandle<FastTimeGeometry> ftlGeoHandle;
+    setup.get<IdealGeometryRecord>().get("FastTimeBarrel", ftlGeoHandle);
+    const FastTimeGeometry& ftlGeometry = *ftlGeoHandle;
+    
+    //---fill global info
+    outTree_.event = event.id().event();
+    outTree_.lumi = event.id().luminosityBlock();
+    outTree_.run = event.id().run();    
+    
     int idx=0;
     for(auto& pho : photons)
     {
@@ -138,6 +158,8 @@ void FTLDumpPhotons<PhotonCollectionT>::analyze(edm::Event const& event, edm::Ev
         if(mcTruthExist)
         {
             outTree_.convRadius->push_back(mcTruthPho.vertex().vect().rho());
+            outTree_.convPhi->push_back(mcTruthPho.vertex().vect().phi());
+            outTree_.convZ->push_back(mcTruthPho.vertex().vect().z());            
             outTree_.genEnergy->push_back(mcTruthPho.fourMomentum().e());
             outTree_.genEta->push_back(mcTruthPho.fourMomentum().eta());
             outTree_.genPhi->push_back(mcTruthPho.fourMomentum().phi());
@@ -153,39 +175,58 @@ void FTLDumpPhotons<PhotonCollectionT>::analyze(edm::Event const& event, edm::Ev
         }
         
         //---find ftl associated hits
+        outTree_.ftlHitsPhoIdx->resize(idx+1);
+        outTree_.ftlHitsEnergy->resize(idx+1);
+        outTree_.ftlHitsTime->resize(idx+1);
+        outTree_.ftlHitsEta->resize(idx+1);
+        outTree_.ftlHitsPhi->resize(idx+1);
+        outTree_.ftlHitsZ->resize(idx+1);        
+        outTree_.ftlHitsEnergySum->resize(idx+1);
+        outTree_.ftlNHits->resize(idx+1);
+        outTree_.ftlHits3x3Sum->resize(idx+1);
+        outTree_.ftlNHits3x3->resize(idx+1);
+
+        outTree_.ftlTotHits = ftlRecHits.size();
         for(auto ftl_hit : ftlRecHits)
         {
-            outTree_.ftlHitsPhoIdx->resize(idx+1);
-            outTree_.ftlHitsEnergy->resize(idx+1);
-            outTree_.ftlHitsTime->resize(idx+1);
-            outTree_.ftlHitsEta->resize(idx+1);
-            outTree_.ftlHitsPhi->resize(idx+1);
-            outTree_.ftlHitsEnergySum->resize(idx+1);
-            outTree_.ftlNHits->resize(idx+1);
-            outTree_.ftlHits3x3Sum->resize(idx+1);
-            outTree_.ftlNHits3x3->resize(idx+1);
             FastTimeDetId id = ftl_hit.id();
-            float hit_eta = -log(tan(atan(1189/(id.iz()*10-0.5))/2))*id.zside();
-            float hit_phi = id.iphi()<=360 ? id.iphi()/360.*TMath::Pi() : (id.iphi()-720)/360.*TMath::Pi();
-            if(fabs(pho.eta()-hit_eta) < pho.superCluster()->etaWidth() &&
-               fabs(deltaPhi(pho.phi(), hit_phi)) < pho.superCluster()->phiWidth())
+            // float ftl_hit_eta = -log(tan(atan(1189/(id.iz()*10-0.5))/2))*id.zside();
+            // float ftl_hit_phi = id.iphi()<=360 ? id.iphi()/360.*TMath::Pi() : (id.iphi()-720)/360.*TMath::Pi();
+            float ftl_hit_eta = ftlGeometry.getPosition(id).eta();
+            float ftl_hit_phi = ftlGeometry.getPosition(id).phi();
+            float ftl_hit_z = ftlGeometry.getPosition(id).z();
+            for(auto& ecal_hit : pho.superCluster()->hitsAndFractions())
             {
-                outTree_.ftlHitsPhoIdx->at(idx).push_back(idx);
-                outTree_.ftlHitsEnergy->at(idx).push_back(ftl_hit.energy());
-                outTree_.ftlHitsTime->at(idx).push_back(ftl_hit.time());
-                outTree_.ftlHitsEta->at(idx).push_back(hit_eta);
-                outTree_.ftlHitsPhi->at(idx).push_back(hit_phi);
-                outTree_.ftlHitsEnergySum->at(idx)+= ftl_hit.energy();
-                outTree_.ftlNHits->at(idx)++;
-            }
-            float seedEta = EBDetId(pho.superCluster()->seed()->seed()).approxEta();
-            float seedPhi = EBDetId(pho.superCluster()->seed()->seed()).iphi();
-            seedPhi = seedPhi<=180 ? seedPhi/180.*TMath::Pi() : (seedPhi-360)/180.*TMath::Pi();
-            if(fabs(seedEta-hit_eta) < 0.0175*1.5 &&
-               fabs(deltaPhi(seedPhi, hit_phi)) < 0.0175*1.5)
-            {
-                outTree_.ftlHits3x3Sum->at(idx)+= ftl_hit.energy();
-                outTree_.ftlNHits3x3->at(idx)++;
+                //---match FTL hits to ECAL hits
+                //   (selection is loose: 0.0175 is the size of a barrel ECAL crystal in eta/phi)
+                const CaloCellGeometry *cellGeometry = ecalBarrelGeometry->getGeometry(EBDetId(ecal_hit.first));
+                float ecal_hit_eta = cellGeometry->getPosition().eta();
+                float ecal_hit_phi = cellGeometry->getPosition().phi();
+                if(fabs(ecal_hit_eta-ftl_hit_eta) < cellGeometry->etaSpan() &&
+                   fabs(deltaPhi(ecal_hit_phi, ftl_hit_phi)) < cellGeometry->phiSpan())
+                {
+                    outTree_.ftlHitsPhoIdx->at(idx).push_back(idx);
+                    outTree_.ftlHitsEnergy->at(idx).push_back(ftl_hit.energy());
+                    outTree_.ftlHitsTime->at(idx).push_back(ftl_hit.time());
+                    outTree_.ftlHitsEta->at(idx).push_back(ftl_hit_eta);
+                    outTree_.ftlHitsPhi->at(idx).push_back(ftl_hit_phi);
+                    outTree_.ftlHitsZ->at(idx).push_back(ftl_hit_z);                    
+                    outTree_.ftlHitsEnergySum->at(idx)+= ftl_hit.energy();
+                    outTree_.ftlNHits->at(idx)++;
+
+                    float seedEta = EBDetId(pho.superCluster()->seed()->seed()).approxEta();
+                    float seedPhi = EBDetId(pho.superCluster()->seed()->seed()).iphi();
+                    seedPhi = seedPhi<=180 ? seedPhi/180.*TMath::Pi() : (seedPhi-360)/180.*TMath::Pi();
+                    if(fabs(seedEta-ftl_hit_eta) < 0.0175*1.5 &&
+                       fabs(deltaPhi(seedPhi, ftl_hit_phi)) < 0.0175*1.5)
+                    {
+                        outTree_.ftlHits3x3Sum->at(idx)+= ftl_hit.energy();
+                        outTree_.ftlNHits3x3->at(idx)++;
+                    }
+
+                    //---if ftl hit matches ECAL hit break to avoid double counting
+                    break;
+                }
             }
         }
         

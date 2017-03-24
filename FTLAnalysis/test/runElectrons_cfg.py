@@ -25,15 +25,21 @@ options.register('debug',
                  "Print debug messages")
 options.parseArguments()
 
-process = cms.Process("FTLDumpZee")
+process = cms.Process("FTLDumpElectrons")
 process.options = cms.untracked.PSet(allowUnscheduled = cms.untracked.bool(True))
 
 process.load('FWCore/MessageService/MessageLogger_cfi')
 process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
 # Global tag
-#process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff')
-#process.GlobalTag = GlobalTag(process.GlobalTag, '80X_dataRun2_Prompt_v10')
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
+from Configuration.AlCa.GlobalTag import GlobalTag
+process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic', '')
+
+# Geometry
+process.load('Configuration.Geometry.GeometryExtended2023D8Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D8_cff')
+
 
 for eosdir in options.eosdirs:
     if eosdir[-1] != '/':
@@ -52,13 +58,13 @@ process.source = cms.Source("PoolSource",
                             fileNames = cms.untracked.vstring(files)
 )
                             
-process.load('PrecisionTiming.FTLDumper.FTLDumpElectrons_cfi')
+process.load('PrecisionTiming.FTLAnalysis.FTLDumpElectrons_cfi')
 FTLDumper = process.FTLDumpElectronsRECO if options.datatier == 'RECO' else process.FTLDumpElectronsPAT
 FTLDumper.readFTLRecHits = options.hasftl
 
 # Output TFile
 process.TFileService = cms.Service("TFileService",
-                                   fileName = cms.string("ftl_zee.root"))
+                                   fileName = cms.string("ftl_electrons.root"))
 
 process.path = cms.Path(FTLDumper)
 
