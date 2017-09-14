@@ -3,6 +3,11 @@ import FWCore.ParameterSet.Config as cms
 from FWCore.ParameterSet.VarParsing import VarParsing
 
 options = VarParsing('analysis')
+options.register('eosdirs',
+                 '',
+                 VarParsing.multiplicity.list,
+                 VarParsing.varType.string,
+                 "files location(s) on EOS")
 options.register('datasets',
                  '',
                  VarParsing.multiplicity.list,
@@ -13,6 +18,16 @@ options.register('outname',
                  VarParsing.multiplicity.singleton,
                  VarParsing.varType.string,
                  "Output file name")
+options.register('usegenpv',
+                 False,
+                 VarParsing.multiplicity.singleton,
+                 VarParsing.varType.bool,
+                 "Use MC-truth to define PV")
+options.register('targetres',
+                 [0.02, 0.03, 0.05, 0.07, 0.09],
+                 VarParsing.multiplicity.list,
+                 VarParsing.varType.float,
+                 "Extra time resolution smearings")
 options.register('debug',
                  False,
                  VarParsing.multiplicity.singleton,
@@ -28,6 +43,8 @@ process.load('Configuration.EventContent.EventContent_cff')
 process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
+#process.MessageLogger.cerr.FwkReport.reportEvery = 1000
+
 files = []
 for dataset in options.datasets:
     print('>> Creating list of files from: \n'+dataset)
@@ -38,10 +55,20 @@ for dataset in options.datasets:
     str_files, err = lsCmd.communicate()
     files.extend(['root://cms-xrd-global.cern.ch/'+ifile for ifile in str_files.split("\n")])
     files.pop()
-    if options.debug:
-        for ifile in files:
-            print(ifile)
 
+for eosdir in options.eosdirs:
+    if eosdir[-1] != '/':
+        eosdir += '/'
+    print('>> Creating list of files from: \n'+eosdir)
+    lsCmd = subprocess.Popen(['eos', 'ls', eosdir+'*.root'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    str_files, err = lsCmd.communicate()
+    files.extend(['root://eoscms/'+eosdir+ifile for ifile in str_files.split("\n")])
+    files.pop()
+
+if options.debug:
+    for ifile in files:
+        print(ifile)
+    
 
 # Input source
 process.source = cms.Source("PoolSource",
@@ -77,6 +104,10 @@ process.TFileService = cms.Service("TFileService",
 
 from PrecisionTiming.FTLAnalysis.FTLMuonIsolation_cfi import FTLMuonIsolation
 process.MuonIsolation = FTLMuonIsolation
+process.MuonIsolation.useMCTruthPV = options.usegenpv
+#process.MuonIsolation.targetResolutions = cms.vdouble(res for res in options.targetres)
+print(process.MuonIsolation.targetResolutions)
+print(process.MuonIsolation.useMCTruthPV)
 
 process.path = cms.Path(process.MuonIsolation)
 

@@ -12,6 +12,7 @@ using namespace std;
     DATA(int, event)                            \
     DATA(int, lumi)                             \
     DATA(int, run)                              \
+    DATA(int, iEvent)                           \
     DATA(float, pt)                             \
     DATA(float, eta)                            \
     DATA(float, phi)                            \
@@ -28,24 +29,34 @@ using namespace std;
     DATA(float, genPt)                          \
     DATA(float, genEta)                         \
     DATA(float, genPhi)                         \
-    DATA(int, vtxIndex)                         \
+    DATA(int, vtx3DIdx)                         \
+    DATA(int, vtx4DIdx)                         \
     DATA(int, nTracksVtx)                       \
     DATA(int, nTracksVtxAssoc)                  \
     DATA(float, nVtxs)                          \
-    DATA(float, vtxX)                           \
-    DATA(float, vtxY)                           \
-    DATA(float, vtxZ)                           \
-    DATA(float, vtxT)                           \
-    DATA(float, vtxNdof)                        \
-    DATA(float, vtxChi2)                        \
-    DATA(bool, vtxIsFake)
+    DATA(float, vtx3DX)                         \
+    DATA(float, vtx3DY)                         \
+    DATA(float, vtx3DZ)                         \
+    DATA(float, vtx3DT)                         \
+    DATA(float, vtx3DNdof)                      \
+    DATA(float, vtx3DChi2)                      \
+    DATA(bool, vtx3DIsFake)                     \
+    DATA(float, vtx4DX)                         \
+    DATA(float, vtx4DY)                         \
+    DATA(float, vtx4DZ)                         \
+    DATA(float, vtx4DT)                         \
+    DATA(float, vtx4DNdof)                      \
+    DATA(float, vtx4DChi2)                      \
+    DATA(bool, vtx4DIsFake)                     
 
-#define DATA_CLASS_TABLE                        \
-    DATA(std::vector<float>, chIsoDR)           \
-    DATA(std::vector<float>, chIsoZCut)         \
-    DATA(std::vector<float>, chIsoZTCut_3sigma) \
-    DATA(std::vector<float>, chIsoZTCut_4sigma) \
-    DATA(std::vector<float>, chIsoZTCut_5sigma) 
+#define DATA_CLASS_TABLE                                \
+    DATA(std::vector<float>, chIsoDR)                   \
+    DATA(std::vector<float>, chIsoZCut)                 \
+    DATA(std::vector<float>, chIsoZTCut_3sigma)         \
+    DATA(std::vector<float>, chIsoZTCut_4sigma)         \
+    DATA(std::vector<float>, chIsoZTCut_5sigma)         \
+    DATA(std::vector<float>, chIsoZTCut_7sigma)         \
+    DATA(std::vector<float>, chIsoZTCut_10sigma)
 
 #include "ExternalTools/DynamicTTree/interface/DynamicTTreeInterface.h"
 
