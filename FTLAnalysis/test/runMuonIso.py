@@ -8,6 +8,11 @@ options.register('eosdirs',
                  VarParsing.multiplicity.list,
                  VarParsing.varType.string,
                  "files location(s) on EOS")
+options.register('localdirs',
+                 '',
+                 VarParsing.multiplicity.list,
+                 VarParsing.varType.string,
+                 "files location(s) on local filesystem")
 options.register('datasets',
                  '',
                  VarParsing.multiplicity.list,
@@ -23,6 +28,16 @@ options.register('usegenpv',
                  VarParsing.multiplicity.singleton,
                  VarParsing.varType.bool,
                  "Use MC-truth to define PV")
+options.register('isTimingSample',
+                 False,
+                 VarParsing.multiplicity.singleton,
+                 VarParsing.varType.bool,
+                 "Process sample using timing and 4D vertexing")
+options.register('runOnMiniAOD',
+                 False,
+                 VarParsing.multiplicity.singleton,
+                 VarParsing.varType.bool,
+                 "Sample is in MINIAOD dataformat")
 options.register('targetres',
                  [0.03, 0.05, 0.07, 0.09],
                  VarParsing.multiplicity.list,
@@ -48,13 +63,16 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 files = []
 for dataset in options.datasets:
     print('>> Creating list of files from: \n'+dataset)
-    query = "--query='file instance=prod/global dataset="+dataset+"'"
-    if options.debug:
-        print(query)
-    lsCmd = subprocess.Popen(['das_client.py '+query+' --limit=0'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    str_files, err = lsCmd.communicate()
-    files.extend(['root://cms-xrd-global.cern.ch/'+ifile for ifile in str_files.split("\n")])
-    files.pop()
+    for instance in ['global', 'phys03']:
+        query = "--query='file instance=prod/"+instance+" dataset="+dataset+"'"
+        if options.debug:
+            print(query)
+        lsCmd = subprocess.Popen(['das_client.py '+query+' --limit=0'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        str_files, err = lsCmd.communicate()
+        files.extend(['root://cms-xrd-global.cern.ch/'+ifile for ifile in str_files.split("\n")])
+        files.pop()
+        if len(files) > 0:
+            break
 
 for eosdir in options.eosdirs:
     if eosdir[-1] != '/':
@@ -65,6 +83,18 @@ for eosdir in options.eosdirs:
     files.extend(['root://eoscms/'+eosdir+ifile for ifile in str_files.split("\n")])
     files.pop()
 
+for localdir in options.localdirs:
+    if localdir[-1] != '/':
+        localdir += '/'
+    print('>> Creating list of files from: \n'+localdir)
+    lsCmd = subprocess.Popen(['ls '+localdir+'*.root'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    str_files, err = lsCmd.communicate()
+    files.extend(['file:'+ifile for ifile in str_files.split("\n")])
+    files.pop()
+
+for ifile in options.inputFiles:
+    files.append("file:"+ifile)
+    
 if options.debug:
     for ifile in files:
         print(ifile)
@@ -72,8 +102,17 @@ if options.debug:
 
 # Input source
 process.source = cms.Source("PoolSource",
-    secondaryFileNames = cms.untracked.vstring(),
-    fileNames = cms.untracked.vstring(files)
+                            fileNames = cms.untracked.vstring(files),
+                            secondaryFileNames=cms.untracked.vstring(
+                                # "/store/mc/PhaseIITDRSpring17DR/QCD_Pt-20toInf_MuEnrichedPt15_TuneCUETP8M1_14TeV_pythia8/GEN-SIM-RECO/PU200_91X_upgrade2023_realistic_v3-v6/110000/80071D5E-4D85-E711-8EA0-6C3BE5B5F218.root",
+                                # "/store/mc/PhaseIITDRSpring17DR/QCD_Pt-20toInf_MuEnrichedPt15_TuneCUETP8M1_14TeV_pythia8/GEN-SIM-RECO/PU200_91X_upgrade2023_realistic_v3-v6/110001/28F8AAA6-8885-E711-A734-001CC47D589C.root",
+                                # "/store/mc/PhaseIITDRSpring17DR/QCD_Pt-20toInf_MuEnrichedPt15_TuneCUETP8M1_14TeV_pythia8/GEN-SIM-RECO/PU200_91X_upgrade2023_realistic_v3-v6/110001/925C97EF-8485-E711-A4AD-B499BAAC039C.root",
+                                # "/store/mc/PhaseIITDRSpring17DR/QCD_Pt-20toInf_MuEnrichedPt15_TuneCUETP8M1_14TeV_pythia8/GEN-SIM-RECO/PU200_91X_upgrade2023_realistic_v3-v6/110001/AE5310F8-7785-E711-B0A9-001CC4A63C2A.root",
+                                # "/store/mc/PhaseIITDRSpring17DR/QCD_Pt-20toInf_MuEnrichedPt15_TuneCUETP8M1_14TeV_pythia8/GEN-SIM-RECO/PU200_91X_upgrade2023_realistic_v3-v6/110001/E05CB668-7B85-E711-A5F0-B499BAAC09BE.root",
+                                # "/store/mc/PhaseIITDRSpring17DR/QCD_Pt-20toInf_MuEnrichedPt15_TuneCUETP8M1_14TeV_pythia8/GEN-SIM-RECO/PU200_91X_upgrade2023_realistic_v3-v6/110001/E29563A2-8B85-E711-A929-B499BAAC04F0.root",
+                                # "/store/mc/PhaseIITDRSpring17DR/QCD_Pt-20toInf_MuEnrichedPt15_TuneCUETP8M1_14TeV_pythia8/GEN-SIM-RECO/PU200_91X_upgrade2023_realistic_v3-v6/110002/8CC629A3-7185-E711-94A1-001CC4A63C8E.root",
+                                # "/store/mc/PhaseIITDRSpring17DR/QCD_Pt-20toInf_MuEnrichedPt15_TuneCUETP8M1_14TeV_pythia8/GEN-SIM-RECO/PU200_91X_upgrade2023_realistic_v3-v6/110004/B404C769-7585-E711-97AD-B499BAAC0676.root"
+                            )
 )
 
 process.options = cms.untracked.PSet(
@@ -102,12 +141,17 @@ process.TFileService = cms.Service("TFileService",
 )
 
 
-from PrecisionTiming.FTLAnalysis.FTLMuonIsolation_cfi import FTLMuonIsolation
+if options.runOnMiniAOD:
+    from PrecisionTiming.FTLAnalysis.FTLMuonIsolation_cfi import FTLMuonIsolationMiniAOD as FTLMuonIsolation
+else:
+    from PrecisionTiming.FTLAnalysis.FTLMuonIsolation_cfi import FTLMuonIsolation as FTLMuonIsolation
 process.MuonIsolation = FTLMuonIsolation
 process.MuonIsolation.useMCTruthPV = options.usegenpv
+process.MuonIsolation.isTimingSample = options.isTimingSample
 #process.MuonIsolation.targetResolutions = cms.vdouble(res for res in options.targetres)
 print(process.MuonIsolation.targetResolutions)
 print(process.MuonIsolation.useMCTruthPV)
+print(process.MuonIsolation.isTimingSample)
 
 process.path = cms.Path(process.MuonIsolation)
 
