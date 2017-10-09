@@ -19,12 +19,12 @@ options.register('outname',
                  VarParsing.varType.string,
                  "Output file name")
 options.register('usegenpv',
-                 False,
+                 True,
                  VarParsing.multiplicity.singleton,
                  VarParsing.varType.bool,
                  "Use MC-truth to define PV")
 options.register('targetres',
-                 [0.02, 0.03, 0.05, 0.07, 0.09],
+                 [0.03, 0.05, 0.07, 0.09],
                  VarParsing.multiplicity.list,
                  VarParsing.varType.float,
                  "Extra time resolution smearings")
