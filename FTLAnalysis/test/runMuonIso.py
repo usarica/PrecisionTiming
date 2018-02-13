@@ -33,21 +33,32 @@ options.register('isTimingSample',
                  VarParsing.multiplicity.singleton,
                  VarParsing.varType.bool,
                  "Process sample using timing and 4D vertexing")
-options.register('runOnMiniAOD',
+options.register('saveTracksInfo',
                  False,
                  VarParsing.multiplicity.singleton,
                  VarParsing.varType.bool,
-                 "Sample is in MINIAOD dataformat")
+                 "Save per-track information")
+options.register('runHGCToySim',
+                 False,
+                 VarParsing.multiplicity.singleton,
+                 VarParsing.varType.bool,
+                 "Allow to define eta and pt dependent time resolutions")
 options.register('targetres',
-                 [0.03, 0.05, 0.07, 0.09],
+                 [0.03, 0.05, 0.07, 0.09, 0.15],
                  VarParsing.multiplicity.list,
                  VarParsing.varType.float,
                  "Extra time resolution smearings")
+options.register('dzCut',
+                 0.1,
+                 VarParsing.multiplicity.singleton,
+                 VarParsing.varType.float,
+                 "Trk-vtx dz cut")
 options.register('debug',
                  False,
                  VarParsing.multiplicity.singleton,
                  VarParsing.varType.bool,
                  "Print debug messages")
+options.maxEvents = -1
 options.parseArguments()
 
 process = cms.Process('TimingAnalysis')
@@ -58,16 +69,20 @@ process.load('Configuration.EventContent.EventContent_cff')
 process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
+# import of standard configurations
+process.maxEvents = cms.untracked.PSet(
+    input = cms.untracked.int32(options.maxEvents)
+)
 #process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
 files = []
 for dataset in options.datasets:
     print('>> Creating list of files from: \n'+dataset)
     for instance in ['global', 'phys03']:
-        query = "--query='file instance=prod/"+instance+" dataset="+dataset+"'"
+        query = "-query='file dataset="+dataset+"'"
         if options.debug:
             print(query)
-        lsCmd = subprocess.Popen(['das_client.py '+query+' --limit=0'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        lsCmd = subprocess.Popen(['dasgoclient '+query+' -limit=0'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         str_files, err = lsCmd.communicate()
         files.extend(['root://cms-xrd-global.cern.ch/'+ifile for ifile in str_files.split("\n")])
         files.pop()
@@ -103,20 +118,7 @@ if options.debug:
 # Input source
 process.source = cms.Source("PoolSource",
                             fileNames = cms.untracked.vstring(files),
-                            secondaryFileNames=cms.untracked.vstring(
-                                # "/store/mc/PhaseIITDRSpring17DR/QCD_Pt-20toInf_MuEnrichedPt15_TuneCUETP8M1_14TeV_pythia8/GEN-SIM-RECO/PU200_91X_upgrade2023_realistic_v3-v6/110000/80071D5E-4D85-E711-8EA0-6C3BE5B5F218.root",
-                                # "/store/mc/PhaseIITDRSpring17DR/QCD_Pt-20toInf_MuEnrichedPt15_TuneCUETP8M1_14TeV_pythia8/GEN-SIM-RECO/PU200_91X_upgrade2023_realistic_v3-v6/110001/28F8AAA6-8885-E711-A734-001CC47D589C.root",
-                                # "/store/mc/PhaseIITDRSpring17DR/QCD_Pt-20toInf_MuEnrichedPt15_TuneCUETP8M1_14TeV_pythia8/GEN-SIM-RECO/PU200_91X_upgrade2023_realistic_v3-v6/110001/925C97EF-8485-E711-A4AD-B499BAAC039C.root",
-                                # "/store/mc/PhaseIITDRSpring17DR/QCD_Pt-20toInf_MuEnrichedPt15_TuneCUETP8M1_14TeV_pythia8/GEN-SIM-RECO/PU200_91X_upgrade2023_realistic_v3-v6/110001/AE5310F8-7785-E711-B0A9-001CC4A63C2A.root",
-                                # "/store/mc/PhaseIITDRSpring17DR/QCD_Pt-20toInf_MuEnrichedPt15_TuneCUETP8M1_14TeV_pythia8/GEN-SIM-RECO/PU200_91X_upgrade2023_realistic_v3-v6/110001/E05CB668-7B85-E711-A5F0-B499BAAC09BE.root",
-                                # "/store/mc/PhaseIITDRSpring17DR/QCD_Pt-20toInf_MuEnrichedPt15_TuneCUETP8M1_14TeV_pythia8/GEN-SIM-RECO/PU200_91X_upgrade2023_realistic_v3-v6/110001/E29563A2-8B85-E711-A929-B499BAAC04F0.root",
-                                # "/store/mc/PhaseIITDRSpring17DR/QCD_Pt-20toInf_MuEnrichedPt15_TuneCUETP8M1_14TeV_pythia8/GEN-SIM-RECO/PU200_91X_upgrade2023_realistic_v3-v6/110002/8CC629A3-7185-E711-94A1-001CC4A63C8E.root",
-                                # "/store/mc/PhaseIITDRSpring17DR/QCD_Pt-20toInf_MuEnrichedPt15_TuneCUETP8M1_14TeV_pythia8/GEN-SIM-RECO/PU200_91X_upgrade2023_realistic_v3-v6/110004/B404C769-7585-E711-97AD-B499BAAC0676.root"
-                            )
-)
-
-process.options = cms.untracked.PSet(
-
+                            secondaryFileNames=cms.untracked.vstring()
 )
 
 # Production Info
@@ -141,14 +143,18 @@ process.TFileService = cms.Service("TFileService",
 )
 
 
-if options.runOnMiniAOD:
-    from PrecisionTiming.FTLAnalysis.FTLMuonIsolation_cfi import FTLMuonIsolationMiniAOD as FTLMuonIsolation
+if options.runHGCToySim:
+    from PrecisionTiming.FTLAnalysis.FTLMuonIsolation_cfi import FTLMuonIsolationHGCToy as FTLMuonIsolation
 else:
     from PrecisionTiming.FTLAnalysis.FTLMuonIsolation_cfi import FTLMuonIsolation as FTLMuonIsolation
 process.MuonIsolation = FTLMuonIsolation
 process.MuonIsolation.useMCTruthPV = options.usegenpv
 process.MuonIsolation.isTimingSample = options.isTimingSample
-#process.MuonIsolation.targetResolutions = cms.vdouble(res for res in options.targetres)
+process.MuonIsolation.saveTracksInfo = options.saveTracksInfo
+process.MuonIsolation.dzCut = options.dzCut
+if process.MuonIsolation.isTimingSample:
+   process.MuonIsolation.vtxTag = cms.untracked.InputTag("offlinePrimaryVertices4D", "", "RECO")
+##process.MuonIsolation.targetResolutions = cms.vdouble(res for res in options.targetres)
 print(process.MuonIsolation.targetResolutions)
 print(process.MuonIsolation.useMCTruthPV)
 print(process.MuonIsolation.isTimingSample)
@@ -159,4 +165,5 @@ process.path = cms.Path(process.MuonIsolation)
 
 # Schedule definition
 process.schedule = cms.Schedule(process.path)
+
 
