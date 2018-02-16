@@ -38,7 +38,7 @@ options.register('saveTracksInfo',
                  VarParsing.multiplicity.singleton,
                  VarParsing.varType.bool,
                  "Save per-track information")
-options.register('runHGCToySim',
+options.register('HGCToySim',
                  False,
                  VarParsing.multiplicity.singleton,
                  VarParsing.varType.bool,
@@ -143,14 +143,15 @@ process.TFileService = cms.Service("TFileService",
 )
 
 
-if options.runHGCToySim:
-    from PrecisionTiming.FTLAnalysis.FTLMuonIsolation_cfi import FTLMuonIsolationHGCToy as FTLMuonIsolation
-else:
-    from PrecisionTiming.FTLAnalysis.FTLMuonIsolation_cfi import FTLMuonIsolation as FTLMuonIsolation
+#if options.HGCToySim:
+#    from PrecisionTiming.FTLAnalysis.FTLMuonIsolation_cfi import FTLMuonIsolationHGCToy as FTLMuonIsolation
+#else:
+from PrecisionTiming.FTLAnalysis.FTLMuonIsolation_cfi import FTLMuonIsolation as FTLMuonIsolation
 process.MuonIsolation = FTLMuonIsolation
 process.MuonIsolation.useMCTruthPV = options.usegenpv
 process.MuonIsolation.isTimingSample = options.isTimingSample
 process.MuonIsolation.saveTracksInfo = options.saveTracksInfo
+process.MuonIsolation.HGCToySim = options.HGCToySim
 process.MuonIsolation.dzCut = options.dzCut
 if process.MuonIsolation.isTimingSample:
    process.MuonIsolation.vtxTag = cms.untracked.InputTag("offlinePrimaryVertices4D", "", "RECO")

@@ -97,6 +97,7 @@ private:
     bool           useMCTruthPV_;
     bool           isTimingSample_;
     bool           saveTracksInfo_;
+    bool           HGCToySim_;
     float          dzCut_;
     vector<double> isoConeSizes_;
 };
@@ -127,6 +128,7 @@ FTLMuonIsolation::FTLMuonIsolation(const edm::ParameterSet& pSet) :
     useMCTruthPV_ = pSet.getUntrackedParameter<bool>("useMCTruthPV");
     isTimingSample_ = pSet.getUntrackedParameter<bool>("isTimingSample");
     saveTracksInfo_ = pSet.getUntrackedParameter<bool>("saveTracksInfo");
+    HGCToySim_ = pSet.getUntrackedParameter<bool>("HGCToySim");    
     dzCut_ = pSet.getUntrackedParameter<double>("dzCut");
     isoConeSizes_ = pSet.getUntrackedParameter<vector<double> >("isoConeSizes");
     if(isTimingSample_)
@@ -230,9 +232,25 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             if(isTimingSample_)
             {
                 float time = ref->time();
-                float timeReso = ref->timeError() != -1. ? ref->timeError() : 1.;
+                float timeReso = ref->timeError() != -1. ? ref->timeError() : 10.;
+                if(HGCToySim_ && std::abs(track->eta())>1.5)
+                {
+                    auto eff = gRandom->Uniform(0., 1.);
+                    if(eff < 1-std::exp(-(track->pt()-0.2)/1.4))
+                    {
+                        extra_smearing = 3.6/track->pt()+0.6 - iRes*iRes;                    
+                        extra_smearing = extra_smearing > 0 ? extra_smearing : 0.;
+                        timeReso = std::sqrt(timeReso*timeReso + extra_smearing*extra_smearing);
+                    }
+                    else
+                    {
+                        extra_smearing = 0.;
+                        timeReso = 10.;
+                    }                    
+                }
+                else
+                    timeReso = std::sqrt(timeReso*timeReso + extra_smearing*extra_smearing);
                 time *= gRandom->Gaus(1., extra_smearing);
-                timeReso = std::sqrt(timeReso*timeReso + extra_smearing*extra_smearing);
                 for(int ivtx = 0; ivtx < (int)vtxHandle_->size(); ++ivtx)
                 {
                     const auto& thevtx = (*vtxHandle_)[ivtx];
@@ -348,7 +366,7 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             if(useMCTruthPV_)
             {
                 double min_dz = std::numeric_limits<double>::max();
-                double min_dzdt = std::numeric_limits<double>::max();
+                //double min_dzdt = std::numeric_limits<double>::max();
                 for( unsigned i = 0; i < vtxHandle_->size(); ++i )
                 {
                     const auto& vtx = (*vtxHandle_)[i];

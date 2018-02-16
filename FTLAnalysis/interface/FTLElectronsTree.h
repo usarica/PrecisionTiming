@@ -37,6 +37,8 @@ using namespace std;
     DATA(vector<int>, ftlNHits)                         \
     DATA(vector<float>, ftlHits3x3Sum)                  \
     DATA(vector<int>, ftlNHits3x3)                      \
+    DATA(vector<float>, ftlSieie)                       \
+    DATA(vector<float>, ftlSipip)                       \
     DATA(vector, ftlHitsEleIdx, <vector<int> >)         \
     DATA(vector, ftlHitsEnergy, <vector<float> >)       \
     DATA(vector, ftlHitsTime, <vector<float> >)         \

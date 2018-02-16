@@ -21,6 +21,8 @@ FTLMuonIsolation = cms.EDAnalyzer(
     isTimingSample = cms.untracked.bool(False),
     ###---save tracks info
     saveTracksInfo = cms.untracked.bool(False),
+    ###---no ETL, get time in endcap from parametrized HGC response
+    HGCToySim = cms.untracked.bool(False),
     ###---Trk-vtx dz cut
     dzCut = cms.untracked.double(0.1),
     ###---Iso options

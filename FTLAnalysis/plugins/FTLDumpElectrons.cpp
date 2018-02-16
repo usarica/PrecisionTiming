@@ -198,6 +198,8 @@ void FTLDumpElectrons<ElectronCollectionT>::analyze(edm::Event const& event, edm
 
         //---find ftl associated hits
         outTree_.ftlHitsEleIdx->resize(idx+1);
+        outTree_.ftlSieie->resize(idx+1);
+        outTree_.ftlSipip->resize(idx+1);        
         outTree_.ftlHitsEnergy->resize(idx+1);
         outTree_.ftlHitsTime->resize(idx+1);
         outTree_.ftlHitsEta->resize(idx+1);
@@ -207,22 +209,26 @@ void FTLDumpElectrons<ElectronCollectionT>::analyze(edm::Event const& event, edm
         outTree_.ftlHits3x3Sum->resize(idx+1);
         outTree_.ftlNHits3x3->resize(idx+1);
         
-        //outTree_.ftlTotHits = ftlRecHits.size();
-        for(auto ftl_hit : ftlRecHits)
+        float ftl_sieie=0, ftl_sipip=0;
+        int ftl_ss_hit_count=0;            
+        for(auto& ecal_hit : ele.superCluster()->hitsAndFractions())
         {
-            FastTimeDetId id = ftl_hit.id();
-            // float ftl_hit_eta = -log(tan(atan(1189/(id.iz()*10-0.5))/2))*id.zside();
-            // float ftl_hit_phi = id.iphi()<=360 ? id.iphi()/360.*TMath::Pi() : (id.iphi()-720)/360.*TMath::Pi();
-            float ftl_hit_eta = ftlGeometry->getPosition(id).eta();
-            float ftl_hit_phi = ftlGeometry->getPosition(id).phi();
+            const CaloCellGeometry *cellGeometry = ecalBarrelGeometry->getGeometry(EBDetId(ecal_hit.first));
+            float ecal_hit_eta = cellGeometry->getPosition().eta();
+            float ecal_hit_phi = cellGeometry->getPosition().phi();
+
+            float seedEta = EBDetId(ele.superCluster()->seed()->seed()).approxEta();
+            float seedPhi = EBDetId(ele.superCluster()->seed()->seed()).iphi();
+            seedPhi = seedPhi<=180 ? seedPhi/180.*TMath::Pi() : (seedPhi-360)/180.*TMath::Pi();
             
-            for(auto& ecal_hit : ele.superCluster()->hitsAndFractions())
+            for(auto ftl_hit : ftlRecHits)
             {
+                FastTimeDetId id = ftl_hit.id();
+                float ftl_hit_eta = ftlGeometry->getPosition(id).eta();
+                float ftl_hit_phi = ftlGeometry->getPosition(id).phi();
+
                 //---match FTL hits to ECAL hits
                 //   (selection is loose: 0.0175 is the size of a barrel ECAL crystal in eta/phi)
-                const CaloCellGeometry *cellGeometry = ecalBarrelGeometry->getGeometry(EBDetId(ecal_hit.first));
-                float ecal_hit_eta = cellGeometry->getPosition().eta();
-                float ecal_hit_phi = cellGeometry->getPosition().phi();
                 if(fabs(ecal_hit_eta-ftl_hit_eta) < cellGeometry->etaSpan() &&
                    fabs(deltaPhi(ecal_hit_phi, ftl_hit_phi)) < cellGeometry->phiSpan())
                 {
@@ -234,14 +240,20 @@ void FTLDumpElectrons<ElectronCollectionT>::analyze(edm::Event const& event, edm
                     outTree_.ftlHitsEnergySum->at(idx)+= ftl_hit.energy();
                     outTree_.ftlNHits->at(idx)++;
 
-                    float seedEta = EBDetId(ele.superCluster()->seed()->seed()).approxEta();
-                    float seedPhi = EBDetId(ele.superCluster()->seed()->seed()).iphi();
-                    seedPhi = seedPhi<=180 ? seedPhi/180.*TMath::Pi() : (seedPhi-360)/180.*TMath::Pi();
-                    if(fabs(seedEta-ftl_hit_eta) < 0.0175*1.5 &&
-                       fabs(deltaPhi(seedPhi, ftl_hit_phi)) < 0.0175*1.5)
+                    if(fabs(seedEta-ftl_hit_eta) < 0.0175*2.5 &&
+                       fabs(deltaPhi(seedPhi, ftl_hit_phi)) < 0.0175*2.5)
                     {
-                        outTree_.ftlHits3x3Sum->at(idx)+= ftl_hit.energy();
-                        outTree_.ftlNHits3x3->at(idx)++;
+                        if(ftl_hit.energy() > 0.5)
+                        {
+                            ftl_sieie += std::abs(seedEta-ftl_hit_eta);
+                            ++ftl_ss_hit_count;
+                        }
+                        if(fabs(seedEta-ftl_hit_eta) < 0.0175*2.5 &&
+                           fabs(deltaPhi(seedPhi, ftl_hit_phi)) < 0.0175*2.5)                            
+                        {
+                            outTree_.ftlHits3x3Sum->at(idx)+= ftl_hit.energy();
+                            outTree_.ftlNHits3x3->at(idx)++;
+                        }
                     }
 
                     //---if ftl hit matches ECAL hit break to avoid double counting
@@ -249,6 +261,9 @@ void FTLDumpElectrons<ElectronCollectionT>::analyze(edm::Event const& event, edm
                 }
             }
         }
+
+        outTree_.ftlSieie->at(idx) = ftl_ss_hit_count>0 ? ftl_sieie/ftl_ss_hit_count : -1.;
+        outTree_.ftlSipip->at(idx) = ftl_ss_hit_count>0 ? ftl_sipip/ftl_ss_hit_count : -1.;        
         
         ++idx;
     }
