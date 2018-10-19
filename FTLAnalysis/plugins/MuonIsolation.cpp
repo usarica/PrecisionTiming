@@ -96,6 +96,8 @@ private:
 
     //---
     vector<double> targetResolutions_;
+    double dzCut_;
+
     
     //---I/O
     int iEvent_;
@@ -130,7 +132,8 @@ FTLMuonIsolation::FTLMuonIsolation(const edm::ParameterSet& pSet) :
     timeResToken_(consumes<edm::ValueMap<float> >(pSet.getUntrackedParameter<edm::InputTag>("timeResTag"))),
     genPartToken_(consumes<reco::GenParticleCollection>(pSet.getUntrackedParameter<edm::InputTag>("genPartTag"))),
     genJetToken_(consumes<std::vector<reco::GenJet> >(pSet.getUntrackedParameter<edm::InputTag>("genJetsTag"))),
-    targetResolutions_(pSet.getUntrackedParameter<vector<double> >("targetResolutions"))
+    targetResolutions_(pSet.getUntrackedParameter<vector<double> >("targetResolutions")),
+    dzCut_(pSet.getUntrackedParameter<double>("dzCut"))
 {
     iEvent_ = 0;
     for(auto& res : targetResolutions_)
@@ -188,6 +191,7 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 
     for(auto& iRes : targetResolutions_)
     {
+        // cout << "RESOLUTION : " << iRes << endl;
         //---make a map of vertices to track refs within cuts
         std::unordered_multimap<unsigned,reco::TrackBaseRef>
             vertices_to_tracks_z,
@@ -196,15 +200,25 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             vertices_to_tracks_zt5,
             vertices_to_tracks_zt7,
             vertices_to_tracks_zt10;
+        std::map<reco::TrackRef, float> track_times;
 
-        float extra_smearing = std::sqrt(iRes*iRes - 0.02*0.02);
+        // float extra_smearing = std::sqrt(iRes*iRes - 0.02*0.02);
         for(unsigned i = 0; i < tracksHandle_->size(); ++i)
         {
             auto ref = tracksHandle_->refAt(i);
             float time = (*timeHandle_)[ref];
             float timeReso = (*timeResHandle_)[ref] != 0.f ? (*timeResHandle_)[ref] : 0.170f;
-            time *= gRandom->Gaus(1., extra_smearing);
+            float extra_smearing = std::sqrt(iRes*iRes - timeReso*timeReso);
+            // cout << "Track " << i << ":\n";
+            // cout << "              iRes: " << iRes << endl;
+            // cout << "    extra_smearing: " << extra_smearing << endl;
+            // cout << "     orig timeReso: " << timeReso << endl;
+            // cout << "         orig time: " << time << endl;
+            time += gRandom->Gaus(0., extra_smearing);
             timeReso = std::sqrt(timeReso*timeReso + extra_smearing*extra_smearing);
+            // cout << "          new time: " << time << endl;
+            // cout << "      new timeReso: " << timeReso << endl;
+            track_times[ref.castTo<reco::TrackRef>()] = time;
             for(int ivtx = 0; ivtx < (int)vtx4DHandle_->size(); ++ivtx)
             {
                 const auto& thevtx = (*vtx4DHandle_)[ivtx];
@@ -221,9 +235,9 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
                 const float time_cut4 = 4.f*base_cut;
                 const float time_cut5 = 5.f*base_cut;
                 const float time_cut7 = 7.f*base_cut;
-                const float time_cut10 = 20.f*base_cut;
+                const float time_cut10 = 10.f*base_cut;
 
-                const bool keepz = ( dz < 0.1f );
+                const bool keepz = ( dz < dzCut_ );
                 const bool keept3 = (!useTime || std::isnan(dt) || dt < time_cut3);
                 const bool keept4 = (!useTime || std::isnan(dt) || dt < time_cut4);
                 const bool keept5 = (!useTime || std::isnan(dt) || dt < time_cut5);
@@ -259,7 +273,7 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             {
                 const auto& thevtx = (*vtx3DHandle_)[ivtx];
                 const float dz = std::abs(ref->dz(thevtx.position()));
-                const bool keepz = ( dz < 0.1f );
+                const bool keepz = ( dz < dzCut_ );
                 if( ref->quality(reco::TrackBase::highPurity) && keepz ) {
                     vertices_to_tracks_z.emplace(ivtx, ref);        
                 }
@@ -394,6 +408,7 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             outTrees_[iRes].vtx4DY = vtx4D.y();
             outTrees_[iRes].vtx4DZ = vtx4D.z();
             outTrees_[iRes].vtx4DT = vtx4D.t();
+            outTrees_[iRes].vtx4DTerr = vtx4D.tError();
             outTrees_[iRes].vtx3DIsFake = vtx3D.isFake();
             outTrees_[iRes].vtx3DNdof = vtx3D.ndof();
             outTrees_[iRes].vtx3DChi2 = vtx3D.chi2();    
@@ -409,29 +424,88 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             outTrees_[iRes].chIsoZTCut_5sigma->resize(isoConeSizes_.size());                
             outTrees_[iRes].chIsoZTCut_7sigma->resize(isoConeSizes_.size());                
             outTrees_[iRes].chIsoZTCut_10sigma->resize(isoConeSizes_.size());                
+            outTrees_[iRes].nTracksZCut->resize(isoConeSizes_.size());
+            outTrees_[iRes].nTracksZTCut_3sigma->resize(isoConeSizes_.size());
+            outTrees_[iRes].nTracksZTCut_4sigma->resize(isoConeSizes_.size());
+            outTrees_[iRes].nTracksZTCut_5sigma->resize(isoConeSizes_.size());                
+            outTrees_[iRes].nTracksZTCut_7sigma->resize(isoConeSizes_.size());                
+            outTrees_[iRes].nTracksZTCut_10sigma->resize(isoConeSizes_.size());                
+            
+            outTrees_[iRes].tracksZCut_iso03_pt->clear();
+            outTrees_[iRes].tracksZCut_iso03_eta->clear();
+            outTrees_[iRes].tracksZCut_iso03_phi->clear();
+            outTrees_[iRes].tracksZCut_iso03_dR->clear();
+            outTrees_[iRes].tracksZCut_iso03_t->clear();
+            outTrees_[iRes].tracksZCut_iso03_dz->clear();
+            outTrees_[iRes].tracksZTCut_3sigma_iso03_pt->clear();
+            outTrees_[iRes].tracksZTCut_3sigma_iso03_eta->clear();
+            outTrees_[iRes].tracksZTCut_3sigma_iso03_phi->clear();
+            outTrees_[iRes].tracksZTCut_3sigma_iso03_dR->clear();
+            outTrees_[iRes].tracksZTCut_3sigma_iso03_t->clear();
+            outTrees_[iRes].tracksZTCut_3sigma_iso03_dz->clear();
+
             for(int iDR=0; iDR<(int)isoConeSizes_.size(); ++iDR)
             {
                 float DR = isoConeSizes_[iDR];
                 outTrees_[iRes].chIsoDR->push_back(DR);
+
+                outTrees_[iRes].chIsoZCut->at(iDR) = 0.0;
+                outTrees_[iRes].chIsoZTCut_3sigma->at(iDR) = 0.0;
+                outTrees_[iRes].chIsoZTCut_4sigma->at(iDR) = 0.0;
+                outTrees_[iRes].chIsoZTCut_5sigma->at(iDR) = 0.0;
+                outTrees_[iRes].chIsoZTCut_7sigma->at(iDR) = 0.0;
+                outTrees_[iRes].chIsoZTCut_10sigma->at(iDR) = 0.0;
+                outTrees_[iRes].nTracksZCut->at(iDR) = 0;
+                outTrees_[iRes].nTracksZTCut_3sigma->at(iDR) = 0;
+                outTrees_[iRes].nTracksZTCut_4sigma->at(iDR) = 0;
+                outTrees_[iRes].nTracksZTCut_5sigma->at(iDR) = 0;
+                outTrees_[iRes].nTracksZTCut_7sigma->at(iDR) = 0;
+                outTrees_[iRes].nTracksZTCut_10sigma->at(iDR) = 0;
+
                 //--- dz only
                 for( auto it = tracks_z.first; it != tracks_z.second; ++it ) {
                     auto ref = it->second.castTo<reco::TrackRef>();
+                    float this_dr = reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi());
+                    if(ref->pt() > 0.90){
+                        outTrees_[iRes].nTracksZCut->at(iDR) += 1;
+                        if(iDR==0){
+                            outTrees_[iRes].tracksZCut_iso03_pt  -> push_back(ref->pt());
+                            outTrees_[iRes].tracksZCut_iso03_eta -> push_back(ref->eta());
+                            outTrees_[iRes].tracksZCut_iso03_phi -> push_back(ref->phi());
+                            outTrees_[iRes].tracksZCut_iso03_dR  -> push_back(this_dr);
+                            outTrees_[iRes].tracksZCut_iso03_t   -> push_back(track_times[ref]);
+                            outTrees_[iRes].tracksZCut_iso03_dz  -> push_back(std::abs(ref->dz(vtx3D.position())));
+                        }
+                    }
                     if( ref == muon.track() ) continue;
-                    if( reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi()) >= DR*DR ) continue;
+                    if( this_dr >= DR*DR ) continue;
                     outTrees_[iRes].chIsoZCut->at(iDR) += ref->pt();
                 }
 
                 //--- dz + dt 3 sigma
                 for( auto it = tracks_zt3.first; it != tracks_zt3.second; ++it ) {
                     auto ref = it->second.castTo<reco::TrackRef>();
+                    float this_dr = reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi());
+                    if(ref->pt() > 0.90) {
+                        outTrees_[iRes].nTracksZTCut_3sigma->at(iDR) += 1;
+                        if(iDR==0){
+                            outTrees_[iRes].tracksZTCut_3sigma_iso03_pt  -> push_back(ref->pt());
+                            outTrees_[iRes].tracksZTCut_3sigma_iso03_eta -> push_back(ref->eta());
+                            outTrees_[iRes].tracksZTCut_3sigma_iso03_phi -> push_back(ref->phi());
+                            outTrees_[iRes].tracksZTCut_3sigma_iso03_dR  -> push_back(this_dr);
+                            outTrees_[iRes].tracksZTCut_3sigma_iso03_t   -> push_back(track_times[ref]);
+                            outTrees_[iRes].tracksZTCut_3sigma_iso03_dz  -> push_back(std::abs(ref->dz(vtx4D.position())));
+                        }
+                    }
                     if( ref == muon.track() ) continue;
-                    if( reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi()) >= DR*DR ) continue;
+                    if( this_dr >= DR*DR ) continue;
                     outTrees_[iRes].chIsoZTCut_3sigma->at(iDR) += ref->pt();
                 }
 
                 //--- dz + dt 4 sigma
                 for( auto it = tracks_zt4.first; it != tracks_zt4.second; ++it ) {
                     auto ref = it->second.castTo<reco::TrackRef>();
+                    if(ref->pt() > 0.90) outTrees_[iRes].nTracksZTCut_4sigma->at(iDR) += 1;
                     if( ref == muon.track() ) continue;
                     if( reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi()) >= DR*DR ) continue;
                     outTrees_[iRes].chIsoZTCut_4sigma->at(iDR) += ref->pt();
@@ -440,6 +514,7 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
                 //--- dz + dt 5 sigma
                 for( auto it = tracks_zt5.first; it != tracks_zt5.second; ++it ) {
                     auto ref = it->second.castTo<reco::TrackRef>();
+                    if(ref->pt() > 0.90) outTrees_[iRes].nTracksZTCut_5sigma->at(iDR) += 1;
                     if( ref == muon.track() ) continue;
                     if( reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi()) >= DR*DR ) continue;
                     outTrees_[iRes].chIsoZTCut_5sigma->at(iDR) += ref->pt();
@@ -448,6 +523,7 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
                 //--- dz + dt 7 sigma
                 for( auto it = tracks_zt7.first; it != tracks_zt7.second; ++it ) {
                     auto ref = it->second.castTo<reco::TrackRef>();
+                    if(ref->pt() > 0.90) outTrees_[iRes].nTracksZTCut_7sigma->at(iDR) += 1;
                     if( ref == muon.track() ) continue;
                     if( reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi()) >= DR*DR ) continue;
                     outTrees_[iRes].chIsoZTCut_7sigma->at(iDR) += ref->pt();
@@ -456,6 +532,7 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
                 //--- dz + dt 10 sigma
                 for( auto it = tracks_zt10.first; it != tracks_zt10.second; ++it ) {
                     auto ref = it->second.castTo<reco::TrackRef>();
+                    if(ref->pt() > 0.90) outTrees_[iRes].nTracksZTCut_10sigma->at(iDR) += 1;
                     if( ref == muon.track() ) continue;
                     if( reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi()) >= DR*DR ) continue;
                     outTrees_[iRes].chIsoZTCut_10sigma->at(iDR) += ref->pt();

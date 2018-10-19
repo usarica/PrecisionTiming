@@ -45,6 +45,7 @@ using namespace std;
     DATA(float, vtx4DY)                         \
     DATA(float, vtx4DZ)                         \
     DATA(float, vtx4DT)                         \
+    DATA(float, vtx4DTerr)                         \
     DATA(float, vtx4DNdof)                      \
     DATA(float, vtx4DChi2)                      \
     DATA(bool, vtx4DIsFake)                     
@@ -56,7 +57,26 @@ using namespace std;
     DATA(std::vector<float>, chIsoZTCut_4sigma)         \
     DATA(std::vector<float>, chIsoZTCut_5sigma)         \
     DATA(std::vector<float>, chIsoZTCut_7sigma)         \
-    DATA(std::vector<float>, chIsoZTCut_10sigma)
+    DATA(std::vector<float>, chIsoZTCut_10sigma)        \
+    DATA(std::vector<int>,   nTracksZCut)               \
+    DATA(std::vector<int>,   nTracksZTCut_3sigma)       \
+    DATA(std::vector<int>,   nTracksZTCut_4sigma)       \
+    DATA(std::vector<int>,   nTracksZTCut_5sigma)       \
+    DATA(std::vector<int>,   nTracksZTCut_7sigma)       \
+    DATA(std::vector<int>,   nTracksZTCut_10sigma)      \
+    DATA(std::vector<float>, tracksZCut_iso03_pt)       \
+    DATA(std::vector<float>, tracksZCut_iso03_eta)      \
+    DATA(std::vector<float>, tracksZCut_iso03_phi)      \
+    DATA(std::vector<float>, tracksZCut_iso03_dR)       \
+    DATA(std::vector<float>, tracksZCut_iso03_t)        \
+    DATA(std::vector<float>, tracksZCut_iso03_dz)               \
+    DATA(std::vector<float>, tracksZTCut_3sigma_iso03_pt)       \
+    DATA(std::vector<float>, tracksZTCut_3sigma_iso03_eta)      \
+    DATA(std::vector<float>, tracksZTCut_3sigma_iso03_phi)      \
+    DATA(std::vector<float>, tracksZTCut_3sigma_iso03_dR)       \
+    DATA(std::vector<float>, tracksZTCut_3sigma_iso03_t)        \
+    DATA(std::vector<float>, tracksZTCut_3sigma_iso03_dz)        
+
 
 #include "ExternalTools/DynamicTTree/interface/DynamicTTreeInterface.h"
 

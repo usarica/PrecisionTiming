@@ -44,14 +44,16 @@ process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 #process.MessageLogger.cerr.FwkReport.reportEvery = 1000
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32( 100 ) )
 
 files = []
 for dataset in options.datasets:
     print('>> Creating list of files from: \n'+dataset)
-    query = "--query='file instance=prod/global dataset="+dataset+"'"
+    # query = "--query='file instance=prod/global dataset="+dataset+"'"
+    query = "--query='file dataset="+dataset+"'"
     if options.debug:
         print(query)
-    lsCmd = subprocess.Popen(['das_client.py '+query+' --limit=0'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    lsCmd = subprocess.Popen(['dasgoclient '+query+' --limit=0'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     str_files, err = lsCmd.communicate()
     files.extend(['root://cms-xrd-global.cern.ch/'+ifile for ifile in str_files.split("\n")])
     files.pop()
@@ -70,11 +72,12 @@ if options.debug:
         print(ifile)
     
 
-# Input source
-process.source = cms.Source("PoolSource",
-    secondaryFileNames = cms.untracked.vstring(),
-    fileNames = cms.untracked.vstring(files)
-)
+# # Input source
+# process.source = cms.Source("PoolSource",
+#     secondaryFileNames = cms.untracked.vstring(),
+#     # fileNames = cms.untracked.vstring(files)
+#     fileNames = cms.untracked.vstring("/store/mc/PhaseIISpr18AODMiniAOD/DYToLL-M-50_0J_14TeV-madgraphMLM-pythia8/AODSIM/PU200_93X_upgrade2023_realistic_v5-v1/50000/80293A48-DE47-E811-9F1B-0025905A48E4.root")
+# )
 
 process.options = cms.untracked.PSet(
 
