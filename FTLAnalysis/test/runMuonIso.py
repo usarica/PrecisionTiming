@@ -70,7 +70,7 @@ for eosdir in options.eosdirs:
 if options.debug:
     for ifile in files:
         print(ifile)
-    
+
 
 # # Input source
 # process.source = cms.Source("PoolSource",
@@ -78,10 +78,9 @@ if options.debug:
 #     # fileNames = cms.untracked.vstring(files)
 #     fileNames = cms.untracked.vstring("/store/mc/PhaseIISpr18AODMiniAOD/DYToLL-M-50_0J_14TeV-madgraphMLM-pythia8/AODSIM/PU200_93X_upgrade2023_realistic_v5-v1/50000/80293A48-DE47-E811-9F1B-0025905A48E4.root")
 # )
+process.source = cms.Source("PoolSource", fileNames = cms.untracked.vstring())
 
-process.options = cms.untracked.PSet(
-
-)
+process.options = cms.untracked.PSet()
 
 # Production Info
 process.configurationMetadata = cms.untracked.PSet(
@@ -99,7 +98,7 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic', '')
 
 
-process.TFileService = cms.Service("TFileService", 
+process.TFileService = cms.Service("TFileService",
     fileName = cms.string(options.outname),
     closeFileFast = cms.untracked.bool(True)
 )
