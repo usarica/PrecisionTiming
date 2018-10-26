@@ -1,10 +1,10 @@
 from WMCore.Configuration import Configuration
 
-# sample  = "QCD"
-# sample = "TTbar"
+#sample  = "QCD"
+#sample = "TTbar"
 sample = "DY"
 
-tag = "nTracks_dz0p1_pt0p9_v2"
+tag = "nTracks_dz0p1_pt0p9_v3"
 
 if sample == "QCD":
     in_dataset = '/QCD_Flat_Pt-15to7000_TuneCUETP8M1_14TeV_pythia8/PhaseIITDRFall17DR-PU200_93X_upgrade2023_realistic_v2-v1/GEN-SIM-RECO'
@@ -26,7 +26,7 @@ config.JobType.pluginName        = 'Analysis'
 
 # Name of the CMSSW configuration file
 config.JobType.psetName          = '../test/runMuonIso.py'
-config.JobType.pyCfgParams       = ['usegenpv=1']
+config.JobType.pyCfgParams       = ['usegenpv=0']
 config.JobType.priority          = 30
 
 config.section_('Data')
@@ -43,7 +43,7 @@ config.Data.allowNonValidInputDataset = True
 
 # This string is used to construct the output dataset name
 # config.Data.publishWithGroupName = True
-config.Data.outLFNDirBase        = '/store/user/bemarsh/LGAD/lindsey_ntupler/'
+config.Data.outLFNDirBase        = '/store/user/usarica/MTD/UPS/MuonIsolation/20181024/'
 
 config.section_('Site')
 # Where the output files will be transmitted to

@@ -28,6 +28,10 @@
 #include "SimDataFormats/Vertex/interface/SimVertex.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
+#include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
+#include "TrackingTools/Records/interface/TransientTrackRecord.h"
+#include "TrackingTools/IPTools/interface/IPTools.h"
+
 #include "DataFormats/JetReco/interface/GenJetCollection.h"
 
 #include "FWCore/ServiceRegistry/interface/Service.h"
@@ -73,8 +77,8 @@ private:
     edm::Handle<genXYZ>                                 genXYZHandle_;
     edm::EDGetTokenT<float>                             genT0Token_;    
     edm::Handle<float>                                  genT0Handle_;
-    edm::EDGetTokenT<vector<SimVertex> >                genVtxToken_;
-    edm::Handle<vector<SimVertex> >                     genVtxHandle_;    
+    edm::EDGetTokenT<vector<SimVertex> >                simVtxToken_;
+    edm::Handle<vector<SimVertex> >                     simVtxHandle_;    
     edm::EDGetTokenT<reco::VertexCollection>            vtx3DToken_;
     edm::Handle<reco::VertexCollection>                 vtx3DHandle_;    
     edm::EDGetTokenT<reco::VertexCollection>            vtx4DToken_;
@@ -123,7 +127,7 @@ private:
 FTLMuonIsolation::FTLMuonIsolation(const edm::ParameterSet& pSet) :
     genXYZToken_(consumes<genXYZ>(pSet.getUntrackedParameter<edm::InputTag>("genXYZTag"))),    
     genT0Token_(consumes<float>(pSet.getUntrackedParameter<edm::InputTag>("genT0Tag"))),        
-    genVtxToken_(consumes<vector<SimVertex> >(pSet.getUntrackedParameter<edm::InputTag>("genVtxTag"))),    
+    simVtxToken_(consumes<vector<SimVertex> >(pSet.getUntrackedParameter<edm::InputTag>("genVtxTag"))),    
     vtx3DToken_(consumes<std::vector<reco::Vertex> >(pSet.getUntrackedParameter<edm::InputTag>("vtxTag3D"))),    
     vtx4DToken_(consumes<std::vector<reco::Vertex> >(pSet.getUntrackedParameter<edm::InputTag>("vtxTag4D"))),    
     muonsToken_(consumes<reco::MuonCollection>(pSet.getUntrackedParameter<edm::InputTag>("muonsTag"))),
@@ -158,12 +162,14 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
     iEvent.getByToken(tracksToken_, tracksHandle_);
     iEvent.getByToken(timeToken_, timeHandle_);
     iEvent.getByToken(timeResToken_, timeResHandle_);
-    if(useMCTruthPV_)
-        iEvent.getByToken(genVtxToken_, genVtxHandle_);    
+    iEvent.getByToken(simVtxToken_, simVtxHandle_);    
     iEvent.getByToken(vtx4DToken_, vtx4DHandle_);
     iEvent.getByToken(vtx3DToken_, vtx3DHandle_);
     iEvent.getByToken(genPartToken_, genPartHandle_);
     iEvent.getByToken(genJetToken_, genJetHandle_);
+
+    edm::ESHandle<TransientTrackBuilder> theTTBuilder;
+    iSetup.get<TransientTrackRecord>().get("TransientTrackBuilder", theTTBuilder);
 
     //---skip bad events (checks on muons and MC-truth vtx)
     unsigned int nmuons = 0;
@@ -172,21 +178,21 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             ++nmuons;
   
     // if(!nmuons || vtx4DHandle_->size()<2 || vtx3DHandle_->size()<2 ||
-    //    genVtxHandle_.product()->size() == 0 || genVtxHandle_.product()->at(0).vertexId() != 0
+    //    simVtxHandle_.product()->size() == 0 || simVtxHandle_.product()->at(0).vertexId() != 0
     //     )
     //     return;
     ++iEvent_;
     
     //---get truth PV
-    SimVertex genPV;
-    if(genVtxHandle_.isValid())
-        genPV = genVtxHandle_.product()->at(0);
+    SimVertex simPV;
+    if(simVtxHandle_.isValid())
+        simPV = simVtxHandle_.product()->at(0);
     else
     {
         auto xyz = genXYZHandle_.product();
         auto t = *genT0Handle_.product();
         auto v = math::XYZVectorD(xyz->x(), xyz->y(), xyz->z());
-        genPV = SimVertex(v, t);
+        simPV = SimVertex(v, t);
     }
 
     for(auto& iRes : targetResolutions_)
@@ -201,6 +207,7 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             vertices_to_tracks_zt7,
             vertices_to_tracks_zt10;
         std::map<reco::TrackRef, float> track_times;
+        std::map<reco::TrackRef, float> track_timeResos;
 
         // float extra_smearing = std::sqrt(iRes*iRes - 0.02*0.02);
         for(unsigned i = 0; i < tracksHandle_->size(); ++i)
@@ -219,6 +226,7 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             // cout << "          new time: " << time << endl;
             // cout << "      new timeReso: " << timeReso << endl;
             track_times[ref.castTo<reco::TrackRef>()] = time;
+            track_timeResos[ref.castTo<reco::TrackRef>()] = timeReso;
             for(int ivtx = 0; ivtx < (int)vtx4DHandle_->size(); ++ivtx)
             {
                 const auto& thevtx = (*vtx4DHandle_)[ivtx];
@@ -293,8 +301,12 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             //---basic check
             if(muon.track().isNull() || muon.pt() < 10)
                 continue;
-    
+
+            auto muontrackref = muon.get<reco::TrackRef>();
+            reco::TransientTrack ttmuon = theTTBuilder->build(muontrackref);
+
             int vtx3D_index = -1;
+            float sip3D=-1;
 
             //---find the 3D vertex this muon is best associated to..
             if(useMCTruthPV_)
@@ -303,7 +315,7 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
                 for( unsigned i = 0; i < vtx3DHandle_->size(); ++i )
                 {
                     const auto& vtx = (*vtx3DHandle_)[i];      
-                    const float dz = fabs(vtx.z() - genPV.position().z());
+                    const float dz = fabs(vtx.z() - simPV.position().z());
                     if( dz < min_dz )
                     {
                         min_dz = dz;
@@ -323,14 +335,44 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
                         max_weight3D = weight;
                         vtx3D_index = i;
                     }
-                }    
+                }
+                if (vtx3D_index==-1){
+                  float minSIP=std::numeric_limits<float>::max();
+                  for (unsigned i = 0; i < vtx3DHandle_->size(); ++i){
+                    const auto& vtx = (*vtx3DHandle_)[i];
+                    std::pair<bool, Measurement1D> IP_Measurement = IPTools::signedImpactParameter3D(
+                      ttmuon,
+                      GlobalVector(muon.px(), muon.py(), muon.pz()),
+                      vtx
+                    );
+                    float IP_Vtx = IP_Measurement.second.value();
+                    float dIP_Vtx = IP_Measurement.second.error();
+
+                    const float valSIP = (dIP_Vtx!=0. ? fabs(IP_Vtx)/dIP_Vtx : 0);
+                    if (minSIP>valSIP){
+                      minSIP = valSIP;
+                      vtx3D_index = i;
+                    }
+                  }
+                }
             }            
                 
             //---use highest ranked if muon doesn't belong to any vertex
             const reco::Vertex& vtx3D = (vtx3D_index == -1 ? (*vtx3DHandle_)[0] : (*vtx3DHandle_)[vtx3D_index]);
             const auto tracks_z  = vertices_to_tracks_z.equal_range(vtx3D_index == -1 ? 0 : vtx3D_index);
+            {
+              std::pair<bool, Measurement1D> IP_Measurement = IPTools::signedImpactParameter3D(
+                ttmuon,
+                GlobalVector(muon.px(), muon.py(), muon.pz()),
+                vtx3D
+              );
+              float IP_Vtx = IP_Measurement.second.value();
+              float dIP_Vtx = IP_Measurement.second.error();
+              sip3D = (dIP_Vtx!=0. ? fabs(IP_Vtx)/dIP_Vtx : 0);
+            }
             
             int vtx4D_index = -1;
+            float sip4D=-1;
 
             //---find the 4D vertex this muon is best associated to..
             if(useMCTruthPV_)
@@ -339,9 +381,9 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
                 for( unsigned i = 0; i < vtx4DHandle_->size(); ++i )
                 {
                     const auto& vtx = (*vtx4DHandle_)[i];
-                    const float dz = std::abs(vtx.z() - genPV.position().z());
-                    const double dzdt = pow((vtx.z() - genPV.position().z())/vtx.zError(), 2) +
-                        pow((vtx.t()-genPV.position().t())/vtx.tError(), 2);
+                    const float dz = std::abs(vtx.z() - simPV.position().z());
+                    const double dzdt = pow((vtx.z() - simPV.position().z())/vtx.zError(), 2) +
+                        pow((vtx.t()-simPV.position().t())/vtx.tError(), 2);
                     if( dz < 0.1 && dzdt < min_dzdt )
                     {
                         min_dzdt = dzdt;
@@ -362,6 +404,29 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
                         vtx4D_index = i;
                     }
                 }    
+                if (vtx4D_index==-1){
+                  float minSIP=std::numeric_limits<float>::max();
+                  for (unsigned i = 0; i < vtx4DHandle_->size(); ++i){
+                    const auto& vtx = (*vtx4DHandle_)[i];
+                    std::pair<bool, Measurement1D> IP_Measurement = IPTools::signedImpactParameter3D(
+                      ttmuon,
+                      GlobalVector(muon.px(), muon.py(), muon.pz()),
+                      vtx
+                    );
+                    float IP_Vtx = IP_Measurement.second.value();
+                    float dIP_Vtx = IP_Measurement.second.error();
+                    if (vtx.t()!=0.){
+                      IP_Vtx = sqrt(IP_Vtx*IP_Vtx + pow(vtx.t()-track_times[muontrackref], 2));
+                      dIP_Vtx = sqrt(dIP_Vtx*dIP_Vtx + pow(track_timeResos[muontrackref], 2) + pow(vtx.tError(), 2));
+                    }
+
+                    const float valSIP = (dIP_Vtx!=0. ? fabs(IP_Vtx)/dIP_Vtx : 0);
+                    if (minSIP>valSIP){
+                      minSIP = valSIP;
+                      vtx4D_index = i;
+                    }
+                  }
+                }
             }
             
             //---use highest ranked if muon doesn't belong to any vertex
@@ -371,21 +436,41 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             const auto tracks_zt5 = vertices_to_tracks_zt5.equal_range(vtx4D_index == -1 ? 0 : vtx4D_index);
             const auto tracks_zt7 = vertices_to_tracks_zt7.equal_range(vtx4D_index == -1 ? 0 : vtx4D_index);
             const auto tracks_zt10 = vertices_to_tracks_zt10.equal_range(vtx4D_index == -1 ? 0 : vtx4D_index);
+            {
+              std::pair<bool, Measurement1D> IP_Measurement = IPTools::signedImpactParameter3D(
+                ttmuon,
+                GlobalVector(muon.px(), muon.py(), muon.pz()),
+                vtx4D
+              );
+              float IP_Vtx = IP_Measurement.second.value();
+              float dIP_Vtx = IP_Measurement.second.error();
+              if (vtx4D.t()!=0.){
+                IP_Vtx = sqrt(IP_Vtx*IP_Vtx + pow(vtx4D.t()-track_times[muontrackref], 2));
+                dIP_Vtx = sqrt(dIP_Vtx*dIP_Vtx + pow(track_timeResos[muontrackref], 2) + pow(vtx4D.tError(), 2));
+              }
+              sip4D = (dIP_Vtx!=0. ? fabs(IP_Vtx)/dIP_Vtx : 0);
+            }
 
             //---muon - vtx matching
             auto muonTkRef = muon.track();
             float muonTime = (*timeHandle_)[muonTkRef];
             float muonTimeReso = (*timeResHandle_)[muonTkRef];
             if( useMCTruthPV_ && ( muonTimeReso==0 ||
-                                   ( muon.track()->dz(Point(genPV.position().x(),
-                                                            genPV.position().y(),
-                                                            genPV.position().z())) > 0.1 &&
-                                     std::abs(genPV.position().t()-muonTime) > 3*muonTimeReso ) ))
+                                   ( muon.track()->dz(Point(simPV.position().x(),
+                                                            simPV.position().y(),
+                                                            simPV.position().z())) > 0.1 &&
+                                     std::abs(simPV.position().t()-muonTime) > 3*muonTimeReso ) ))
                 continue;
 
             //---event counter
             outTrees_[iRes].iEvent = iEvent_;
             
+            //---fill gen vtx info
+            outTrees_[iRes].simPVX = simPV.position().x();
+            outTrees_[iRes].simPVY = simPV.position().y();
+            outTrees_[iRes].simPVZ = simPV.position().z();
+            outTrees_[iRes].simPVT = simPV.position().t();
+
             //---fill muon and vtx information            
             outTrees_[iRes].pt = muon.pt();
             outTrees_[iRes].eta = muon.eta();
@@ -403,15 +488,17 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             outTrees_[iRes].vtx3DX = vtx3D.x();
             outTrees_[iRes].vtx3DY = vtx3D.y();
             outTrees_[iRes].vtx3DZ = vtx3D.z();
-            outTrees_[iRes].vtx3DT = vtx3D.t();
+            outTrees_[iRes].SIP3D = sip3D;
+            outTrees_[iRes].vtx3DIsFake = vtx3D.isFake();
+            outTrees_[iRes].vtx3DNdof = vtx3D.ndof();
+            outTrees_[iRes].vtx3DChi2 = vtx3D.chi2();
+            //outTrees_[iRes].vtx3DT = vtx3D.t();
             outTrees_[iRes].vtx4DX = vtx4D.x();
             outTrees_[iRes].vtx4DY = vtx4D.y();
             outTrees_[iRes].vtx4DZ = vtx4D.z();
             outTrees_[iRes].vtx4DT = vtx4D.t();
             outTrees_[iRes].vtx4DTerr = vtx4D.tError();
-            outTrees_[iRes].vtx3DIsFake = vtx3D.isFake();
-            outTrees_[iRes].vtx3DNdof = vtx3D.ndof();
-            outTrees_[iRes].vtx3DChi2 = vtx3D.chi2();    
+            outTrees_[iRes].SIP4D = sip4D;
             outTrees_[iRes].vtx4DIsFake = vtx4D.isFake();
             outTrees_[iRes].vtx4DNdof = vtx4D.ndof();
             outTrees_[iRes].vtx4DChi2 = vtx4D.chi2();    
@@ -548,6 +635,26 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
             outTrees_[iRes].genPhi = -99.;
     
             double mindr = std::numeric_limits<double>::max();
+
+            reco::Vertex::Point matchedPartVtx;
+            int globalMatchPartId=-99;
+            for (const reco::GenParticle &p : *genPartHandle_){
+              if (p.status() != 1) continue;
+
+              double dr = reco::deltaR(muon, p);
+              if (dr<mindr){
+                mindr = dr;
+                matchedPartVtx = p.vertex();
+                globalMatchPartId = p.pdgId();
+              }
+            }
+            outTrees_[iRes].globalMatchPartId = globalMatchPartId;
+            outTrees_[iRes].globalMatchPartVtxX = matchedPartVtx.x();
+            outTrees_[iRes].globalMatchPartVtxY = matchedPartVtx.y();
+            outTrees_[iRes].globalMatchPartVtxZ = matchedPartVtx.z();
+
+
+            mindr = std::numeric_limits<double>::max();
             for (const reco::GenParticle &p : *genPartHandle_)
             {
                 if (p.status() != 1) continue;
@@ -565,6 +672,10 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
                 }      
             }
 
+            outTrees_[iRes].genJetE = -99.;
+            outTrees_[iRes].genJetPt = -99.;
+            outTrees_[iRes].genJetEta = -99.;
+            outTrees_[iRes].genJetPhi = -99.;
             mindr = std::numeric_limits<double>::max();
             for( const auto& jet : *genJetHandle_ ) {
                 if( jet.pt() < 15.0 || jet.hadEnergy()/jet.energy() < 0.3)
@@ -572,10 +683,12 @@ FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
                 double dr = reco::deltaR(muon,jet);
                 if( dr < 0.3 && dr < mindr )
                 {
+                    mindr = dr;
                     outTrees_[iRes].genMatchedJet = true;
-                    outTrees_[iRes].genPt = jet.pt();
-                    outTrees_[iRes].genEta = jet.eta();
-                    outTrees_[iRes].genPhi = jet.phi();                
+                    outTrees_[iRes].genJetE = jet.energy();
+                    outTrees_[iRes].genJetPt = jet.pt();
+                    outTrees_[iRes].genJetEta = jet.eta();
+                    outTrees_[iRes].genJetPhi = jet.phi();                
                 }
             }
 

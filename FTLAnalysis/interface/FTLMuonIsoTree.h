@@ -26,9 +26,25 @@ using namespace std;
     DATA(bool, genMatched)                      \
     DATA(bool, genMatchedPrompt)                \
     DATA(bool, genMatchedJet)                   \
+    DATA(int, globalMatchPartId)                      \
+    DATA(float, globalMatchPartVtxX)                      \
+    DATA(float, globalMatchPartVtxY)                      \
+    DATA(float, globalMatchPartVtxZ)                      \
     DATA(float, genPt)                          \
     DATA(float, genEta)                         \
     DATA(float, genPhi)                         \
+    DATA(float, genJetE)                           \
+    DATA(float, genJetPt)                          \
+    DATA(float, genJetEta)                         \
+    DATA(float, genJetPhi)                         \
+    DATA(float, simPVX)                         \
+    DATA(float, simPVY)                         \
+    DATA(float, simPVZ)                         \
+    DATA(float, simPVT)                         \
+    DATA(float, genVtxX)                         \
+    DATA(float, genVtxY)                         \
+    DATA(float, genVtxZ)                         \
+    DATA(float, genVtxT)                         \
     DATA(int, vtx3DIdx)                         \
     DATA(int, vtx4DIdx)                         \
     DATA(int, nTracksVtx)                       \
@@ -37,7 +53,7 @@ using namespace std;
     DATA(float, vtx3DX)                         \
     DATA(float, vtx3DY)                         \
     DATA(float, vtx3DZ)                         \
-    DATA(float, vtx3DT)                         \
+    DATA(float, SIP3D)                         \
     DATA(float, vtx3DNdof)                      \
     DATA(float, vtx3DChi2)                      \
     DATA(bool, vtx3DIsFake)                     \
@@ -46,6 +62,7 @@ using namespace std;
     DATA(float, vtx4DZ)                         \
     DATA(float, vtx4DT)                         \
     DATA(float, vtx4DTerr)                         \
+    DATA(float, SIP4D)                         \
     DATA(float, vtx4DNdof)                      \
     DATA(float, vtx4DChi2)                      \
     DATA(bool, vtx4DIsFake)                     

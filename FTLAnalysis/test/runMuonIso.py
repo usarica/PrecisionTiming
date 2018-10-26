@@ -42,6 +42,7 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 process.load('Configuration.EventContent.EventContent_cff')
 process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
+process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 
 #process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32( 100 ) )
@@ -84,7 +85,7 @@ process.options = cms.untracked.PSet()
 
 # Production Info
 process.configurationMetadata = cms.untracked.PSet(
-    version = cms.untracked.string('$Revision: 1.20 $'),
+    version = cms.untracked.string('$Revision: 1.30 $'),
     annotation = cms.untracked.string('PrecisionTiming/FTLAnalysis/python/FTLMuonIsolation_cfi.py nevts:-1'),
     name = cms.untracked.string('Applications')
 )
