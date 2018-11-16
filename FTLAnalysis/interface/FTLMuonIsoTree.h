@@ -56,15 +56,24 @@ using namespace std;
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_unassociated)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_associationrank_0)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_associationrank_1)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_nodzcut_unassociated)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_sipcut_unassociated)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_sipcut_associationrank_0)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_sipcut_associationrank_1)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_unassociated)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_associationrank_0)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_associationrank_1)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_associationrank_2)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_nodzcut_unassociated)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_nodzcut_associationrank_0)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_nodzcut_associationrank_1)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_nodzcut_associationrank_2)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_sipcut_unassociated)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_sipcut_associationrank_0)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_sipcut_associationrank_1)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_sipcut_associationrank_2)          \
     DATA(std::vector<float>, track_pt)                             \
     DATA(std::vector<float>, track_eta)                            \
     DATA(std::vector<float>, track_phi)                            \
