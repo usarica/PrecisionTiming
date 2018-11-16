@@ -42,6 +42,9 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 process.load('Configuration.EventContent.EventContent_cff')
 process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D20Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D20_cff')
+process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 
 #process.MessageLogger.cerr.FwkReport.reportEvery = 1000
@@ -74,11 +77,11 @@ if options.debug:
 
 
 # # Input source
-# process.source = cms.Source("PoolSource",
-#     secondaryFileNames = cms.untracked.vstring(),
+#process.source = cms.Source("PoolSource",
+#    secondaryFileNames = cms.untracked.vstring(),
 #     # fileNames = cms.untracked.vstring(files)
-#     fileNames = cms.untracked.vstring("/store/mc/PhaseIISpr18AODMiniAOD/DYToLL-M-50_0J_14TeV-madgraphMLM-pythia8/AODSIM/PU200_93X_upgrade2023_realistic_v5-v1/50000/80293A48-DE47-E811-9F1B-0025905A48E4.root")
-# )
+#    fileNames = cms.untracked.vstring("root://cms-xrd-global.cern.ch///store/mc/PhaseIISpr18AODMiniAOD/DYToLL-M-50_0J_14TeV-madgraphMLM-pythia8/AODSIM/PU200_93X_upgrade2023_realistic_v5-v1/90000/FEA5A761-EE47-E811-9C32-0CC47A4C8E38.root")
+#)
 process.source = cms.Source("PoolSource", fileNames = cms.untracked.vstring())
 
 process.options = cms.untracked.PSet()

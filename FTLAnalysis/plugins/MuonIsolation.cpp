@@ -26,6 +26,7 @@
 #include "DataFormats/ParticleFlowReco/interface/PFCluster.h"
 
 #include "SimDataFormats/Vertex/interface/SimVertex.h"
+#include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
@@ -49,68 +50,305 @@
 
 #include "PrecisionTiming/FTLAnalysis/interface/FTLMuonIsoTree.h"
 
+
+template<typename T> bool checkListVariable(std::vector<T> const& list, T const& var){
+  // Look for exact match
+  for (T const& v:list){ if (v==var) return true; }
+  return false;
+}
+
+struct VertexInformation;
+struct TrackInformation;
+struct MuonInformation;
+
+struct VertexInformation{
+  reco::Vertex const* ptr;
+  bool use3D;
+  bool isUsable;
+  unsigned int ndof;
+  float chisq;
+  float vx;
+  float vy;
+  float vz;
+  float t;
+  float terr;
+
+  std::vector<TrackInformation const*> associatedTrackInfos;
+  std::vector<MuonInformation const*> associatedMuonInfos;
+
+  bool hasTime() const{ return (terr>0.); }
+  void setup(){
+    isUsable = (ptr ? ptr->isValid() && !ptr->isFake() : false);
+    ndof = (ptr ? ptr->ndof() : 0);
+    chisq = (ptr ? ptr->chi2() : 0);
+    vx = (ptr ? ptr->x() : 0);
+    vy = (ptr ? ptr->y() : 0);
+    vz = (ptr ? ptr->z() : 0);
+    t = (ptr && !use3D ? ptr->t() : 0);
+    terr = (ptr && !use3D ? ptr->tError() : 0);
+  }
+  void addAssociatedTrackInfo(TrackInformation const& info_){ if (!checkListVariable(associatedTrackInfos, &info_)) associatedTrackInfos.push_back(&info_); }
+  void addAssociatedMuonInfo(MuonInformation const& info_){ if (!checkListVariable(associatedMuonInfos, &info_)) associatedMuonInfos.push_back(&info_); }
+
+  VertexInformation(reco::Vertex const& ref_, bool use3D_) :
+    ptr(&ref_),
+    use3D(use3D_)
+  { setup(); }
+  VertexInformation(reco::Vertex const* ptr_, bool use3D_) :
+    ptr(ptr_),
+    use3D(use3D_)
+  { setup(); }
+  VertexInformation() :
+    ptr(nullptr)
+  { setup(); }
+
+};
+struct TrackInformation{
+  reco::TrackBaseRef ref;
+  edm::ESHandle<TransientTrackBuilder> const* theTTBuilder;
+  VertexInformation const* associatedVertex3D;
+  VertexInformation const* associatedVertex4D;
+  int vtx3DAssociationRank;
+  int vtx4DAssociationRank;
+  float px;
+  float py;
+  float pz;
+  float pt;
+  float eta;
+  float phi;
+  float vx;
+  float vy;
+  float vz;
+  float t;
+  float terr;
+
+  bool hasTransientTrack;
+  reco::TransientTrack ttrk;
+
+  bool isNonnull() const{ return ref.isNonnull(); }
+  bool hasTime() const{ return (terr>0.); }
+  bool hasAssociatedVertex3D() const{ return (associatedVertex3D!=nullptr); }
+  bool hasAssociatedVertex4D() const{ return (associatedVertex4D!=nullptr); }
+  void setup(){
+    bool refIsNonnull = this->isNonnull();
+    px = (refIsNonnull ? ref->px() : 0);
+    py = (refIsNonnull ? ref->py() : 0);
+    pz = (refIsNonnull ? ref->pz() : 0);
+    pt = (refIsNonnull ? ref->pt() : 0);
+    eta = (refIsNonnull ? ref->eta() : 0);
+    phi = (refIsNonnull ? ref->phi() : 0);
+    vx = (refIsNonnull ? ref->vx() : 0);
+    vy = (refIsNonnull ? ref->vy() : 0);
+    vz = (refIsNonnull ? ref->vz() : 0);
+#if _useTrackTime_ == 0
+    t = 0;
+    terr = 0;
+#else
+    t = (refIsNonnull ? ref->t0() : 0);
+    terr = (refIsNonnull ? ref->tError() : 0);
+#endif
+
+    if (theTTBuilder && theTTBuilder->isValid() && refIsNonnull){
+      hasTransientTrack=true;
+      ttrk = (*theTTBuilder)->build(*ref);
+    }
+    else hasTransientTrack=false;
+  }
+
+  TrackInformation(reco::TrackBaseRef const& ref_, edm::ESHandle<TransientTrackBuilder> const* theTTBuilder_=nullptr) :
+    ref(ref_),
+    theTTBuilder(theTTBuilder_),
+    associatedVertex3D(nullptr),
+    associatedVertex4D(nullptr),
+    vtx3DAssociationRank(-1),
+    vtx4DAssociationRank(-1)
+  { setup(); }
+  TrackInformation() :
+    ref(),
+    theTTBuilder(nullptr),
+    associatedVertex3D(nullptr),
+    associatedVertex4D(nullptr),
+    vtx3DAssociationRank(-1),
+    vtx4DAssociationRank(-1)
+  { setup(); }
+
+};
+struct MuonInformation{
+  reco::Muon const* ptr;
+  TrackInformation const* trkinfo;
+  VertexInformation const* associatedVertex3D;
+  VertexInformation const* associatedVertex4D;
+  int trkIndex;
+  float px;
+  float py;
+  float pz;
+  float pt;
+  float eta;
+  float phi;
+
+  bool isNonnull() const{ return (ptr!=nullptr); }
+  bool hasTrackInfo() const{ return (trkinfo!=nullptr); }
+  bool hasTime() const{ return (hasTrackInfo() && trkinfo->terr>0.); }
+  void setup(){
+    bool refIsNonnull = this->isNonnull();
+    px = (refIsNonnull ? ptr->px() : 0);
+    py = (refIsNonnull ? ptr->py() : 0);
+    pz = (refIsNonnull ? ptr->pz() : 0);
+    pt = (refIsNonnull ? ptr->pt() : 0);
+    eta = (refIsNonnull ? ptr->eta() : 0);
+    phi = (refIsNonnull ? ptr->phi() : 0);
+  }
+
+  MuonInformation(reco::Muon const* ptr_, std::vector<TrackInformation> const& trkinfos) :
+    ptr(ptr_),
+    trkinfo(nullptr),
+    associatedVertex3D(nullptr),
+    associatedVertex4D(nullptr),
+    trkIndex(-1)
+  {
+    reco::TrackRef muontrackref = ptr->track();
+    reco::TrackBaseRef muontrackbaseref = reco::TrackBaseRef(muontrackref);
+    int itrk=0;
+    for (TrackInformation const& trkinfo_:trkinfos){
+      if (trkinfo_.ref == muontrackbaseref){
+        this->trkinfo = &trkinfo_;
+        trkIndex=itrk;
+        break;
+      }
+      itrk++;
+    }
+    setup();
+  }
+  MuonInformation(reco::Muon const& ref_, std::vector<TrackInformation> const& trkinfos) :
+    ptr(&ref_),
+    trkinfo(nullptr),
+    associatedVertex3D(nullptr),
+    associatedVertex4D(nullptr),
+    trkIndex(-1)
+  {
+    reco::TrackRef muontrackref = ptr->get<reco::TrackRef>();
+    int itrk=0;
+    for (TrackInformation const& trkinfo_:trkinfos){
+      if (trkinfo_.ref.castTo<reco::TrackRef>() == muontrackref){
+        this->trkinfo = &trkinfo_;
+        trkIndex=itrk;
+        break;
+      }
+      itrk++;
+    }
+    setup();
+  }
+  MuonInformation() :
+    ptr(nullptr),
+    trkinfo(nullptr),
+    associatedVertex3D(nullptr),
+    associatedVertex4D(nullptr),
+    trkIndex(-1)
+  {
+    setup();
+  }
+
+};
+
+
+bool testTrackUsedInVertexFit(VertexInformation const& vtx, TrackInformation const& trk){
+  return bool(vtx.isUsable && trk.isNonnull() && vtx.ptr->trackWeight(trk.ref)>0.);
+}
+bool computeIPVals(
+  VertexInformation const& vtx, TrackInformation const& trk,
+  float& IP, float& d_IP
+){
+  IP=0; d_IP=0;
+  if (vtx.isUsable && trk.isNonnull() && trk.hasTransientTrack){
+    std::pair<bool, Measurement1D> IP_Measurement = IPTools::signedImpactParameter3D(
+      trk.ttrk,
+      GlobalVector(trk.px, trk.py, trk.pz),
+      *(vtx.ptr)
+    );
+    IP = IP_Measurement.second.value();
+    d_IP = IP_Measurement.second.error();
+    return true;
+  }
+  else return false;
+}
+bool computeRelTimeVals(
+  VertexInformation const& vtx, TrackInformation const& trk,
+  float& dt, float& dterr
+){
+  dt=0; dterr=0;
+  if (vtx.isUsable && vtx.hasTime() && trk.isNonnull() && trk.hasTime()){
+    dt = trk.t - vtx.t;
+    dterr = sqrt(pow(trk.terr, 2)+pow(vtx.terr, 2));
+    return true;
+  }
+  else return false;
+}
+
+
 //
 // class declaration
 //
-
-class FTLMuonIsolation : public edm::EDAnalyzer {
+class FTLMuonIsolation : public edm::EDAnalyzer{
 public:
-  
-    typedef edm::Association<reco::VertexCollection> CandToVertex;
-    typedef edm::ValueMap<int> CandToVertexQuality;
-    typedef ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<float>,ROOT::Math::DefaultCoordinateSystemTag> genXYZ;
-    typedef ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<double>, ROOT::Math::DefaultCoordinateSystemTag> Point;
-    
-    explicit FTLMuonIsolation(const edm::ParameterSet&);
-    ~FTLMuonIsolation() {};
 
-    static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
+  typedef edm::Association<reco::VertexCollection> CandToVertex;
+  typedef edm::ValueMap<int> CandToVertexQuality;
+  typedef ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<float>, ROOT::Math::DefaultCoordinateSystemTag> genXYZ;
+  typedef ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<double>, ROOT::Math::DefaultCoordinateSystemTag> Point;
+
+  explicit FTLMuonIsolation(const edm::ParameterSet&);
+  ~FTLMuonIsolation() {};
+
+  static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
 
 private:
-    virtual void beginJob() override {};
-    virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
-    virtual void endJob() override {};
+  virtual void beginJob() override {};
+  virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
+  virtual void endJob() override {};
 
-    //---member data
-    edm::EDGetTokenT<genXYZ>                            genXYZToken_;
-    edm::Handle<genXYZ>                                 genXYZHandle_;
-    edm::EDGetTokenT<float>                             genT0Token_;    
-    edm::Handle<float>                                  genT0Handle_;
-    edm::EDGetTokenT<vector<SimVertex> >                simVtxToken_;
-    edm::Handle<vector<SimVertex> >                     simVtxHandle_;    
-    edm::EDGetTokenT<reco::VertexCollection>            vtx3DToken_;
-    edm::Handle<reco::VertexCollection>                 vtx3DHandle_;    
-    edm::EDGetTokenT<reco::VertexCollection>            vtx4DToken_;
-    edm::Handle<reco::VertexCollection>                 vtx4DHandle_;    
-    edm::EDGetTokenT<reco::MuonCollection>              muonsToken_;
-    edm::Handle<reco::MuonCollection>                   muonsHandle_;    
-    edm::EDGetTokenT<edm::View<reco::Track> >           tracksToken_;
-    edm::Handle<edm::View<reco::Track> >                tracksHandle_;    
-    edm::EDGetTokenT<edm::ValueMap<float> >             timeToken_;
-    edm::Handle<edm::ValueMap<float> >                  timeHandle_;    
-    edm::EDGetTokenT<edm::ValueMap<float> >             timeResToken_;
-    edm::Handle<edm::ValueMap<float> >                  timeResHandle_;        
-    // edm::EDGetTokenT<std::vector<std::vector<float> > > ebtimeToken_;
-    // edm::Handle<std::vector<std::vector<float> > >      ebtimeHandle_;    
-    edm::EDGetTokenT<reco::GenParticleCollection>       genPartToken_;
-    edm::Handle<reco::GenParticleCollection>            genPartHandle_;    
-    edm::EDGetTokenT<vector<reco::GenJet> >             genJetToken_;
-    edm::Handle<vector<reco::GenJet> >                  genJetHandle_;    
+  //---member data
+  edm::EDGetTokenT<genXYZ>                            genXYZToken_;
+  edm::Handle<genXYZ>                                 genXYZHandle_;
+  edm::EDGetTokenT<float>                             genT0Token_;
+  edm::Handle<float>                                  genT0Handle_;
+  edm::EDGetTokenT<vector<SimVertex> >                simVtxToken_;
+  edm::Handle<vector<SimVertex> >                     simVtxHandle_;
+  edm::EDGetTokenT<reco::VertexCollection>            vtx3DToken_;
+  edm::Handle<reco::VertexCollection>                 vtx3DHandle_;
+  edm::EDGetTokenT<reco::VertexCollection>            vtx4DToken_;
+  edm::Handle<reco::VertexCollection>                 vtx4DHandle_;
+  edm::EDGetTokenT<reco::MuonCollection>              muonsToken_;
+  edm::Handle<reco::MuonCollection>                   muonsHandle_;
+  edm::EDGetTokenT<edm::View<reco::Track> >           tracksToken_;
+  edm::Handle<edm::View<reco::Track> >                tracksHandle_;
+  edm::EDGetTokenT<edm::ValueMap<float> >             timeToken_;
+  edm::Handle<edm::ValueMap<float> >                  timeHandle_;
+  edm::EDGetTokenT<edm::ValueMap<float> >             timeResToken_;
+  edm::Handle<edm::ValueMap<float> >                  timeResHandle_;
+  // edm::EDGetTokenT<std::vector<std::vector<float> > > ebtimeToken_;
+  // edm::Handle<std::vector<std::vector<float> > >      ebtimeHandle_;    
+  edm::EDGetTokenT<reco::GenParticleCollection>       genPartToken_;
+  edm::Handle<reco::GenParticleCollection>            genPartHandle_;
+  edm::EDGetTokenT<vector<reco::GenJet> >             genJetToken_;
+  edm::Handle<vector<reco::GenJet> >                  genJetHandle_;
 
-    //---
-    vector<double> targetResolutions_;
-    double dzCut_;
+  //---
+  vector<double> targetResolutions_;
+  double dzCut_;
 
-    
-    //---I/O
-    int iEvent_;
-    edm::Service<TFileService> fs;
-    map<double, FTLMuonIsoTree> outTrees_;
 
-    //---options
-    bool           useMCTruthPV_;
-    vector<double> isoConeSizes_;
+  //---I/O
+  int iEvent_;
+  edm::Service<TFileService> fs;
+  map<double, FTLMuonIsoTree> outTrees_;
+
+  //---options
+  bool           useMCTruthPV_;
+  bool recordTrackInfo_;
+  bool recordVertexInfo_;
+  double isoConeSize_;
+  double isoTimeScale_;
 };
 
 //
@@ -125,26 +363,30 @@ private:
 // constructors and destructor
 //
 FTLMuonIsolation::FTLMuonIsolation(const edm::ParameterSet& pSet) :
-    genXYZToken_(consumes<genXYZ>(pSet.getUntrackedParameter<edm::InputTag>("genXYZTag"))),    
-    genT0Token_(consumes<float>(pSet.getUntrackedParameter<edm::InputTag>("genT0Tag"))),        
-    simVtxToken_(consumes<vector<SimVertex> >(pSet.getUntrackedParameter<edm::InputTag>("genVtxTag"))),    
-    vtx3DToken_(consumes<std::vector<reco::Vertex> >(pSet.getUntrackedParameter<edm::InputTag>("vtxTag3D"))),    
-    vtx4DToken_(consumes<std::vector<reco::Vertex> >(pSet.getUntrackedParameter<edm::InputTag>("vtxTag4D"))),    
-    muonsToken_(consumes<reco::MuonCollection>(pSet.getUntrackedParameter<edm::InputTag>("muonsTag"))),
-    tracksToken_(consumes<edm::View<reco::Track> >(pSet.getUntrackedParameter<edm::InputTag>("tracksTag"))),
-    timeToken_(consumes<edm::ValueMap<float> >(pSet.getUntrackedParameter<edm::InputTag>("timeTag"))),
-    timeResToken_(consumes<edm::ValueMap<float> >(pSet.getUntrackedParameter<edm::InputTag>("timeResTag"))),
-    genPartToken_(consumes<reco::GenParticleCollection>(pSet.getUntrackedParameter<edm::InputTag>("genPartTag"))),
-    genJetToken_(consumes<std::vector<reco::GenJet> >(pSet.getUntrackedParameter<edm::InputTag>("genJetsTag"))),
-    targetResolutions_(pSet.getUntrackedParameter<vector<double> >("targetResolutions")),
-    dzCut_(pSet.getUntrackedParameter<double>("dzCut"))
+  genXYZToken_(consumes<genXYZ>(pSet.getUntrackedParameter<edm::InputTag>("genXYZTag"))),
+  genT0Token_(consumes<float>(pSet.getUntrackedParameter<edm::InputTag>("genT0Tag"))),
+  simVtxToken_(consumes<vector<SimVertex> >(pSet.getUntrackedParameter<edm::InputTag>("genVtxTag"))),
+  vtx3DToken_(consumes<std::vector<reco::Vertex> >(pSet.getUntrackedParameter<edm::InputTag>("vtxTag3D"))),
+  vtx4DToken_(consumes<std::vector<reco::Vertex> >(pSet.getUntrackedParameter<edm::InputTag>("vtxTag4D"))),
+  muonsToken_(consumes<reco::MuonCollection>(pSet.getUntrackedParameter<edm::InputTag>("muonsTag"))),
+  tracksToken_(consumes<edm::View<reco::Track> >(pSet.getUntrackedParameter<edm::InputTag>("tracksTag"))),
+  timeToken_(consumes<edm::ValueMap<float> >(pSet.getUntrackedParameter<edm::InputTag>("timeTag"))),
+  timeResToken_(consumes<edm::ValueMap<float> >(pSet.getUntrackedParameter<edm::InputTag>("timeResTag"))),
+  genPartToken_(consumes<reco::GenParticleCollection>(pSet.getUntrackedParameter<edm::InputTag>("genPartTag"))),
+  genJetToken_(consumes<std::vector<reco::GenJet> >(pSet.getUntrackedParameter<edm::InputTag>("genJetsTag"))),
+  targetResolutions_(pSet.getUntrackedParameter<vector<double> >("targetResolutions")),
+  dzCut_(pSet.getUntrackedParameter<double>("dzCut"))
 {
-    iEvent_ = 0;
-    for(auto& res : targetResolutions_)
-        outTrees_[res] = FTLMuonIsoTree((pSet.getUntrackedParameter<string>("treeName")+"_"+to_string(int(res*1000))).c_str(),
-                                         "Muon tree for FTL studies");
-    useMCTruthPV_ = pSet.getUntrackedParameter<bool>("useMCTruthPV");
-    isoConeSizes_ = pSet.getUntrackedParameter<vector<double> >("isoConeSizes");
+  iEvent_ = 0;
+  for (auto& res : targetResolutions_) outTrees_[res] = FTLMuonIsoTree(
+    (pSet.getUntrackedParameter<string>("treeName")+"_"+to_string(int(res*1000))).c_str(),
+    "Muon tree for FTL studies"
+  );
+  useMCTruthPV_ = pSet.getUntrackedParameter<bool>("useMCTruthPV");
+  recordTrackInfo_ = pSet.getUntrackedParameter<bool>("recordTrackInfo");
+  recordVertexInfo_ = pSet.getUntrackedParameter<bool>("recordVertexInfo");
+  isoConeSize_ = pSet.getUntrackedParameter<double>("isoConeSize");
+  isoTimeScale_ = pSet.getUntrackedParameter<double>("isoTimeScale");
 }
 
 //
@@ -152,550 +394,574 @@ FTLMuonIsolation::FTLMuonIsolation(const edm::ParameterSet& pSet) :
 //
 
 // ------------ method called for each event  ------------
-void
-FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
-{
-    //---get input collections
-    iEvent.getByToken(genXYZToken_, genXYZHandle_);
-    iEvent.getByToken(genT0Token_, genT0Handle_);
-    iEvent.getByToken(muonsToken_, muonsHandle_);
-    iEvent.getByToken(tracksToken_, tracksHandle_);
-    iEvent.getByToken(timeToken_, timeHandle_);
-    iEvent.getByToken(timeResToken_, timeResHandle_);
-    iEvent.getByToken(simVtxToken_, simVtxHandle_);    
-    iEvent.getByToken(vtx4DToken_, vtx4DHandle_);
-    iEvent.getByToken(vtx3DToken_, vtx3DHandle_);
-    iEvent.getByToken(genPartToken_, genPartHandle_);
-    iEvent.getByToken(genJetToken_, genJetHandle_);
+void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
+  //---get input collections
+  iEvent.getByToken(genXYZToken_, genXYZHandle_);
+  iEvent.getByToken(genT0Token_, genT0Handle_);
+  iEvent.getByToken(muonsToken_, muonsHandle_);
+  iEvent.getByToken(tracksToken_, tracksHandle_);
+  iEvent.getByToken(timeToken_, timeHandle_);
+  iEvent.getByToken(timeResToken_, timeResHandle_);
+  iEvent.getByToken(simVtxToken_, simVtxHandle_);
+  iEvent.getByToken(vtx4DToken_, vtx4DHandle_);
+  iEvent.getByToken(vtx3DToken_, vtx3DHandle_);
+  iEvent.getByToken(genPartToken_, genPartHandle_);
+  iEvent.getByToken(genJetToken_, genJetHandle_);
 
-    edm::ESHandle<TransientTrackBuilder> theTTBuilder;
-    iSetup.get<TransientTrackRecord>().get("TransientTrackBuilder", theTTBuilder);
+  edm::ESHandle<TransientTrackBuilder> theTTBuilder;
+  iSetup.get<TransientTrackRecord>().get("TransientTrackBuilder", theTTBuilder);
 
-    //---skip bad events (checks on muons and MC-truth vtx)
-    unsigned int nmuons = 0;
-    for (const auto &muon : *muonsHandle_)
-        if (muon.pt() > 5.)
-            ++nmuons;
-  
-    // if(!nmuons || vtx4DHandle_->size()<2 || vtx3DHandle_->size()<2 ||
-    //    simVtxHandle_.product()->size() == 0 || simVtxHandle_.product()->at(0).vertexId() != 0
-    //     )
-    //     return;
-    ++iEvent_;
-    
-    //---get truth PV
-    SimVertex simPV;
-    if(simVtxHandle_.isValid())
-        simPV = simVtxHandle_.product()->at(0);
-    else
-    {
-        auto xyz = genXYZHandle_.product();
-        auto t = *genT0Handle_.product();
-        auto v = math::XYZVectorD(xyz->x(), xyz->y(), xyz->z());
-        simPV = SimVertex(v, t);
+  ++iEvent_;
+
+  //---get truth PV
+  SimVertex simPV;
+  if (simVtxHandle_.isValid()) simPV = simVtxHandle_.product()->at(0);
+  else{
+    auto xyz = genXYZHandle_.product();
+    auto t = *genT0Handle_.product();
+    auto v = math::XYZVectorD(xyz->x(), xyz->y(), xyz->z());
+    simPV = SimVertex(v, t);
+  }
+
+  // Determine the smeared track reco. times
+  for (auto& iRes : targetResolutions_){
+    //---reset output
+    outTrees_[iRes].Reset();
+
+    //---fill global info            
+    outTrees_[iRes].event = iEvent.id().event();
+    outTrees_[iRes].lumi = iEvent.id().luminosityBlock();
+    outTrees_[iRes].run = iEvent.id().run();
+
+    //---fill gen vtx info
+    outTrees_[iRes].simPVX = simPV.position().x();
+    outTrees_[iRes].simPVY = simPV.position().y();
+    outTrees_[iRes].simPVZ = simPV.position().z();
+    outTrees_[iRes].simPVT = simPV.position().t();
+
+    // Collection of tracks with all the information needed
+    std::vector<TrackInformation> trackInfoList;
+    trackInfoList.reserve(tracksHandle_->size());
+    for (unsigned i = 0; i < tracksHandle_->size(); ++i){
+      auto ref = tracksHandle_->refAt(i);
+      // Add track to trk info list
+      trackInfoList.emplace_back(ref, &theTTBuilder);
+
+      float time = (*timeHandle_)[ref];
+      float timeReso = (*timeResHandle_)[ref] != 0.f ? (*timeResHandle_)[ref] : 0.170f;
+      float extra_smearing = std::sqrt(iRes*iRes - timeReso*timeReso);
+#if _useTrackTime_ == 0
+      float t0 = time;
+      float t0err = timeReso;
+#else
+      float t0 = ref->t0();
+      float t0err = ref->t0Error();
+#endif
+
+      float timeextra = gRandom->Gaus(0., extra_smearing);
+      time += timeextra;
+      timeReso = std::sqrt(timeReso*timeReso + extra_smearing*extra_smearing);
+      if (t0err>0.){
+        t0 += timeextra;
+        t0err = sqrt(pow(t0err, 2)+pow(extra_smearing, 2));
+      }
+
+      // Change time of the tracks to smeared time
+      trackInfoList.back().t = t0;
+      trackInfoList.back().terr = t0err;
     }
 
-    for(auto& iRes : targetResolutions_)
-    {
-        // cout << "RESOLUTION : " << iRes << endl;
-        //---make a map of vertices to track refs within cuts
-        std::unordered_multimap<unsigned,reco::TrackBaseRef>
-            vertices_to_tracks_z,
-            vertices_to_tracks_zt3,
-            vertices_to_tracks_zt4,
-            vertices_to_tracks_zt5,
-            vertices_to_tracks_zt7,
-            vertices_to_tracks_zt10;
-        std::map<reco::TrackRef, float> track_times;
-        std::map<reco::TrackRef, float> track_timeResos;
+    // Collection of vertices with all the information needed
+    std::vector<VertexInformation> vtx3DInfoList;
+    vtx3DInfoList.reserve(vtx3DHandle_->size());
+    for (unsigned int ivtx=0; ivtx<vtx3DHandle_->size(); ivtx++){
+      const auto& vtx = vtx3DHandle_->at(ivtx);
+      if (!vtx.isValid() || vtx.isFake()) continue;
+      vtx3DInfoList.emplace_back(vtx, true);
 
-        // float extra_smearing = std::sqrt(iRes*iRes - 0.02*0.02);
-        for(unsigned i = 0; i < tracksHandle_->size(); ++i)
-        {
-            auto ref = tracksHandle_->refAt(i);
-            float time = (*timeHandle_)[ref];
-            float timeReso = (*timeResHandle_)[ref] != 0.f ? (*timeResHandle_)[ref] : 0.170f;
-            float extra_smearing = std::sqrt(iRes*iRes - timeReso*timeReso);
-            // cout << "Track " << i << ":\n";
-            // cout << "              iRes: " << iRes << endl;
-            // cout << "    extra_smearing: " << extra_smearing << endl;
-            // cout << "     orig timeReso: " << timeReso << endl;
-            // cout << "         orig time: " << time << endl;
-            time += gRandom->Gaus(0., extra_smearing);
-            timeReso = std::sqrt(timeReso*timeReso + extra_smearing*extra_smearing);
-            // cout << "          new time: " << time << endl;
-            // cout << "      new timeReso: " << timeReso << endl;
-            track_times[ref.castTo<reco::TrackRef>()] = time;
-            track_timeResos[ref.castTo<reco::TrackRef>()] = timeReso;
-            for(int ivtx = 0; ivtx < (int)vtx4DHandle_->size(); ++ivtx)
-            {
-                const auto& thevtx = (*vtx4DHandle_)[ivtx];
-                const float dz = std::abs(ref->dz(thevtx.position()));
-                const float dt = std::abs(time - thevtx.t());
-                // const float dz2 = std::pow(ref->dz(thevtx.position()), 2);
-                // const float dt2 = std::pow(time - thevtx.t(), 2);
-                const bool useTime = (thevtx.t() != 0.);
+      auto const& vtxInfo = vtx3DInfoList.back();
+      if (recordVertexInfo_){
+        outTrees_[iRes].vtx3D_vx->push_back(vtxInfo.vx);
+        outTrees_[iRes].vtx3D_vy->push_back(vtxInfo.vy);
+        outTrees_[iRes].vtx3D_vz->push_back(vtxInfo.vz);
+        outTrees_[iRes].vtx3D_ndof->push_back(vtxInfo.ndof);
+        outTrees_[iRes].vtx3D_chisq->push_back(vtxInfo.chisq);
+        outTrees_[iRes].vtx3D_ntrks->push_back(vtxInfo.ptr->nTracks(0.));
+      }
+    }
+    outTrees_[iRes].nVtx3D = vtx3DHandle_->size();
 
-                const float base_cut = std::sqrt(thevtx.tError()*thevtx.tError()
-                                                 + timeReso*timeReso);
-            
-                const float time_cut3 = 3.f*base_cut;
-                const float time_cut4 = 4.f*base_cut;
-                const float time_cut5 = 5.f*base_cut;
-                const float time_cut7 = 7.f*base_cut;
-                const float time_cut10 = 10.f*base_cut;
+    std::vector<VertexInformation> vtx4DInfoList;
+    vtx4DInfoList.reserve(vtx4DHandle_->size());
+    for (unsigned int ivtx=0; ivtx<vtx4DHandle_->size(); ivtx++){
+      const auto& vtx = vtx4DHandle_->at(ivtx);
+      if (!vtx.isValid() || vtx.isFake()) continue;
+      vtx4DInfoList.emplace_back(vtx, false);
 
-                const bool keepz = ( dz < dzCut_ );
-                const bool keept3 = (!useTime || std::isnan(dt) || dt < time_cut3);
-                const bool keept4 = (!useTime || std::isnan(dt) || dt < time_cut4);
-                const bool keept5 = (!useTime || std::isnan(dt) || dt < time_cut5);
-                const bool keept7 = (!useTime || std::isnan(dt) || dt < time_cut7);
-                const bool keept10 = (!useTime || std::isnan(dt) || dt < time_cut10);
-                // const bool keept3 = (!useTime || std::isnan(dt) || dt2/time_cut3 + dz2/(0.2*0.2) < 1);
-                // const bool keept4 = (!useTime || std::isnan(dt) || dt2/time_cut4 + dz2/(0.2*0.2) < 1);
-                // const bool keept5 = (!useTime || std::isnan(dt) || dt2/time_cut5 + dz2/(0.2*0.2) < 1);
-                // const bool keept7 = (!useTime || std::isnan(dt) || dt2/time_cut7 + dz2/(0.2*0.2) < 1);
-                // const bool keept10 = (!useTime || std::isnan(dt) || dt2/time_cut10 + dz2/(0.2*0.2) < 1);            
-            
-                if( ref->quality(reco::TrackBase::highPurity) && keepz ) {
-                    //vertices_to_tracks_z.emplace(ivtx, ref);        
-                    if( keept10 ) {
-                        vertices_to_tracks_zt10.emplace(ivtx, ref);
-                    }
-                    if( keept7 ) {
-                        vertices_to_tracks_zt7.emplace(ivtx, ref);
-                    }
-                    if( keept5 ) {
-                        vertices_to_tracks_zt5.emplace(ivtx, ref);
-                    }
-                    if( keept4 ) {
-                        vertices_to_tracks_zt4.emplace(ivtx, ref);
-                    }
-                    if( keept3 ) {
-                        vertices_to_tracks_zt3.emplace(ivtx, ref);
-                    }	
-                }      
-            }
-            
-            for(int ivtx = 0; ivtx < (int)vtx3DHandle_->size(); ++ivtx)
-            {
-                const auto& thevtx = (*vtx3DHandle_)[ivtx];
-                const float dz = std::abs(ref->dz(thevtx.position()));
-                const bool keepz = ( dz < dzCut_ );
-                if( ref->quality(reco::TrackBase::highPurity) && keepz ) {
-                    vertices_to_tracks_z.emplace(ivtx, ref);        
-                }
-            }
+      auto const& vtxInfo = vtx4DInfoList.back();
+      if (recordVertexInfo_){
+        outTrees_[iRes].vtx4D_vx->push_back(vtxInfo.vx);
+        outTrees_[iRes].vtx4D_vy->push_back(vtxInfo.vy);
+        outTrees_[iRes].vtx4D_vz->push_back(vtxInfo.vz);
+        outTrees_[iRes].vtx4D_t->push_back(vtxInfo.t);
+        outTrees_[iRes].vtx4D_terr->push_back(vtxInfo.terr);
+        outTrees_[iRes].vtx4D_ndof->push_back(vtxInfo.ndof);
+        outTrees_[iRes].vtx4D_chisq->push_back(vtxInfo.chisq);
+        outTrees_[iRes].vtx4D_ntrks->push_back(vtxInfo.ptr->nTracks(0.));
+      }
+    }
+    outTrees_[iRes].nVtx4D = vtx4DHandle_->size();
+
+    // Determine vertex - track associations
+    for (TrackInformation& trkInfo : trackInfoList){
+      // Loop over 3D vertices
+      int chosenVtx3D=-1;
+      for (unsigned int ivtx=0; ivtx<vtx3DInfoList.size(); ivtx++){
+        auto const& vtxInfo = vtx3DInfoList.at(ivtx);
+        if (testTrackUsedInVertexFit(vtxInfo, trkInfo)){ chosenVtx3D = ivtx; break; }
+      }
+      if (chosenVtx3D<0){
+        float minSIP=std::numeric_limits<float>::max();
+        for (unsigned int ivtx=0; ivtx<vtx3DInfoList.size(); ivtx++){
+          auto const& vtxInfo = vtx3DInfoList.at(ivtx);
+          float IP_Vtx = 0, dIP_Vtx = 0;
+          if (!computeIPVals(vtxInfo, trkInfo, IP_Vtx, dIP_Vtx)) continue;
+          const float valSIP = (dIP_Vtx!=0. ? fabs(IP_Vtx)/dIP_Vtx : 0);
+          if (minSIP>valSIP){
+            minSIP = valSIP;
+            chosenVtx3D = ivtx;
+          }
         }
-  
-        for(auto &muon : *muonsHandle_)
-        {
-            //---reset output
-            outTrees_[iRes].Reset();
+        if (chosenVtx3D>=0) trkInfo.vtx3DAssociationRank = 1;
+      }
+      else trkInfo.vtx3DAssociationRank = 0;
+      if (chosenVtx3D<0) chosenVtx3D=0;
+      trkInfo.associatedVertex3D = &(vtx3DInfoList.at(chosenVtx3D));
+      vtx3DInfoList.at(chosenVtx3D).addAssociatedTrackInfo(trkInfo);
 
-            //---fill global info            
-            outTrees_[iRes].event = iEvent.id().event();
-            outTrees_[iRes].lumi = iEvent.id().luminosityBlock();
-            outTrees_[iRes].run = iEvent.id().run();    
-        
-            //---basic check
-            if(muon.track().isNull() || muon.pt() < 10)
-                continue;
-
-            auto muontrackref = muon.get<reco::TrackRef>();
-            reco::TransientTrack ttmuon = theTTBuilder->build(muontrackref);
-
-            int vtx3D_index = -1;
-            float sip3D=-1;
-
-            //---find the 3D vertex this muon is best associated to..
-            if(useMCTruthPV_)
-            {
-                float min_dz = 999.;
-                for( unsigned i = 0; i < vtx3DHandle_->size(); ++i )
-                {
-                    const auto& vtx = (*vtx3DHandle_)[i];      
-                    const float dz = fabs(vtx.z() - simPV.position().z());
-                    if( dz < min_dz )
-                    {
-                        min_dz = dz;
-                        vtx3D_index = i;
-                    }
-                }                
+      // Loop over 4D vertices
+      int chosenVtx4D=-1;
+      for (unsigned int ivtx=0; ivtx<vtx4DInfoList.size(); ivtx++){
+        auto const& vtxInfo = vtx4DInfoList.at(ivtx);
+        if (testTrackUsedInVertexFit(vtxInfo, trkInfo)){ chosenVtx4D = ivtx; break; }
+      }
+      bool trackhastime = trkInfo.hasTime();
+      if (chosenVtx4D<0){
+        float minSIP=std::numeric_limits<float>::max();
+        if (trackhastime){ // Search within vertices with time measurement first if the track has time. Include dt/delta_dt in SIP
+          for (unsigned int ivtx=0; ivtx<vtx4DInfoList.size(); ivtx++){
+            auto const& vtxInfo = vtx4DInfoList.at(ivtx);
+            float IP_Vtx = 0, dIP_Vtx = 0, dt = 0, dterr = 0;
+            if (!computeIPVals(vtxInfo, trkInfo, IP_Vtx, dIP_Vtx)) continue;
+            if (!computeRelTimeVals(vtxInfo, trkInfo, dt, dterr)) continue;
+            const float valSIP = (dIP_Vtx*dterr!=0. ? fabs(IP_Vtx*dt)/(dIP_Vtx*dterr) : 0);
+            if (minSIP>valSIP){
+              minSIP = valSIP;
+              chosenVtx4D = ivtx;
             }
-            else
-            {
-                float max_weight3D = 0.f;
-                for( unsigned i = 0; i < vtx3DHandle_->size(); ++i )
-                {
-                    const auto& vtx = (*vtx3DHandle_)[i];      
-                    const float weight = vtx.trackWeight(muon.track());
-                    if( weight > max_weight3D )
-                    {
-                        max_weight3D = weight;
-                        vtx3D_index = i;
-                    }
-                }
-                if (vtx3D_index==-1){
-                  float minSIP=std::numeric_limits<float>::max();
-                  for (unsigned i = 0; i < vtx3DHandle_->size(); ++i){
-                    const auto& vtx = (*vtx3DHandle_)[i];
-                    std::pair<bool, Measurement1D> IP_Measurement = IPTools::signedImpactParameter3D(
-                      ttmuon,
-                      GlobalVector(muon.px(), muon.py(), muon.pz()),
-                      vtx
-                    );
-                    float IP_Vtx = IP_Measurement.second.value();
-                    float dIP_Vtx = IP_Measurement.second.error();
-
-                    const float valSIP = (dIP_Vtx!=0. ? fabs(IP_Vtx)/dIP_Vtx : 0);
-                    if (minSIP>valSIP){
-                      minSIP = valSIP;
-                      vtx3D_index = i;
-                    }
-                  }
-                }
-            }            
-                
-            //---use highest ranked if muon doesn't belong to any vertex
-            const reco::Vertex& vtx3D = (vtx3D_index == -1 ? (*vtx3DHandle_)[0] : (*vtx3DHandle_)[vtx3D_index]);
-            const auto tracks_z  = vertices_to_tracks_z.equal_range(vtx3D_index == -1 ? 0 : vtx3D_index);
-            {
-              std::pair<bool, Measurement1D> IP_Measurement = IPTools::signedImpactParameter3D(
-                ttmuon,
-                GlobalVector(muon.px(), muon.py(), muon.pz()),
-                vtx3D
-              );
-              float IP_Vtx = IP_Measurement.second.value();
-              float dIP_Vtx = IP_Measurement.second.error();
-              sip3D = (dIP_Vtx!=0. ? fabs(IP_Vtx)/dIP_Vtx : 0);
+          }
+        }
+        if (chosenVtx4D<0){
+          minSIP=std::numeric_limits<float>::max();
+          for (unsigned int ivtx=0; ivtx<vtx4DInfoList.size(); ivtx++){
+            auto const& vtxInfo = vtx4DInfoList.at(ivtx);
+            float IP_Vtx = 0, dIP_Vtx = 0;
+            if (!computeIPVals(vtxInfo, trkInfo, IP_Vtx, dIP_Vtx)) continue;
+            const float valSIP = (dIP_Vtx!=0. ? fabs(IP_Vtx)/dIP_Vtx : 0);
+            if (minSIP>valSIP){
+              minSIP = valSIP;
+              chosenVtx4D = ivtx;
             }
-            
-            int vtx4D_index = -1;
-            float sip4D=-1;
+          }
+          if (chosenVtx4D>=0) trkInfo.vtx4DAssociationRank = 2;
+        }
+        else trkInfo.vtx4DAssociationRank = 1;
+      }
+      else trkInfo.vtx4DAssociationRank = 0;
+      if (chosenVtx4D<0) chosenVtx4D=0;
+      trkInfo.associatedVertex4D = &(vtx4DInfoList.at(chosenVtx4D));
+      vtx4DInfoList.at(chosenVtx4D).addAssociatedTrackInfo(trkInfo);
+    }
 
-            //---find the 4D vertex this muon is best associated to..
-            if(useMCTruthPV_)
-            {
-                double min_dzdt = std::numeric_limits<double>::max();
-                for( unsigned i = 0; i < vtx4DHandle_->size(); ++i )
-                {
-                    const auto& vtx = (*vtx4DHandle_)[i];
-                    const float dz = std::abs(vtx.z() - simPV.position().z());
-                    const double dzdt = pow((vtx.z() - simPV.position().z())/vtx.zError(), 2) +
-                        pow((vtx.t()-simPV.position().t())/vtx.tError(), 2);
-                    if( dz < 0.1 && dzdt < min_dzdt )
-                    {
-                        min_dzdt = dzdt;
-                        vtx4D_index = i;
-                    }
-                }
+    // Loop over the muons
+    std::vector<MuonInformation> muonInfoList; muonInfoList.reserve(muonsHandle_->size());
+    for (auto const& muon:(*muonsHandle_)){
+      //---basic check
+      if (muon.track().isNull()) continue;
+      muonInfoList.emplace_back(muon, trackInfoList);
+      auto& muonInfo = muonInfoList.back();
+      TrackInformation const* trkInfo = muonInfo.trkinfo;
+
+      // Vertex association variables
+      int chosenVtx3D=-1;
+      float IP3DVtx3D=0, dIP3DVtx3D=0;
+      int chosenVtx4D=-1;
+      float IP3DVtx4D=0, dIP3DVtx4D=0;
+      // chIso pt sums
+      float muon_isosumtrackpt_vtx3D_unassociated=0;
+      float muon_isosumtrackpt_vtx3D_associationrank_0=0;
+      float muon_isosumtrackpt_vtx3D_associationrank_1=0;
+      float muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0=0;
+      float muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1=0;
+
+      float muon_isosumtrackpt_vtx4D_unassociated=0;
+      float muon_isosumtrackpt_vtx4D_associationrank_0=0;
+      float muon_isosumtrackpt_vtx4D_associationrank_1=0;
+      float muon_isosumtrackpt_vtx4D_associationrank_2=0;
+
+      float muon_isosumtrackpt_vtx4D_nodzcut_associationrank_0=0;
+      float muon_isosumtrackpt_vtx4D_nodzcut_associationrank_1=0;
+      float muon_isosumtrackpt_vtx4D_nodzcut_associationrank_2=0;
+      if (trkInfo){
+        // Loop over 3D vertices
+        for (unsigned int ivtx=0; ivtx<vtx3DInfoList.size(); ivtx++){
+          auto const& vtxInfo = vtx3DInfoList.at(ivtx);
+          if (testTrackUsedInVertexFit(vtxInfo, *trkInfo)) chosenVtx3D = ivtx;
+        }
+        if (chosenVtx3D<0){
+          float minSIP=std::numeric_limits<float>::max();
+          for (unsigned int ivtx=0; ivtx<vtx3DInfoList.size(); ivtx++){
+            auto const& vtxInfo = vtx3DInfoList.at(ivtx);
+            float IP_Vtx = 0, dIP_Vtx = 0;
+            if (!computeIPVals(vtxInfo, *trkInfo, IP_Vtx, dIP_Vtx)) continue;
+            const float valSIP = (dIP_Vtx!=0. ? fabs(IP_Vtx)/dIP_Vtx : 0);
+            if (minSIP>valSIP){
+              minSIP = valSIP;
+              chosenVtx3D = ivtx;
             }
-            else
-            {
-                float max_weight4D = 0.f;
-                for( unsigned i = 0; i < vtx4DHandle_->size(); ++i )
-                {
-                    const auto& vtx = (*vtx4DHandle_)[i];      
-                    const float weight = vtx.trackWeight(muon.track());
-                    if( weight > max_weight4D )
-                    {
-                        max_weight4D = weight;
-                        vtx4D_index = i;
-                    }
-                }    
-                if (vtx4D_index==-1){
-                  float minSIP=std::numeric_limits<float>::max();
-                  for (unsigned i = 0; i < vtx4DHandle_->size(); ++i){
-                    const auto& vtx = (*vtx4DHandle_)[i];
-                    std::pair<bool, Measurement1D> IP_Measurement = IPTools::signedImpactParameter3D(
-                      ttmuon,
-                      GlobalVector(muon.px(), muon.py(), muon.pz()),
-                      vtx
-                    );
-                    float IP_Vtx = IP_Measurement.second.value();
-                    float dIP_Vtx = IP_Measurement.second.error();
-                    if (vtx.t()!=0.){
-                      IP_Vtx = sqrt(IP_Vtx*IP_Vtx + pow(vtx.t()-track_times[muontrackref], 2));
-                      dIP_Vtx = sqrt(dIP_Vtx*dIP_Vtx + pow(track_timeResos[muontrackref], 2) + pow(vtx.tError(), 2));
-                    }
+          }
+        }
+        if (chosenVtx3D<0) chosenVtx3D=0;
+        muonInfo.associatedVertex3D = &(vtx3DInfoList.at(chosenVtx3D));
+        computeIPVals(vtx3DInfoList.at(chosenVtx3D), *trkInfo, IP3DVtx3D, dIP3DVtx3D);
 
-                    const float valSIP = (dIP_Vtx!=0. ? fabs(IP_Vtx)/dIP_Vtx : 0);
-                    if (minSIP>valSIP){
-                      minSIP = valSIP;
-                      vtx4D_index = i;
-                    }
-                  }
-                }
-            }
-            
-            //---use highest ranked if muon doesn't belong to any vertex
-            const reco::Vertex& vtx4D = (vtx4D_index == -1 ? (*vtx4DHandle_)[0] : (*vtx4DHandle_)[vtx4D_index]);
-            const auto tracks_zt3 = vertices_to_tracks_zt3.equal_range(vtx4D_index == -1 ? 0 : vtx4D_index);
-            const auto tracks_zt4 = vertices_to_tracks_zt4.equal_range(vtx4D_index == -1 ? 0 : vtx4D_index);
-            const auto tracks_zt5 = vertices_to_tracks_zt5.equal_range(vtx4D_index == -1 ? 0 : vtx4D_index);
-            const auto tracks_zt7 = vertices_to_tracks_zt7.equal_range(vtx4D_index == -1 ? 0 : vtx4D_index);
-            const auto tracks_zt10 = vertices_to_tracks_zt10.equal_range(vtx4D_index == -1 ? 0 : vtx4D_index);
-            {
-              std::pair<bool, Measurement1D> IP_Measurement = IPTools::signedImpactParameter3D(
-                ttmuon,
-                GlobalVector(muon.px(), muon.py(), muon.pz()),
-                vtx4D
-              );
-              float IP_Vtx = IP_Measurement.second.value();
-              float dIP_Vtx = IP_Measurement.second.error();
-              if (vtx4D.t()!=0.){
-                IP_Vtx = sqrt(IP_Vtx*IP_Vtx + pow(vtx4D.t()-track_times[muontrackref], 2));
-                dIP_Vtx = sqrt(dIP_Vtx*dIP_Vtx + pow(track_timeResos[muontrackref], 2) + pow(vtx4D.tError(), 2));
-              }
-              sip4D = (dIP_Vtx!=0. ? fabs(IP_Vtx)/dIP_Vtx : 0);
-            }
-
-            //---muon - vtx matching
-            auto muonTkRef = muon.track();
-            float muonTime = (*timeHandle_)[muonTkRef];
-            float muonTimeReso = (*timeResHandle_)[muonTkRef];
-            if( useMCTruthPV_ && ( muonTimeReso==0 ||
-                                   ( muon.track()->dz(Point(simPV.position().x(),
-                                                            simPV.position().y(),
-                                                            simPV.position().z())) > 0.1 &&
-                                     std::abs(simPV.position().t()-muonTime) > 3*muonTimeReso ) ))
-                continue;
-
-            //---event counter
-            outTrees_[iRes].iEvent = iEvent_;
-            
-            //---fill gen vtx info
-            outTrees_[iRes].simPVX = simPV.position().x();
-            outTrees_[iRes].simPVY = simPV.position().y();
-            outTrees_[iRes].simPVZ = simPV.position().z();
-            outTrees_[iRes].simPVT = simPV.position().t();
-
-            //---fill muon and vtx information            
-            outTrees_[iRes].pt = muon.pt();
-            outTrees_[iRes].eta = muon.eta();
-            outTrees_[iRes].phi = muon.phi();
-            outTrees_[iRes].px = muon.px();
-            outTrees_[iRes].py = muon.py();
-            outTrees_[iRes].pz = muon.pz();
-            outTrees_[iRes].muonZ = muon.track()->dz(vtx4D.position()) + vtx4D.z();
-            outTrees_[iRes].isLooseMuon = muon::isLooseMuon(muon);
-            outTrees_[iRes].isMediumMuon = muon::isMediumMuon(muon);
-            outTrees_[iRes].isTightMuon = muon::isTightMuon(muon, (*vtx4DHandle_)[vtx4D_index==-1 ? 0 : vtx4D_index]);
-            outTrees_[iRes].nVtxs = vtx4DHandle_->size();        
-            outTrees_[iRes].vtx3DIdx = vtx3D_index;
-            outTrees_[iRes].vtx4DIdx = vtx4D_index;
-            outTrees_[iRes].vtx3DX = vtx3D.x();
-            outTrees_[iRes].vtx3DY = vtx3D.y();
-            outTrees_[iRes].vtx3DZ = vtx3D.z();
-            outTrees_[iRes].SIP3D = sip3D;
-            outTrees_[iRes].vtx3DIsFake = vtx3D.isFake();
-            outTrees_[iRes].vtx3DNdof = vtx3D.ndof();
-            outTrees_[iRes].vtx3DChi2 = vtx3D.chi2();
-            //outTrees_[iRes].vtx3DT = vtx3D.t();
-            outTrees_[iRes].vtx4DX = vtx4D.x();
-            outTrees_[iRes].vtx4DY = vtx4D.y();
-            outTrees_[iRes].vtx4DZ = vtx4D.z();
-            outTrees_[iRes].vtx4DT = vtx4D.t();
-            outTrees_[iRes].vtx4DTerr = vtx4D.tError();
-            outTrees_[iRes].SIP4D = sip4D;
-            outTrees_[iRes].vtx4DIsFake = vtx4D.isFake();
-            outTrees_[iRes].vtx4DNdof = vtx4D.ndof();
-            outTrees_[iRes].vtx4DChi2 = vtx4D.chi2();    
-
-            //---compute the varius isolations for all requested cone sizes
-            outTrees_[iRes].nTracksVtx = std::distance(tracks_z.first, tracks_z.second);
-            outTrees_[iRes].chIsoZCut->resize(isoConeSizes_.size());
-            outTrees_[iRes].chIsoZTCut_3sigma->resize(isoConeSizes_.size());
-            outTrees_[iRes].chIsoZTCut_4sigma->resize(isoConeSizes_.size());
-            outTrees_[iRes].chIsoZTCut_5sigma->resize(isoConeSizes_.size());                
-            outTrees_[iRes].chIsoZTCut_7sigma->resize(isoConeSizes_.size());                
-            outTrees_[iRes].chIsoZTCut_10sigma->resize(isoConeSizes_.size());                
-            outTrees_[iRes].nTracksZCut->resize(isoConeSizes_.size());
-            outTrees_[iRes].nTracksZTCut_3sigma->resize(isoConeSizes_.size());
-            outTrees_[iRes].nTracksZTCut_4sigma->resize(isoConeSizes_.size());
-            outTrees_[iRes].nTracksZTCut_5sigma->resize(isoConeSizes_.size());                
-            outTrees_[iRes].nTracksZTCut_7sigma->resize(isoConeSizes_.size());                
-            outTrees_[iRes].nTracksZTCut_10sigma->resize(isoConeSizes_.size());                
-            
-            outTrees_[iRes].tracksZCut_iso03_pt->clear();
-            outTrees_[iRes].tracksZCut_iso03_eta->clear();
-            outTrees_[iRes].tracksZCut_iso03_phi->clear();
-            outTrees_[iRes].tracksZCut_iso03_dR->clear();
-            outTrees_[iRes].tracksZCut_iso03_t->clear();
-            outTrees_[iRes].tracksZCut_iso03_dz->clear();
-            outTrees_[iRes].tracksZTCut_3sigma_iso03_pt->clear();
-            outTrees_[iRes].tracksZTCut_3sigma_iso03_eta->clear();
-            outTrees_[iRes].tracksZTCut_3sigma_iso03_phi->clear();
-            outTrees_[iRes].tracksZTCut_3sigma_iso03_dR->clear();
-            outTrees_[iRes].tracksZTCut_3sigma_iso03_t->clear();
-            outTrees_[iRes].tracksZTCut_3sigma_iso03_dz->clear();
-
-            for(int iDR=0; iDR<(int)isoConeSizes_.size(); ++iDR)
-            {
-                float DR = isoConeSizes_[iDR];
-                outTrees_[iRes].chIsoDR->push_back(DR);
-
-                outTrees_[iRes].chIsoZCut->at(iDR) = 0.0;
-                outTrees_[iRes].chIsoZTCut_3sigma->at(iDR) = 0.0;
-                outTrees_[iRes].chIsoZTCut_4sigma->at(iDR) = 0.0;
-                outTrees_[iRes].chIsoZTCut_5sigma->at(iDR) = 0.0;
-                outTrees_[iRes].chIsoZTCut_7sigma->at(iDR) = 0.0;
-                outTrees_[iRes].chIsoZTCut_10sigma->at(iDR) = 0.0;
-                outTrees_[iRes].nTracksZCut->at(iDR) = 0;
-                outTrees_[iRes].nTracksZTCut_3sigma->at(iDR) = 0;
-                outTrees_[iRes].nTracksZTCut_4sigma->at(iDR) = 0;
-                outTrees_[iRes].nTracksZTCut_5sigma->at(iDR) = 0;
-                outTrees_[iRes].nTracksZTCut_7sigma->at(iDR) = 0;
-                outTrees_[iRes].nTracksZTCut_10sigma->at(iDR) = 0;
-
-                //--- dz only
-                for( auto it = tracks_z.first; it != tracks_z.second; ++it ) {
-                    auto ref = it->second.castTo<reco::TrackRef>();
-                    float this_dr = reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi());
-                    if(ref->pt() > 0.90){
-                        outTrees_[iRes].nTracksZCut->at(iDR) += 1;
-                        if(iDR==0){
-                            outTrees_[iRes].tracksZCut_iso03_pt  -> push_back(ref->pt());
-                            outTrees_[iRes].tracksZCut_iso03_eta -> push_back(ref->eta());
-                            outTrees_[iRes].tracksZCut_iso03_phi -> push_back(ref->phi());
-                            outTrees_[iRes].tracksZCut_iso03_dR  -> push_back(this_dr);
-                            outTrees_[iRes].tracksZCut_iso03_t   -> push_back(track_times[ref]);
-                            outTrees_[iRes].tracksZCut_iso03_dz  -> push_back(std::abs(ref->dz(vtx3D.position())));
-                        }
-                    }
-                    if( ref == muon.track() ) continue;
-                    if( this_dr >= DR*DR ) continue;
-                    outTrees_[iRes].chIsoZCut->at(iDR) += ref->pt();
-                }
-
-                //--- dz + dt 3 sigma
-                for( auto it = tracks_zt3.first; it != tracks_zt3.second; ++it ) {
-                    auto ref = it->second.castTo<reco::TrackRef>();
-                    float this_dr = reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi());
-                    if(ref->pt() > 0.90) {
-                        outTrees_[iRes].nTracksZTCut_3sigma->at(iDR) += 1;
-                        if(iDR==0){
-                            outTrees_[iRes].tracksZTCut_3sigma_iso03_pt  -> push_back(ref->pt());
-                            outTrees_[iRes].tracksZTCut_3sigma_iso03_eta -> push_back(ref->eta());
-                            outTrees_[iRes].tracksZTCut_3sigma_iso03_phi -> push_back(ref->phi());
-                            outTrees_[iRes].tracksZTCut_3sigma_iso03_dR  -> push_back(this_dr);
-                            outTrees_[iRes].tracksZTCut_3sigma_iso03_t   -> push_back(track_times[ref]);
-                            outTrees_[iRes].tracksZTCut_3sigma_iso03_dz  -> push_back(std::abs(ref->dz(vtx4D.position())));
-                        }
-                    }
-                    if( ref == muon.track() ) continue;
-                    if( this_dr >= DR*DR ) continue;
-                    outTrees_[iRes].chIsoZTCut_3sigma->at(iDR) += ref->pt();
-                }
-
-                //--- dz + dt 4 sigma
-                for( auto it = tracks_zt4.first; it != tracks_zt4.second; ++it ) {
-                    auto ref = it->second.castTo<reco::TrackRef>();
-                    if(ref->pt() > 0.90) outTrees_[iRes].nTracksZTCut_4sigma->at(iDR) += 1;
-                    if( ref == muon.track() ) continue;
-                    if( reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi()) >= DR*DR ) continue;
-                    outTrees_[iRes].chIsoZTCut_4sigma->at(iDR) += ref->pt();
-                }
-
-                //--- dz + dt 5 sigma
-                for( auto it = tracks_zt5.first; it != tracks_zt5.second; ++it ) {
-                    auto ref = it->second.castTo<reco::TrackRef>();
-                    if(ref->pt() > 0.90) outTrees_[iRes].nTracksZTCut_5sigma->at(iDR) += 1;
-                    if( ref == muon.track() ) continue;
-                    if( reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi()) >= DR*DR ) continue;
-                    outTrees_[iRes].chIsoZTCut_5sigma->at(iDR) += ref->pt();
-                }
-
-                //--- dz + dt 7 sigma
-                for( auto it = tracks_zt7.first; it != tracks_zt7.second; ++it ) {
-                    auto ref = it->second.castTo<reco::TrackRef>();
-                    if(ref->pt() > 0.90) outTrees_[iRes].nTracksZTCut_7sigma->at(iDR) += 1;
-                    if( ref == muon.track() ) continue;
-                    if( reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi()) >= DR*DR ) continue;
-                    outTrees_[iRes].chIsoZTCut_7sigma->at(iDR) += ref->pt();
-                }
-
-                //--- dz + dt 10 sigma
-                for( auto it = tracks_zt10.first; it != tracks_zt10.second; ++it ) {
-                    auto ref = it->second.castTo<reco::TrackRef>();
-                    if(ref->pt() > 0.90) outTrees_[iRes].nTracksZTCut_10sigma->at(iDR) += 1;
-                    if( ref == muon.track() ) continue;
-                    if( reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi()) >= DR*DR ) continue;
-                    outTrees_[iRes].chIsoZTCut_10sigma->at(iDR) += ref->pt();
-                }
-            }
-
-            //---Gen matching
-            outTrees_[iRes].genMatched = false;
-            outTrees_[iRes].genMatchedPrompt = false;
-            outTrees_[iRes].genMatchedJet = false;
-            outTrees_[iRes].genPt = -99.;
-            outTrees_[iRes].genEta = -99.;
-            outTrees_[iRes].genPhi = -99.;
-    
-            double mindr = std::numeric_limits<double>::max();
-
-            reco::Vertex::Point matchedPartVtx;
-            int globalMatchPartId=-99;
-            for (const reco::GenParticle &p : *genPartHandle_){
-              if (p.status() != 1) continue;
-
-              double dr = reco::deltaR(muon, p);
-              if (dr<mindr){
-                mindr = dr;
-                matchedPartVtx = p.vertex();
-                globalMatchPartId = p.pdgId();
+        // Loop over 4D vertices
+        for (unsigned int ivtx=0; ivtx<vtx4DInfoList.size(); ivtx++){
+          auto const& vtxInfo = vtx4DInfoList.at(ivtx);
+          if (testTrackUsedInVertexFit(vtxInfo, *trkInfo)) chosenVtx4D = ivtx;
+        }
+        if (chosenVtx4D<0){
+          float minSIP=std::numeric_limits<float>::max();
+          bool trackhastime = trkInfo->hasTime();
+          if (trackhastime){ // Search within vertices with time measurement first if the track has time. Include dt/delta_dt in SIP
+            for (unsigned int ivtx=0; ivtx<vtx4DInfoList.size(); ivtx++){
+              auto const& vtxInfo = vtx4DInfoList.at(ivtx);
+              float IP_Vtx = 0, dIP_Vtx = 0, dt = 0, dterr = 0;
+              if (!computeIPVals(vtxInfo, *trkInfo, IP_Vtx, dIP_Vtx)) continue;
+              if (!computeRelTimeVals(vtxInfo, *trkInfo, dt, dterr)) continue;
+              const float valSIP = (dIP_Vtx*dterr!=0. ? fabs(IP_Vtx*dt)/(dIP_Vtx*dterr) : 0);
+              if (minSIP>valSIP){
+                minSIP = valSIP;
+                chosenVtx4D = ivtx;
               }
             }
-            outTrees_[iRes].globalMatchPartId = globalMatchPartId;
-            outTrees_[iRes].globalMatchPartVtxX = matchedPartVtx.x();
-            outTrees_[iRes].globalMatchPartVtxY = matchedPartVtx.y();
-            outTrees_[iRes].globalMatchPartVtxZ = matchedPartVtx.z();
+          }
+          if (chosenVtx4D<0){
+            minSIP=std::numeric_limits<float>::max();
+            for (unsigned int ivtx=0; ivtx<vtx4DInfoList.size(); ivtx++){
+              auto const& vtxInfo = vtx4DInfoList.at(ivtx);
+              float IP_Vtx = 0, dIP_Vtx = 0;
+              if (!computeIPVals(vtxInfo, *trkInfo, IP_Vtx, dIP_Vtx)) continue;
+              const float valSIP = (dIP_Vtx!=0. ? fabs(IP_Vtx)/dIP_Vtx : 0);
+              if (minSIP>valSIP){
+                minSIP = valSIP;
+                chosenVtx4D = ivtx;
+              }
+            }
+          }
+        }
+        if (chosenVtx4D<0) chosenVtx4D=0;
+        muonInfo.associatedVertex4D = &(vtx4DInfoList.at(chosenVtx4D));
+        computeIPVals(vtx4DInfoList.at(chosenVtx4D), *trkInfo, IP3DVtx4D, dIP3DVtx4D);
 
+        // Compute isolation sums
+        for (TrackInformation const& trkInfo_ : trackInfoList){
+          if (trkInfo_.ref == trkInfo->ref) continue;
 
-            mindr = std::numeric_limits<double>::max();
-            for (const reco::GenParticle &p : *genPartHandle_)
-            {
-                if (p.status() != 1) continue;
-                if (std::abs(p.pdgId()) != 13) continue;
+          // Checks on 3D vertex-like association
+          float dz = std::abs(trkInfo_.ref->dz(muonInfo.associatedVertex3D->ptr->position()));
+          bool keep_dz = (dz <= dzCut_);
+          float this_dr = reco::deltaR2(trkInfo_.ref->eta(), trkInfo_.ref->phi(), muonInfo.eta, muonInfo.phi);
+          bool keep_dr = (this_dr <= isoConeSize_);
+          if (keep_dr){
+            if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D){
+              if (trkInfo_.vtx3DAssociationRank==0) muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0 += trkInfo_.pt;
+              else if (trkInfo_.vtx3DAssociationRank==1) muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1 += trkInfo_.pt;
+            }
+            if (keep_dz){
+              if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0) muon_isosumtrackpt_vtx3D_associationrank_0 += trkInfo_.pt;
+              else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1) muon_isosumtrackpt_vtx3D_associationrank_1 += trkInfo_.pt;
+              else if (trkInfo_.associatedVertex3D!=muonInfo.associatedVertex3D) muon_isosumtrackpt_vtx3D_unassociated += trkInfo_.pt;
+            }
+          }
+
+          // Checks on 4D vertex-like association
+          dz = std::abs(trkInfo_.ref->dz(muonInfo.associatedVertex4D->ptr->position()));
+          keep_dz = (dz <= dzCut_);
+          this_dr = reco::deltaR2(trkInfo_.ref->eta(), trkInfo_.ref->phi(), muonInfo.eta, muonInfo.phi);
+          keep_dr = (this_dr <= isoConeSize_);
+          float dt = (trkInfo_.hasTime() && muonInfo.associatedVertex4D->hasTime() ? std::abs(trkInfo_.t - muonInfo.associatedVertex4D->t) : 0);
+          float dterr = (trkInfo_.hasTime() && muonInfo.associatedVertex4D->hasTime() ? sqrt(pow(trkInfo_.terr, 2) + pow(muonInfo.associatedVertex4D->terr, 2)) : 0);
+          bool keep_dt = (dt <= dterr*isoTimeScale_);
+          if (keep_dr && keep_dt){
+            if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D){
+              if (trkInfo_.vtx4DAssociationRank==0) muon_isosumtrackpt_vtx4D_nodzcut_associationrank_0 += trkInfo_.pt;
+              else if (trkInfo_.vtx4DAssociationRank==1) muon_isosumtrackpt_vtx4D_nodzcut_associationrank_1 += trkInfo_.pt;
+              else if (trkInfo_.vtx4DAssociationRank==2) muon_isosumtrackpt_vtx4D_nodzcut_associationrank_2 += trkInfo_.pt;
+            }
+            if (keep_dz){
+              if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==0) muon_isosumtrackpt_vtx4D_associationrank_0 += trkInfo_.pt;
+              else if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==1) muon_isosumtrackpt_vtx4D_associationrank_1 += trkInfo_.pt;
+              else if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==2) muon_isosumtrackpt_vtx4D_associationrank_2 += trkInfo_.pt;
+              else if (trkInfo_.associatedVertex4D!=muonInfo.associatedVertex4D) muon_isosumtrackpt_vtx4D_unassociated += trkInfo_.pt;
+            }
+          }
+
+        }
+      }
+
+      bool genMatched = false;
+      bool genMatchedPrompt = false;
+      float genPt = -99.;
+      float genEta = -99.;
+      float genPhi = -99.;
+      bool genMatchedJet = false;
+      float genJetE = -99.;
+      float genJetPt = -99.;
+      float genJetEta = -99.;
+      float genJetPhi = -99.;
+
+      double mindr = std::numeric_limits<double>::max();
+      for (const reco::GenParticle &p : *genPartHandle_){
+        if (p.status() != 1) continue;
+        if (std::abs(p.pdgId()) != 13) continue;
+
+        double dr = reco::deltaR(muon, p);
+        if (dr<0.2 && dr<mindr){
+          mindr = dr;
+          genMatched = true;
+          genMatchedPrompt = p.isPromptFinalState();
+          genPt = p.pt();
+          genEta = p.eta();
+          genPhi = p.phi();
+        }
+      }
+
+      mindr = std::numeric_limits<double>::max();
+      for (const auto& jet : *genJetHandle_){
+        if (jet.pt() < 15.0 || jet.hadEnergy()/jet.energy() < 0.3) continue;
+
+        double dr = reco::deltaR(muon, jet);
+        if (dr < 0.3 && dr < mindr){
+          mindr = dr;
+          genMatchedJet = true;
+          genJetE = jet.energy();
+          genJetPt = jet.pt();
+          genJetEta = jet.eta();
+          genJetPhi = jet.phi();
+        }
+      }
       
-                double dr = reco::deltaR(muon,p);
-                if( dr<0.2 && dr<mindr )
-                {
-                    mindr = dr;	
-                    outTrees_[iRes].genMatched = true;
-                    outTrees_[iRes].genMatchedPrompt = p.isPromptFinalState();
-                    outTrees_[iRes].genPt = p.pt();
-                    outTrees_[iRes].genEta = p.eta();
-                    outTrees_[iRes].genPhi = p.phi();
-                }      
-            }
+      //---fill muon info
+      outTrees_[iRes].muonGenMatched->push_back(genMatched);
+      outTrees_[iRes].muonGenMatchedPrompt->push_back(genMatchedPrompt);
+      outTrees_[iRes].muonGenMatchedJet->push_back(genMatchedJet);
+      outTrees_[iRes].muonGenPt->push_back(genPt);
+      outTrees_[iRes].muonGenEta->push_back(genEta);
+      outTrees_[iRes].muonGenPhi->push_back(genPhi);
+      outTrees_[iRes].muonGenJetE->push_back(genJetE);
+      outTrees_[iRes].muonGenJetPt->push_back(genJetPt);
+      outTrees_[iRes].muonGenJetEta->push_back(genJetEta);
+      outTrees_[iRes].muonGenJetPhi->push_back(genJetPhi);
 
-            outTrees_[iRes].genJetE = -99.;
-            outTrees_[iRes].genJetPt = -99.;
-            outTrees_[iRes].genJetEta = -99.;
-            outTrees_[iRes].genJetPhi = -99.;
-            mindr = std::numeric_limits<double>::max();
-            for( const auto& jet : *genJetHandle_ ) {
-                if( jet.pt() < 15.0 || jet.hadEnergy()/jet.energy() < 0.3)
-                    continue;
-                double dr = reco::deltaR(muon,jet);
-                if( dr < 0.3 && dr < mindr )
-                {
-                    mindr = dr;
-                    outTrees_[iRes].genMatchedJet = true;
-                    outTrees_[iRes].genJetE = jet.energy();
-                    outTrees_[iRes].genJetPt = jet.pt();
-                    outTrees_[iRes].genJetEta = jet.eta();
-                    outTrees_[iRes].genJetPhi = jet.phi();                
-                }
-            }
+      outTrees_[iRes].muon_pt->push_back(muonInfo.pt);
+      outTrees_[iRes].muon_eta->push_back(muonInfo.eta);
+      outTrees_[iRes].muon_phi->push_back(muonInfo.phi);
+      outTrees_[iRes].muon_px->push_back(muonInfo.px);
+      outTrees_[iRes].muon_py->push_back(muonInfo.py);
+      outTrees_[iRes].muon_pz->push_back(muonInfo.pz);
+      if (trkInfo){
+        outTrees_[iRes].muon_vx->push_back(trkInfo->vx);
+        outTrees_[iRes].muon_vy->push_back(trkInfo->vy);
+        outTrees_[iRes].muon_vz->push_back(trkInfo->vz);
+        outTrees_[iRes].muon_t->push_back(trkInfo->t);
+        outTrees_[iRes].muon_terr->push_back(trkInfo->terr);
+        outTrees_[iRes].isLooseMuon->push_back(muon::isLooseMuon(muon));
+        outTrees_[iRes].isMediumMuon->push_back(muon::isMediumMuon(muon));
+        outTrees_[iRes].isTightMuon->push_back(muon::isTightMuon(muon, *(vtx4DInfoList.at(chosenVtx4D).ptr)));
+      }
+      else{
+        outTrees_[iRes].muon_vx->push_back(0);
+        outTrees_[iRes].muon_vy->push_back(0);
+        outTrees_[iRes].muon_vz->push_back(0);
+        outTrees_[iRes].muon_t->push_back(0);
+        outTrees_[iRes].muon_terr->push_back(0);
+        outTrees_[iRes].isLooseMuon->push_back(0);
+        outTrees_[iRes].isMediumMuon->push_back(0);
+        outTrees_[iRes].isTightMuon->push_back(0);
+      }
+      outTrees_[iRes].muonTrkId->push_back(muonInfo.trkIndex);
+      outTrees_[iRes].muonVtx3DId->push_back(chosenVtx3D);
+      outTrees_[iRes].muonIP3DVtx3D->push_back(IP3DVtx3D);
+      outTrees_[iRes].muondIP3DVtx3D->push_back(dIP3DVtx3D);
+      outTrees_[iRes].muonVtx4DId->push_back(chosenVtx4D);
+      outTrees_[iRes].muonIP3DVtx4D->push_back(IP3DVtx4D);
+      outTrees_[iRes].muondIP3DVtx4D->push_back(dIP3DVtx4D);
 
-            //---Fill tree
-            outTrees_[iRes].GetTTreePtr()->Fill();
-        }
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_unassociated->push_back(muon_isosumtrackpt_vtx3D_unassociated);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_associationrank_0);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_associationrank_1);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1);
+      outTrees_[iRes].muon_isosumtrackpt_vtx4D_unassociated->push_back(muon_isosumtrackpt_vtx4D_unassociated);
+      outTrees_[iRes].muon_isosumtrackpt_vtx4D_associationrank_0->push_back(muon_isosumtrackpt_vtx4D_associationrank_0);
+      outTrees_[iRes].muon_isosumtrackpt_vtx4D_associationrank_1->push_back(muon_isosumtrackpt_vtx4D_associationrank_1);
+      outTrees_[iRes].muon_isosumtrackpt_vtx4D_associationrank_2->push_back(muon_isosumtrackpt_vtx4D_associationrank_2);
+      outTrees_[iRes].muon_isosumtrackpt_vtx4D_nodzcut_associationrank_0->push_back(muon_isosumtrackpt_vtx4D_nodzcut_associationrank_0);
+      outTrees_[iRes].muon_isosumtrackpt_vtx4D_nodzcut_associationrank_1->push_back(muon_isosumtrackpt_vtx4D_nodzcut_associationrank_1);
+      outTrees_[iRes].muon_isosumtrackpt_vtx4D_nodzcut_associationrank_2->push_back(muon_isosumtrackpt_vtx4D_nodzcut_associationrank_2);
     }
+    outTrees_[iRes].nMuons = muonInfoList.size();
+
+    //---fill trk info
+    if (recordTrackInfo_){
+      for (auto const& trackInfo:trackInfoList){
+        outTrees_[iRes].track_pt->push_back(trackInfo.pt);
+        outTrees_[iRes].track_eta->push_back(trackInfo.eta);
+        outTrees_[iRes].track_phi->push_back(trackInfo.phi);
+        outTrees_[iRes].track_px->push_back(trackInfo.px);
+        outTrees_[iRes].track_py->push_back(trackInfo.py);
+        outTrees_[iRes].track_pz->push_back(trackInfo.pz);
+        outTrees_[iRes].track_vx->push_back(trackInfo.vx);
+        outTrees_[iRes].track_vy->push_back(trackInfo.vy);
+        outTrees_[iRes].track_vz->push_back(trackInfo.vz);
+        outTrees_[iRes].track_t->push_back(trackInfo.t);
+        outTrees_[iRes].track_terr->push_back(trackInfo.terr);
+
+        int trackVtx3DId=0;
+        for (auto const& vtxInfo:vtx3DInfoList){
+          if (trackInfo.associatedVertex3D==&vtxInfo){
+            outTrees_[iRes].trackVtx3DId->push_back(trackVtx3DId);
+            float IP3DVtx3D, dIP3DVtx3D;
+            computeIPVals(vtxInfo, trackInfo, IP3DVtx3D, dIP3DVtx3D);
+            outTrees_[iRes].trackIP3DVtx3D->push_back(IP3DVtx3D);
+            outTrees_[iRes].trackdIP3DVtx3D->push_back(dIP3DVtx3D);
+            break;
+          }
+          trackVtx3DId++;
+        }
+        outTrees_[iRes].trackVtx3DAssociationRank->push_back(trackInfo.vtx3DAssociationRank);
+
+        int trackVtx4DId=0;
+        for (auto const& vtxInfo:vtx4DInfoList){
+          if (trackInfo.associatedVertex4D==&vtxInfo){
+            outTrees_[iRes].trackVtx4DId->push_back(trackVtx4DId);
+            float IP3DVtx4D, dIP3DVtx4D;
+            computeIPVals(vtxInfo, trackInfo, IP3DVtx4D, dIP3DVtx4D);
+            outTrees_[iRes].trackIP3DVtx4D->push_back(IP3DVtx4D);
+            outTrees_[iRes].trackdIP3DVtx4D->push_back(dIP3DVtx4D);
+            break;
+          }
+          trackVtx4DId++;
+        }
+        outTrees_[iRes].trackVtx4DAssociationRank->push_back(trackInfo.vtx4DAssociationRank);
+      }
+    }
+
+    /*
+    for (int iDR=0; iDR<(int) isoConeSize_.size(); ++iDR){
+      float const& DR = isoConeSize_[iDR];
+      outTrees_[iRes].chIsoDR->push_back(DR);
+
+      outTrees_[iRes].chIsoZCut->at(iDR) = 0.0;
+      outTrees_[iRes].chIsoZTCut_3sigma->at(iDR) = 0.0;
+      outTrees_[iRes].chIsoZTCut_4sigma->at(iDR) = 0.0;
+      outTrees_[iRes].chIsoZTCut_5sigma->at(iDR) = 0.0;
+      outTrees_[iRes].chIsoZTCut_7sigma->at(iDR) = 0.0;
+      outTrees_[iRes].chIsoZTCut_10sigma->at(iDR) = 0.0;
+
+      // Compute charged trk isolation from the 3D vertex
+      std::vector<reco::TrackRef>& tracks_3D = vertices_to_tracks_3D.at(vtx3D_index);
+      for (auto& ref:tracks_3D){
+        if (!ref->quality(reco::TrackBase::highPurity)) continue;
+
+        const float dz = std::abs(ref->dz(vtx3D.position()));
+        const bool keepz = (dz < dzCut_);
+        const float this_dr = reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi());
+
+        if (iDR==0){
+          outTrees_[iRes].nTracksZCut += 1;
+          outTrees_[iRes].tracksZCut_pt->push_back(ref->pt());
+          outTrees_[iRes].tracksZCut_eta->push_back(ref->eta());
+          outTrees_[iRes].tracksZCut_phi->push_back(ref->phi());
+          outTrees_[iRes].tracksZCut_dR->push_back(this_dr);
+          outTrees_[iRes].tracksZCut_t->push_back(track_times[ref]);
+          outTrees_[iRes].tracksZCut_dz->push_back(ref->dz(vtx3D.position()));
+        }
+
+        if (ref==muontrack) continue;
+        if (!keepz) continue;
+        if (this_dr >= DR*DR) continue;
+        outTrees_[iRes].chIsoZCut->at(iDR) += ref->pt();
+      }
+
+      // Compute charged trk isolation from the 4D vertex
+      std::vector<reco::TrackRef>& tracks_4D = vertices_to_tracks_4D.at(vtx4D_index);
+      for (auto& ref:tracks_4D){
+        if (!ref->quality(reco::TrackBase::highPurity)) continue;
+
+        const float dz = std::abs(ref->dz(vtx4D.position()));
+        const bool keepz = (dz < dzCut_);
+        const float this_dr = reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi());
+
+        const float t0 = track_t0[ref];
+        const float t0err = track_t0err[ref];
+        const float dt = std::abs(t0 - vtx4D.t());
+        const bool useTime = (vtx4D.tError()>0. && t0err>0.);
+        const float base_cut = std::sqrt(vtx4D.tError()*vtx4D.tError() + t0err*t0err);
+        const float time_cut3 = 3.f*base_cut;
+        const float time_cut4 = 4.f*base_cut;
+        const float time_cut5 = 5.f*base_cut;
+        const float time_cut7 = 7.f*base_cut;
+        const float time_cut10 = 10.f*base_cut;
+
+        const bool keept3 = (!useTime || std::isnan(dt) || dt < time_cut3);
+        const bool keept4 = (!useTime || std::isnan(dt) || dt < time_cut4);
+        const bool keept5 = (!useTime || std::isnan(dt) || dt < time_cut5);
+        const bool keept7 = (!useTime || std::isnan(dt) || dt < time_cut7);
+        const bool keept10 = (!useTime || std::isnan(dt) || dt < time_cut10);
+
+        if (iDR==0){
+          outTrees_[iRes].nTracksZTCut += 1;
+          outTrees_[iRes].tracksZTCut_pt->push_back(ref->pt());
+          outTrees_[iRes].tracksZTCut_eta->push_back(ref->eta());
+          outTrees_[iRes].tracksZTCut_phi->push_back(ref->phi());
+          outTrees_[iRes].tracksZTCut_dR->push_back(this_dr);
+          outTrees_[iRes].tracksZTCut_t->push_back(t0);
+          outTrees_[iRes].tracksZTCut_dz->push_back(ref->dz(vtx4D.position()));
+        }
+
+        if (ref==muontrack) continue;
+        if (!keepz) continue;
+        if (this_dr >= DR*DR) continue;
+
+        if (keept3)
+          outTrees_[iRes].chIsoZTCut_3sigma->at(iDR) += ref->pt();
+        if (keept4)
+          outTrees_[iRes].chIsoZTCut_4sigma->at(iDR) += ref->pt();
+        if (keept5)
+          outTrees_[iRes].chIsoZTCut_5sigma->at(iDR) += ref->pt();
+        if (keept7)
+          outTrees_[iRes].chIsoZTCut_7sigma->at(iDR) += ref->pt();
+        if (keept10)
+          outTrees_[iRes].chIsoZTCut_10sigma->at(iDR) += ref->pt();
+      }
+
+    }
+    */
+    //---Fill tree
+    outTrees_[iRes].GetTTreePtr()->Fill();
+  }
 }
   
 // ------------ method fills 'descriptions' with the allowed parameters for the module  ------------

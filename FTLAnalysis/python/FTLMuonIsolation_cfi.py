@@ -10,7 +10,7 @@ FTLMuonIsolation = cms.EDAnalyzer(
     timeTag = cms.untracked.InputTag("trackTimeValueMapProducer",
                                      "generalTracksConfigurableFlatResolutionModel", "RECO"),
     timeResTag = cms.untracked.InputTag("trackTimeValueMapProducer",
-                                          "generalTracksConfigurableFlatResolutionModelResolution", "RECO"),
+                                     "generalTracksConfigurableFlatResolutionModelResolution", "RECO"),
     genVtxTag = cms.untracked.InputTag("g4SimHits", "", "SIM"),
     vtxTag4D = cms.untracked.InputTag("offlinePrimaryVertices4D", "", "RECO"),
     vtxTag3D = cms.untracked.InputTag("offlinePrimaryVertices", "", "RECO"),
@@ -24,6 +24,11 @@ FTLMuonIsolation = cms.EDAnalyzer(
     treeName = cms.untracked.string("muon_tree"),
     ###---Vtx choice option
     useMCTruthPV = cms.untracked.bool(False),
+    ###---Fill info for all tracks
+    recordTrackInfo = cms.untracked.bool(False),
+    ###---Fill info for all vertices
+    recordVertexInfo = cms.untracked.bool(False),
     ###---Iso options
-    isoConeSizes = cms.untracked.vdouble(0.3, 0.4)
+    isoConeSize = cms.untracked.double(0.3),
+    isoTimeScale = cms.untracked.double(3)
 )

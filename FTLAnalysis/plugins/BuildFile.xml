@@ -5,6 +5,7 @@
 <use   name="FWCore/ParameterSet"/>
 <use   name="CondFormats/DataRecord"/>
 <use   name="CondTools/Ecal"/>
+<use   name="DataFormats/TrackReco"/>
 <use   name="DataFormats/VertexReco"/>
 <use   name="DataFormats/Provenance"/>
 <use   name="DataFormats/Math"/>
@@ -27,6 +28,7 @@
 <use   name="TrackingTools/Records"/>
 <use   name="TrackingTools/IPTools"/>
 <use   name="ExternalTools/DynamicTTree"/>
+<flags CPPDEFINES="_useTrackTime_=0" />
 <flags EDM_PLUGIN="1"/>
 <export>
   <lib   name="1"></lib>

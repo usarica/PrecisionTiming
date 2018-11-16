@@ -1,16 +1,17 @@
 from WMCore.Configuration import Configuration
 
 #sample  = "QCD"
-#sample = "TTbar"
-sample = "DY"
+sample = "TTbar"
+#sample = "DY"
 
-tag = "nTracks_dz0p1_pt0p9_v3"
+tag = "nTracks_dz0p1_pt0p9_v8"
 
 if sample == "QCD":
     in_dataset = '/QCD_Flat_Pt-15to7000_TuneCUETP8M1_14TeV_pythia8/PhaseIITDRFall17DR-PU200_93X_upgrade2023_realistic_v2-v1/GEN-SIM-RECO'
-elif sample == "TTbar":
-    # in_dataset = '/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8/PhaseIITDRFall17DR-PU200_93X_upgrade2023_realistic_v2-v1/GEN-SIM-RECO'
+elif sample == "TTbar_ext":
     in_dataset = '/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8/PhaseIISpr18AODMiniAOD-PU200_93X_upgrade2023_realistic_v5_ext1-v2/AODSIM'
+elif sample == "TTbar":
+    in_dataset = '/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8/PhaseIISpr18AODMiniAOD-PU200_93X_upgrade2023_realistic_v5-v2/AODSIM'
 elif sample == "DY":
     in_dataset = '/DYToLL-M-50_0J_14TeV-madgraphMLM-pythia8/PhaseIISpr18AODMiniAOD-PU200_93X_upgrade2023_realistic_v5-v1/AODSIM'
 

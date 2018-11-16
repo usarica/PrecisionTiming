@@ -13,86 +13,91 @@ using namespace std;
     DATA(int, lumi)                             \
     DATA(int, run)                              \
     DATA(int, iEvent)                           \
-    DATA(float, pt)                             \
-    DATA(float, eta)                            \
-    DATA(float, phi)                            \
-    DATA(float, px)                             \
-    DATA(float, py)                             \
-    DATA(float, pz)                             \
-    DATA(float, muonZ)                          \
-    DATA(bool, isLooseMuon)                     \
-    DATA(bool, isMediumMuon)                    \
-    DATA(bool, isTightMuon)                     \
-    DATA(bool, genMatched)                      \
-    DATA(bool, genMatchedPrompt)                \
-    DATA(bool, genMatchedJet)                   \
-    DATA(int, globalMatchPartId)                      \
-    DATA(float, globalMatchPartVtxX)                      \
-    DATA(float, globalMatchPartVtxY)                      \
-    DATA(float, globalMatchPartVtxZ)                      \
-    DATA(float, genPt)                          \
-    DATA(float, genEta)                         \
-    DATA(float, genPhi)                         \
-    DATA(float, genJetE)                           \
-    DATA(float, genJetPt)                          \
-    DATA(float, genJetEta)                         \
-    DATA(float, genJetPhi)                         \
     DATA(float, simPVX)                         \
     DATA(float, simPVY)                         \
     DATA(float, simPVZ)                         \
     DATA(float, simPVT)                         \
-    DATA(float, genVtxX)                         \
-    DATA(float, genVtxY)                         \
-    DATA(float, genVtxZ)                         \
-    DATA(float, genVtxT)                         \
-    DATA(int, vtx3DIdx)                         \
-    DATA(int, vtx4DIdx)                         \
-    DATA(int, nTracksVtx)                       \
-    DATA(int, nTracksVtxAssoc)                  \
-    DATA(float, nVtxs)                          \
-    DATA(float, vtx3DX)                         \
-    DATA(float, vtx3DY)                         \
-    DATA(float, vtx3DZ)                         \
-    DATA(float, SIP3D)                         \
-    DATA(float, vtx3DNdof)                      \
-    DATA(float, vtx3DChi2)                      \
-    DATA(bool, vtx3DIsFake)                     \
-    DATA(float, vtx4DX)                         \
-    DATA(float, vtx4DY)                         \
-    DATA(float, vtx4DZ)                         \
-    DATA(float, vtx4DT)                         \
-    DATA(float, vtx4DTerr)                         \
-    DATA(float, SIP4D)                         \
-    DATA(float, vtx4DNdof)                      \
-    DATA(float, vtx4DChi2)                      \
-    DATA(bool, vtx4DIsFake)                     
+    DATA(unsigned int, nMuons)                  \
+    DATA(unsigned int, nVtx3D)                  \
+    DATA(unsigned int, nVtx4D)                  
 
-#define DATA_CLASS_TABLE                                \
-    DATA(std::vector<float>, chIsoDR)                   \
-    DATA(std::vector<float>, chIsoZCut)                 \
-    DATA(std::vector<float>, chIsoZTCut_3sigma)         \
-    DATA(std::vector<float>, chIsoZTCut_4sigma)         \
-    DATA(std::vector<float>, chIsoZTCut_5sigma)         \
-    DATA(std::vector<float>, chIsoZTCut_7sigma)         \
-    DATA(std::vector<float>, chIsoZTCut_10sigma)        \
-    DATA(std::vector<int>,   nTracksZCut)               \
-    DATA(std::vector<int>,   nTracksZTCut_3sigma)       \
-    DATA(std::vector<int>,   nTracksZTCut_4sigma)       \
-    DATA(std::vector<int>,   nTracksZTCut_5sigma)       \
-    DATA(std::vector<int>,   nTracksZTCut_7sigma)       \
-    DATA(std::vector<int>,   nTracksZTCut_10sigma)      \
-    DATA(std::vector<float>, tracksZCut_iso03_pt)       \
-    DATA(std::vector<float>, tracksZCut_iso03_eta)      \
-    DATA(std::vector<float>, tracksZCut_iso03_phi)      \
-    DATA(std::vector<float>, tracksZCut_iso03_dR)       \
-    DATA(std::vector<float>, tracksZCut_iso03_t)        \
-    DATA(std::vector<float>, tracksZCut_iso03_dz)               \
-    DATA(std::vector<float>, tracksZTCut_3sigma_iso03_pt)       \
-    DATA(std::vector<float>, tracksZTCut_3sigma_iso03_eta)      \
-    DATA(std::vector<float>, tracksZTCut_3sigma_iso03_phi)      \
-    DATA(std::vector<float>, tracksZTCut_3sigma_iso03_dR)       \
-    DATA(std::vector<float>, tracksZTCut_3sigma_iso03_t)        \
-    DATA(std::vector<float>, tracksZTCut_3sigma_iso03_dz)        
+#define DATA_CLASS_TABLE                        \
+    DATA(std::vector<float>, muon_pt)                             \
+    DATA(std::vector<float>, muon_eta)                            \
+    DATA(std::vector<float>, muon_phi)                            \
+    DATA(std::vector<float>, muon_px)                             \
+    DATA(std::vector<float>, muon_py)                             \
+    DATA(std::vector<float>, muon_pz)                             \
+    DATA(std::vector<float>, muon_vx)                          \
+    DATA(std::vector<float>, muon_vy)                          \
+    DATA(std::vector<float>, muon_vz)                          \
+    DATA(std::vector<float>, muon_t)                          \
+    DATA(std::vector<float>, muon_terr)                          \
+    DATA(std::vector<unsigned int>, isLooseMuon)                     \
+    DATA(std::vector<unsigned int>, isMediumMuon)                    \
+    DATA(std::vector<unsigned int>, isTightMuon)                     \
+    DATA(std::vector<unsigned int>, muonGenMatched)                      \
+    DATA(std::vector<unsigned int>, muonGenMatchedPrompt)                \
+    DATA(std::vector<unsigned int>, muonGenMatchedJet)                   \
+    DATA(std::vector<float>, muonGenPt)                          \
+    DATA(std::vector<float>, muonGenEta)                         \
+    DATA(std::vector<float>, muonGenPhi)                         \
+    DATA(std::vector<float>, muonGenJetE)                           \
+    DATA(std::vector<float>, muonGenJetPt)                          \
+    DATA(std::vector<float>, muonGenJetEta)                         \
+    DATA(std::vector<float>, muonGenJetPhi)                         \
+    DATA(std::vector<int>, muonTrkId)                               \
+    DATA(std::vector<unsigned int>, muonVtx3DId)                \
+    DATA(std::vector<float>, muonIP3DVtx3D)                      \
+    DATA(std::vector<float>, muondIP3DVtx3D)                     \
+    DATA(std::vector<unsigned int>, muonVtx4DId)                \
+    DATA(std::vector<float>, muonIP3DVtx4D)                      \
+    DATA(std::vector<float>, muondIP3DVtx4D)                     \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_unassociated)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_associationrank_0)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_associationrank_1)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_unassociated)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_associationrank_0)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_associationrank_1)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_associationrank_2)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_nodzcut_associationrank_0)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_nodzcut_associationrank_1)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_nodzcut_associationrank_2)          \
+    DATA(std::vector<float>, track_pt)                             \
+    DATA(std::vector<float>, track_eta)                            \
+    DATA(std::vector<float>, track_phi)                            \
+    DATA(std::vector<float>, track_px)                             \
+    DATA(std::vector<float>, track_py)                             \
+    DATA(std::vector<float>, track_pz)                             \
+    DATA(std::vector<float>, track_vx)                          \
+    DATA(std::vector<float>, track_vy)                          \
+    DATA(std::vector<float>, track_vz)                          \
+    DATA(std::vector<float>, track_t)                          \
+    DATA(std::vector<float>, track_terr)                          \
+    DATA(std::vector<unsigned int>, trackVtx3DId)                \
+    DATA(std::vector<float>, trackIP3DVtx3D)                      \
+    DATA(std::vector<float>, trackdIP3DVtx3D)                     \
+    DATA(std::vector<int>, trackVtx3DAssociationRank)   \
+    DATA(std::vector<unsigned int>, trackVtx4DId)                \
+    DATA(std::vector<float>, trackIP3DVtx4D)                      \
+    DATA(std::vector<float>, trackdIP3DVtx4D)                     \
+    DATA(std::vector<int>, trackVtx4DAssociationRank)   \
+    DATA(std::vector<float>, vtx3D_vx)                             \
+    DATA(std::vector<float>, vtx3D_vy)                             \
+    DATA(std::vector<float>, vtx3D_vz)                             \
+    DATA(std::vector<unsigned int>, vtx3D_ntrks)                \
+    DATA(std::vector<float>, vtx3D_ndof)                \
+    DATA(std::vector<float>, vtx3D_chisq)                \
+    DATA(std::vector<float>, vtx4D_vx)                             \
+    DATA(std::vector<float>, vtx4D_vy)                             \
+    DATA(std::vector<float>, vtx4D_vz)                             \
+    DATA(std::vector<float>, vtx4D_t)                          \
+    DATA(std::vector<float>, vtx4D_terr)                          \
+    DATA(std::vector<unsigned int>, vtx4D_ntrks)                \
+    DATA(std::vector<float>, vtx4D_ndof)                \
+    DATA(std::vector<float>, vtx4D_chisq)                
 
 
 #include "ExternalTools/DynamicTTree/interface/DynamicTTreeInterface.h"
