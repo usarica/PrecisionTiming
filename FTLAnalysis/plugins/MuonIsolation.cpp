@@ -545,16 +545,15 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
         auto const& vtxInfo = vtx4DInfoList.at(ivtx);
         if (testTrackUsedInVertexFit(vtxInfo, trkInfo)){ chosenVtx4D = ivtx; break; }
       }
-      bool trackhastime = trkInfo.hasTime();
       if (chosenVtx4D<0){
         float minSIP=std::numeric_limits<float>::max();
-        if (trackhastime){ // Search within vertices with time measurement first if the track has time. Include dt/delta_dt in SIP
+        if (trkInfo.hasTime()){ // Search within vertices with time measurement first if the track has time. Include dt/delta_dt in SIP
           for (unsigned int ivtx=0; ivtx<vtx4DInfoList.size(); ivtx++){
             auto const& vtxInfo = vtx4DInfoList.at(ivtx);
             float IP_Vtx = 0, dIP_Vtx = 0, dt = 0, dterr = 0;
             if (!computeIPVals(vtxInfo, trkInfo, IP_Vtx, dIP_Vtx)) continue;
             if (!computeRelTimeVals(vtxInfo, trkInfo, dt, dterr)) continue;
-            const float valSIP = (dIP_Vtx*dterr!=0. ? fabs(IP_Vtx*dt)/(dIP_Vtx*dterr) : 0);
+            const float valSIP = sqrt(pow((dIP_Vtx!=0. ? IP_Vtx/dIP_Vtx : 0.), 2) + pow((dterr!=0. ? dt/dterr : 0.), 2));
             if (minSIP>valSIP){
               minSIP = valSIP;
               chosenVtx4D = ivtx;
@@ -654,14 +653,13 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
         }
         if (chosenVtx4D<0){
           float minSIP=std::numeric_limits<float>::max();
-          bool trackhastime = trkInfo->hasTime();
-          if (trackhastime){ // Search within vertices with time measurement first if the track has time. Include dt/delta_dt in SIP
+          if (trkInfo->hasTime()){ // Search within vertices with time measurement first if the track has time. Include dt/delta_dt in SIP
             for (unsigned int ivtx=0; ivtx<vtx4DInfoList.size(); ivtx++){
               auto const& vtxInfo = vtx4DInfoList.at(ivtx);
               float IP_Vtx = 0, dIP_Vtx = 0, dt = 0, dterr = 0;
               if (!computeIPVals(vtxInfo, *trkInfo, IP_Vtx, dIP_Vtx)) continue;
               if (!computeRelTimeVals(vtxInfo, *trkInfo, dt, dterr)) continue;
-              const float valSIP = (dIP_Vtx*dterr!=0. ? fabs(IP_Vtx*dt)/(dIP_Vtx*dterr) : 0);
+              const float valSIP = sqrt(pow((dIP_Vtx!=0. ? IP_Vtx/dIP_Vtx : 0.), 2) + pow((dterr!=0. ? dt/dterr : 0.), 2));
               if (minSIP>valSIP){
                 minSIP = valSIP;
                 chosenVtx4D = ivtx;
@@ -712,7 +710,7 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
             }
 
             if (hasSip){
-              if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0 && abssipval<5.) muon_isosumtrackpt_vtx3D_sipcut_associationrank_0 += trkInfo_.pt;
+              if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0 && abssipval<3.) muon_isosumtrackpt_vtx3D_sipcut_associationrank_0 += trkInfo_.pt;
               else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1 && abssipval<3.) muon_isosumtrackpt_vtx3D_sipcut_associationrank_1 += trkInfo_.pt;
               else if (abssipval<3.) muon_isosumtrackpt_vtx3D_sipcut_unassociated += trkInfo_.pt;
             }
@@ -749,7 +747,7 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 
             if (hasSip){
               if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==0 && abssipval<5.) muon_isosumtrackpt_vtx4D_sipcut_associationrank_0 += trkInfo_.pt;
-              else if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==1 && abssipval<20. && abssipval*reldt<5.) muon_isosumtrackpt_vtx4D_sipcut_associationrank_1 += trkInfo_.pt;
+              else if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==1 && abssipval<5.) muon_isosumtrackpt_vtx4D_sipcut_associationrank_1 += trkInfo_.pt;
               else if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==2 && abssipval<5.) muon_isosumtrackpt_vtx4D_sipcut_associationrank_2 += trkInfo_.pt;
               else if (abssipval<5.) muon_isosumtrackpt_vtx4D_sipcut_unassociated += trkInfo_.pt;
             }
