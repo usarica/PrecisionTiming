@@ -1,10 +1,11 @@
 from WMCore.Configuration import Configuration
 
 #sample  = "QCD"
-sample = "TTbar"
+#sample = "TTbar"
+sample = "TTbar_ext"
 #sample = "DY"
 
-tag = "nTracks_dz0p1_pt0p9_v8"
+tag = "new_v1"
 
 if sample == "QCD":
     in_dataset = '/QCD_Flat_Pt-15to7000_TuneCUETP8M1_14TeV_pythia8/PhaseIITDRFall17DR-PU200_93X_upgrade2023_realistic_v2-v1/GEN-SIM-RECO'

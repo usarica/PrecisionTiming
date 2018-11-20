@@ -593,8 +593,10 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 
       // Vertex association variables
       int chosenVtx3D=-1;
+      int rankVtx3D=-1;
       float IP3DVtx3D=0, dIP3DVtx3D=0;
       int chosenVtx4D=-1;
+      int rankVtx4D=-1;
       float IP3DVtx4D=0, dIP3DVtx4D=0;
       // chIso pt sums
       float muon_isosumtrackpt_vtx3D_unassociated=0;
@@ -641,7 +643,9 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
               chosenVtx3D = ivtx;
             }
           }
+          if (chosenVtx3D>=0) rankVtx3D=1;
         }
+        else rankVtx3D=0;
         if (chosenVtx3D<0) chosenVtx3D=0;
         muonInfo.associatedVertex3D = &(vtx3DInfoList.at(chosenVtx3D));
         computeIPVals(vtx3DInfoList.at(chosenVtx3D), *trkInfo, IP3DVtx3D, dIP3DVtx3D);
@@ -678,8 +682,11 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
                 chosenVtx4D = ivtx;
               }
             }
+            if (chosenVtx4D>=0) rankVtx4D=2;
           }
+          else rankVtx4D=1;
         }
+        else rankVtx4D=0;
         if (chosenVtx4D<0) chosenVtx4D=0;
         muonInfo.associatedVertex4D = &(vtx4DInfoList.at(chosenVtx4D));
         computeIPVals(vtx4DInfoList.at(chosenVtx4D), *trkInfo, IP3DVtx4D, dIP3DVtx4D);
@@ -840,9 +847,26 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       outTrees_[iRes].muonVtx3DId->push_back(chosenVtx3D);
       outTrees_[iRes].muonIP3DVtx3D->push_back(IP3DVtx3D);
       outTrees_[iRes].muondIP3DVtx3D->push_back(dIP3DVtx3D);
+      outTrees_[iRes].muonVtx3DAssociationRank->push_back(rankVtx3D);
+      outTrees_[iRes].muon_Vtx3D_vx->push_back(muonInfo.associatedVertex3D->vx);
+      outTrees_[iRes].muon_Vtx3D_vy->push_back(muonInfo.associatedVertex3D->vy);
+      outTrees_[iRes].muon_Vtx3D_vz->push_back(muonInfo.associatedVertex3D->vz);
+      outTrees_[iRes].muon_Vtx3D_ndof->push_back(muonInfo.associatedVertex3D->ndof);
+      outTrees_[iRes].muon_Vtx3D_chisq->push_back(muonInfo.associatedVertex3D->chisq);
+      outTrees_[iRes].muon_Vtx3D_ntrks->push_back(muonInfo.associatedVertex3D->ptr->nTracks(0.));
+
       outTrees_[iRes].muonVtx4DId->push_back(chosenVtx4D);
       outTrees_[iRes].muonIP3DVtx4D->push_back(IP3DVtx4D);
       outTrees_[iRes].muondIP3DVtx4D->push_back(dIP3DVtx4D);
+      outTrees_[iRes].muonVtx4DAssociationRank->push_back(rankVtx4D);
+      outTrees_[iRes].muon_Vtx4D_vx->push_back(muonInfo.associatedVertex4D->vx);
+      outTrees_[iRes].muon_Vtx4D_vy->push_back(muonInfo.associatedVertex4D->vy);
+      outTrees_[iRes].muon_Vtx4D_vz->push_back(muonInfo.associatedVertex4D->vz);
+      outTrees_[iRes].muon_Vtx4D_t->push_back(muonInfo.associatedVertex4D->t);
+      outTrees_[iRes].muon_Vtx4D_terr->push_back(muonInfo.associatedVertex4D->terr);
+      outTrees_[iRes].muon_Vtx4D_ndof->push_back(muonInfo.associatedVertex4D->ndof);
+      outTrees_[iRes].muon_Vtx4D_chisq->push_back(muonInfo.associatedVertex4D->chisq);
+      outTrees_[iRes].muon_Vtx4D_ntrks->push_back(muonInfo.associatedVertex4D->ptr->nTracks(0.));
 
       outTrees_[iRes].muon_isosumtrackpt_vtx3D_unassociated->push_back(muon_isosumtrackpt_vtx3D_unassociated);
       outTrees_[iRes].muon_isosumtrackpt_vtx3D_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_associationrank_0);
@@ -913,97 +937,6 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       }
     }
 
-    /*
-    for (int iDR=0; iDR<(int) isoConeSize_.size(); ++iDR){
-      float const& DR = isoConeSize_[iDR];
-      outTrees_[iRes].chIsoDR->push_back(DR);
-
-      outTrees_[iRes].chIsoZCut->at(iDR) = 0.0;
-      outTrees_[iRes].chIsoZTCut_3sigma->at(iDR) = 0.0;
-      outTrees_[iRes].chIsoZTCut_4sigma->at(iDR) = 0.0;
-      outTrees_[iRes].chIsoZTCut_5sigma->at(iDR) = 0.0;
-      outTrees_[iRes].chIsoZTCut_7sigma->at(iDR) = 0.0;
-      outTrees_[iRes].chIsoZTCut_10sigma->at(iDR) = 0.0;
-
-      // Compute charged trk isolation from the 3D vertex
-      std::vector<reco::TrackRef>& tracks_3D = vertices_to_tracks_3D.at(vtx3D_index);
-      for (auto& ref:tracks_3D){
-        if (!ref->quality(reco::TrackBase::highPurity)) continue;
-
-        const float dz = std::abs(ref->dz(vtx3D.position()));
-        const bool keepz = (dz < dzCut_);
-        const float this_dr = reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi());
-
-        if (iDR==0){
-          outTrees_[iRes].nTracksZCut += 1;
-          outTrees_[iRes].tracksZCut_pt->push_back(ref->pt());
-          outTrees_[iRes].tracksZCut_eta->push_back(ref->eta());
-          outTrees_[iRes].tracksZCut_phi->push_back(ref->phi());
-          outTrees_[iRes].tracksZCut_dR->push_back(this_dr);
-          outTrees_[iRes].tracksZCut_t->push_back(track_times[ref]);
-          outTrees_[iRes].tracksZCut_dz->push_back(ref->dz(vtx3D.position()));
-        }
-
-        if (ref==muontrack) continue;
-        if (!keepz) continue;
-        if (this_dr >= DR*DR) continue;
-        outTrees_[iRes].chIsoZCut->at(iDR) += ref->pt();
-      }
-
-      // Compute charged trk isolation from the 4D vertex
-      std::vector<reco::TrackRef>& tracks_4D = vertices_to_tracks_4D.at(vtx4D_index);
-      for (auto& ref:tracks_4D){
-        if (!ref->quality(reco::TrackBase::highPurity)) continue;
-
-        const float dz = std::abs(ref->dz(vtx4D.position()));
-        const bool keepz = (dz < dzCut_);
-        const float this_dr = reco::deltaR2(ref->eta(), ref->phi(), muon.eta(), muon.phi());
-
-        const float t0 = track_t0[ref];
-        const float t0err = track_t0err[ref];
-        const float dt = std::abs(t0 - vtx4D.t());
-        const bool useTime = (vtx4D.tError()>0. && t0err>0.);
-        const float base_cut = std::sqrt(vtx4D.tError()*vtx4D.tError() + t0err*t0err);
-        const float time_cut3 = 3.f*base_cut;
-        const float time_cut4 = 4.f*base_cut;
-        const float time_cut5 = 5.f*base_cut;
-        const float time_cut7 = 7.f*base_cut;
-        const float time_cut10 = 10.f*base_cut;
-
-        const bool keept3 = (!useTime || std::isnan(dt) || dt < time_cut3);
-        const bool keept4 = (!useTime || std::isnan(dt) || dt < time_cut4);
-        const bool keept5 = (!useTime || std::isnan(dt) || dt < time_cut5);
-        const bool keept7 = (!useTime || std::isnan(dt) || dt < time_cut7);
-        const bool keept10 = (!useTime || std::isnan(dt) || dt < time_cut10);
-
-        if (iDR==0){
-          outTrees_[iRes].nTracksZTCut += 1;
-          outTrees_[iRes].tracksZTCut_pt->push_back(ref->pt());
-          outTrees_[iRes].tracksZTCut_eta->push_back(ref->eta());
-          outTrees_[iRes].tracksZTCut_phi->push_back(ref->phi());
-          outTrees_[iRes].tracksZTCut_dR->push_back(this_dr);
-          outTrees_[iRes].tracksZTCut_t->push_back(t0);
-          outTrees_[iRes].tracksZTCut_dz->push_back(ref->dz(vtx4D.position()));
-        }
-
-        if (ref==muontrack) continue;
-        if (!keepz) continue;
-        if (this_dr >= DR*DR) continue;
-
-        if (keept3)
-          outTrees_[iRes].chIsoZTCut_3sigma->at(iDR) += ref->pt();
-        if (keept4)
-          outTrees_[iRes].chIsoZTCut_4sigma->at(iDR) += ref->pt();
-        if (keept5)
-          outTrees_[iRes].chIsoZTCut_5sigma->at(iDR) += ref->pt();
-        if (keept7)
-          outTrees_[iRes].chIsoZTCut_7sigma->at(iDR) += ref->pt();
-        if (keept10)
-          outTrees_[iRes].chIsoZTCut_10sigma->at(iDR) += ref->pt();
-      }
-
-    }
-    */
     //---Fill tree
     outTrees_[iRes].GetTTreePtr()->Fill();
   }

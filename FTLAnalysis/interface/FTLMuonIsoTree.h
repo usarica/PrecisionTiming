@@ -47,12 +47,28 @@ using namespace std;
     DATA(std::vector<float>, muonGenJetEta)                         \
     DATA(std::vector<float>, muonGenJetPhi)                         \
     DATA(std::vector<int>, muonTrkId)                               \
-    DATA(std::vector<unsigned int>, muonVtx3DId)                \
+    DATA(std::vector<unsigned int>, muonVtx3DId)                 \
     DATA(std::vector<float>, muonIP3DVtx3D)                      \
     DATA(std::vector<float>, muondIP3DVtx3D)                     \
-    DATA(std::vector<unsigned int>, muonVtx4DId)                \
+    DATA(std::vector<int>, muonVtx3DAssociationRank)             \
+    DATA(std::vector<unsigned int>, muonVtx4DId)                 \
     DATA(std::vector<float>, muonIP3DVtx4D)                      \
     DATA(std::vector<float>, muondIP3DVtx4D)                     \
+    DATA(std::vector<int>, muonVtx4DAssociationRank)             \
+    DATA(std::vector<float>, muon_Vtx3D_vx)                             \
+    DATA(std::vector<float>, muon_Vtx3D_vy)                             \
+    DATA(std::vector<float>, muon_Vtx3D_vz)                             \
+    DATA(std::vector<unsigned int>, muon_Vtx3D_ntrks)                \
+    DATA(std::vector<float>, muon_Vtx3D_ndof)                \
+    DATA(std::vector<float>, muon_Vtx3D_chisq)                \
+    DATA(std::vector<float>, muon_Vtx4D_vx)                             \
+    DATA(std::vector<float>, muon_Vtx4D_vy)                             \
+    DATA(std::vector<float>, muon_Vtx4D_vz)                             \
+    DATA(std::vector<float>, muon_Vtx4D_t)                          \
+    DATA(std::vector<float>, muon_Vtx4D_terr)                          \
+    DATA(std::vector<unsigned int>, muon_Vtx4D_ntrks)                \
+    DATA(std::vector<float>, muon_Vtx4D_ndof)                \
+    DATA(std::vector<float>, muon_Vtx4D_chisq)               \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_unassociated)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_associationrank_0)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_associationrank_1)          \
