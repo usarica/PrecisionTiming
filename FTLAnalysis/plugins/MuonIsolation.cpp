@@ -110,6 +110,8 @@ struct TrackInformation{
   VertexInformation const* associatedVertex4D;
   int vtx3DAssociationRank;
   int vtx4DAssociationRank;
+  unsigned int nVtx3DWgts;
+  unsigned int nVtx4DWgts;
   float px;
   float py;
   float pz;
@@ -161,7 +163,9 @@ struct TrackInformation{
     associatedVertex3D(nullptr),
     associatedVertex4D(nullptr),
     vtx3DAssociationRank(-1),
-    vtx4DAssociationRank(-1)
+    vtx4DAssociationRank(-1),
+    nVtx3DWgts(0),
+    nVtx4DWgts(0)
   { setup(); }
   TrackInformation() :
     ref(),
@@ -169,7 +173,9 @@ struct TrackInformation{
     associatedVertex3D(nullptr),
     associatedVertex4D(nullptr),
     vtx3DAssociationRank(-1),
-    vtx4DAssociationRank(-1)
+    vtx4DAssociationRank(-1),
+    nVtx3DWgts(0),
+    nVtx4DWgts(0)
   { setup(); }
 
 };
@@ -251,8 +257,13 @@ struct MuonInformation{
 };
 
 
-bool testTrackUsedInVertexFit(VertexInformation const& vtx, TrackInformation const& trk){
-  return bool(vtx.isUsable && trk.isNonnull() && vtx.ptr->trackWeight(trk.ref)>0.);
+bool testTrackUsedInVertexFit(VertexInformation const& vtx, TrackInformation const& trk, float* wgt=nullptr){
+  float w=0;
+  bool res=(vtx.isUsable && trk.isNonnull());
+  if (res) w = vtx.ptr->trackWeight(trk.ref);
+  res &= (w>0.);
+  if (wgt) *wgt=w;
+  return res;
 }
 bool computeIPVals(
   VertexInformation const& vtx, TrackInformation const& trk,
@@ -518,7 +529,10 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       int chosenVtx3D=-1;
       for (unsigned int ivtx=0; ivtx<vtx3DInfoList.size(); ivtx++){
         auto const& vtxInfo = vtx3DInfoList.at(ivtx);
-        if (testTrackUsedInVertexFit(vtxInfo, trkInfo)){ chosenVtx3D = ivtx; break; }
+        if (testTrackUsedInVertexFit(vtxInfo, trkInfo)){
+          if (chosenVtx3D<0) chosenVtx3D = ivtx;
+          trkInfo.nVtx3DWgts++;
+        }
       }
       if (chosenVtx3D<0){
         float minSIP=std::numeric_limits<float>::max();
@@ -543,7 +557,10 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       int chosenVtx4D=-1;
       for (unsigned int ivtx=0; ivtx<vtx4DInfoList.size(); ivtx++){
         auto const& vtxInfo = vtx4DInfoList.at(ivtx);
-        if (testTrackUsedInVertexFit(vtxInfo, trkInfo)){ chosenVtx4D = ivtx; break; }
+        if (testTrackUsedInVertexFit(vtxInfo, trkInfo)){
+          if (chosenVtx4D<0) chosenVtx4D = ivtx;
+          trkInfo.nVtx4DWgts++;
+        }
       }
       if (chosenVtx4D<0){
         float minSIP=std::numeric_limits<float>::max();
@@ -611,6 +628,26 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       float muon_isosumtrackpt_vtx3D_sipcut_associationrank_0=0;
       float muon_isosumtrackpt_vtx3D_sipcut_associationrank_1=0;
 
+      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_unassociated=0;
+      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_associationrank_0=0;
+      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_associationrank_1=0;
+      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated=0;
+      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0=0;
+      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1=0;
+      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated=0;
+      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0=0;
+      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1=0;
+      float muon_isosumtrackpt_vtx3D_dtmuoncut_unassociated=0;
+      float muon_isosumtrackpt_vtx3D_dtmuoncut_associationrank_0=0;
+      float muon_isosumtrackpt_vtx3D_dtmuoncut_associationrank_1=0;
+      float muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated=0;
+      float muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0=0;
+      float muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1=0;
+      float muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated=0;
+      float muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0=0;
+      float muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1=0;
+
+
       float muon_isosumtrackpt_vtx4D_unassociated=0;
       float muon_isosumtrackpt_vtx4D_associationrank_0=0;
       float muon_isosumtrackpt_vtx4D_associationrank_1=0;
@@ -625,6 +662,7 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       float muon_isosumtrackpt_vtx4D_sipcut_associationrank_0=0;
       float muon_isosumtrackpt_vtx4D_sipcut_associationrank_1=0;
       float muon_isosumtrackpt_vtx4D_sipcut_associationrank_2=0;
+
       if (trkInfo){
         // Loop over 3D vertices
         for (unsigned int ivtx=0; ivtx<vtx3DInfoList.size(); ivtx++){
@@ -701,6 +739,12 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
           float this_dr = reco::deltaR2(trkInfo_.ref->eta(), trkInfo_.ref->phi(), muonInfo.eta, muonInfo.phi);
           bool keep_dr = (this_dr <= isoConeSize_);
 
+          bool has_dtmuon = (trkInfo_.hasTime() && muonInfo.hasTime());
+          float dtmuon = (has_dtmuon ? std::abs(trkInfo_.t - trkInfo->t) : 0);
+          float dtmuonerr = (has_dtmuon ? sqrt(pow(trkInfo_.terr, 2) + pow(trkInfo->terr, 2)) : 0);
+          float reldtmuon = (dtmuonerr>0. ? dtmuon/dtmuonerr : 0.);
+          bool keep_dtmuon = (reldtmuon <= isoTimeScale_);
+
           float trkIP_Vtx = 0, trkdIP_Vtx = 0;
           bool hasSip = (computeIPVals(*(muonInfo.associatedVertex3D), trkInfo_, trkIP_Vtx, trkdIP_Vtx));
           float abssipval = (hasSip && trkdIP_Vtx>0. ? fabs(trkIP_Vtx/trkdIP_Vtx) : 0);
@@ -720,6 +764,42 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
               if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0 && abssipval<3.) muon_isosumtrackpt_vtx3D_sipcut_associationrank_0 += trkInfo_.pt;
               else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1 && abssipval<3.) muon_isosumtrackpt_vtx3D_sipcut_associationrank_1 += trkInfo_.pt;
               else if (abssipval<3.) muon_isosumtrackpt_vtx3D_sipcut_unassociated += trkInfo_.pt;
+            }
+
+            if (keep_dtmuon){
+              if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0) muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0 += trkInfo_.pt;
+              else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1) muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1 += trkInfo_.pt;
+              else muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated += trkInfo_.pt;
+
+              if (keep_dz){
+                if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0) muon_isosumtrackpt_vtx3D_dtmuoncut_associationrank_0 += trkInfo_.pt;
+                else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1) muon_isosumtrackpt_vtx3D_dtmuoncut_associationrank_1 += trkInfo_.pt;
+                else muon_isosumtrackpt_vtx3D_dtmuoncut_unassociated += trkInfo_.pt;
+              }
+
+              if (hasSip){
+                if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0 && abssipval<3.) muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0 += trkInfo_.pt;
+                else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1 && abssipval<3.) muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1 += trkInfo_.pt;
+                else if (abssipval<3.) muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated += trkInfo_.pt;
+              }
+
+              if (has_dtmuon){
+                if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0) muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0 += trkInfo_.pt;
+                else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1) muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1 += trkInfo_.pt;
+                else muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated += trkInfo_.pt;
+
+                if (keep_dz){
+                  if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0) muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_associationrank_0 += trkInfo_.pt;
+                  else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1) muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_associationrank_1 += trkInfo_.pt;
+                  else muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_unassociated += trkInfo_.pt;
+                }
+
+                if (hasSip){
+                  if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0 && abssipval<3.) muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0 += trkInfo_.pt;
+                  else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1 && abssipval<3.) muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1 += trkInfo_.pt;
+                  else if (abssipval<3.) muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated += trkInfo_.pt;
+                }
+              }
             }
 
           }
@@ -877,6 +957,24 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       outTrees_[iRes].muon_isosumtrackpt_vtx3D_sipcut_unassociated->push_back(muon_isosumtrackpt_vtx3D_sipcut_unassociated);
       outTrees_[iRes].muon_isosumtrackpt_vtx3D_sipcut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_sipcut_associationrank_0);
       outTrees_[iRes].muon_isosumtrackpt_vtx3D_sipcut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_sipcut_associationrank_1);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_unassociated->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_unassociated);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_associationrank_0);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_associationrank_1);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_unassociated->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_unassociated);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_associationrank_0);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_associationrank_1);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1);
       outTrees_[iRes].muon_isosumtrackpt_vtx4D_unassociated->push_back(muon_isosumtrackpt_vtx4D_unassociated);
       outTrees_[iRes].muon_isosumtrackpt_vtx4D_associationrank_0->push_back(muon_isosumtrackpt_vtx4D_associationrank_0);
       outTrees_[iRes].muon_isosumtrackpt_vtx4D_associationrank_1->push_back(muon_isosumtrackpt_vtx4D_associationrank_1);
@@ -920,6 +1018,7 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
           trackVtx3DId++;
         }
         outTrees_[iRes].trackVtx3DAssociationRank->push_back(trackInfo.vtx3DAssociationRank);
+        outTrees_[iRes].trackNVtx3DWgts->push_back(trackInfo.nVtx3DWgts);
 
         int trackVtx4DId=0;
         for (auto const& vtxInfo:vtx4DInfoList){
@@ -934,6 +1033,7 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
           trackVtx4DId++;
         }
         outTrees_[iRes].trackVtx4DAssociationRank->push_back(trackInfo.vtx4DAssociationRank);
+        outTrees_[iRes].trackNVtx4DWgts->push_back(trackInfo.nVtx4DWgts);
       }
     }
 
