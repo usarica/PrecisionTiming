@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <memory>
 #include <unordered_map>
+#include "TLorentzVector.h"
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -360,6 +361,9 @@ private:
   bool recordVertexInfo_;
   double isoConeSize_;
   double isoTimeScale_;
+
+  std::vector<std::pair<int, int>> findDuplicates(const std::vector<float>* fourvector, std::vector<int> id, std::vector<int> status);
+
 };
 
 //
@@ -599,7 +603,74 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       vtx4DInfoList.at(chosenVtx4D).addAssociatedTrackInfo(trkInfo);
     }
 
-    // Loop over the muons
+    // Loop over the gen. muons
+    vector<float> reco_GenParticle_FV[4];
+    vector<int> reco_GenParticle_id;
+    vector<int> reco_GenParticle_status;
+    vector<int> reco_GenParticle_mother1id;
+    vector<int> reco_GenParticle_mother2id;
+    vector<unsigned int> reco_GenParticle_isPromptFinalState;
+    for (reco::GenParticle const& part:(*genPartHandle_)){
+      if (
+        (std::abs(part.pdgId())==13 && (part.status()==23 || part.status()==1)) // Generated muons
+        //((part.pdgId()==25 || part.pdgId()==32) && part.status()==22) // Generated Higgs
+        //||
+        //((std::abs(part.pdgId())>=11 && std::abs(part.pdgId())<=16) && (part.status()==23 || part.status()==1)) // Generated leptons
+        //||
+        //((std::abs(part.pdgId())<=6 || std::abs(part.pdgId())==21) && (part.status()==21 || part.status()==23 || part.status()==22)) // Generated partons
+        ){
+        if (part.status()==23 && part.numberOfDaughters()==1){ if (std::abs(part.daughter(0)->pdgId())==13 && part.daughter(0)->status()==1) continue; }
+        reco_GenParticle_FV[0].push_back(part.px());
+        reco_GenParticle_FV[1].push_back(part.py());
+        reco_GenParticle_FV[2].push_back(part.pz());
+        reco_GenParticle_FV[3].push_back(part.energy());
+        reco_GenParticle_id.push_back(part.pdgId());
+        reco_GenParticle_status.push_back(part.status());
+        reco_GenParticle_isPromptFinalState.push_back(part.isPromptFinalState());
+        if (part.numberOfMothers()>0) reco_GenParticle_mother1id.push_back(part.mother(0)->pdgId());
+        else reco_GenParticle_mother1id.push_back(-9000);
+        if (part.numberOfMothers()>1) reco_GenParticle_mother2id.push_back(part.mother(1)->pdgId());
+        else reco_GenParticle_mother2id.push_back(-9000);
+      }
+    }
+    {
+      vector<pair<int, int>> reco_GenParticle_duplicates = findDuplicates(reco_GenParticle_FV, reco_GenParticle_id, reco_GenParticle_status);
+      vector<int> removalArray;
+      for (pair<int, int> const& duplicate:reco_GenParticle_duplicates){
+        int const& iTransfer = duplicate.first; // Status==23 particle
+        bool inserted=false;
+        for (unsigned int it = 0; it<removalArray.size(); it++){
+          int const& iIndex = removalArray.at(it);
+          if (iTransfer > iIndex){
+            removalArray.insert(removalArray.begin()+it, iTransfer);
+            inserted=true;
+            break;
+          }
+        }
+        if (!inserted) removalArray.push_back(iTransfer);
+      }
+      // Remove status==23 duplicates from genParticles
+      for (int const& iTransfer:removalArray){
+        for (int fv=0; fv<4; fv++) reco_GenParticle_FV[fv].erase(reco_GenParticle_FV[fv].begin()+iTransfer);
+        reco_GenParticle_id.erase(reco_GenParticle_id.begin()+iTransfer);
+        reco_GenParticle_status.erase(reco_GenParticle_status.begin()+iTransfer);
+        reco_GenParticle_mother1id.erase(reco_GenParticle_mother1id.begin()+iTransfer);
+        reco_GenParticle_mother2id.erase(reco_GenParticle_mother2id.begin()+iTransfer);
+        reco_GenParticle_isPromptFinalState.erase(reco_GenParticle_isPromptFinalState.begin()+iTransfer);
+      }
+    }
+    outTrees_[iRes].genmuon_px->assign(reco_GenParticle_FV[0].begin(), reco_GenParticle_FV[0].end());
+    outTrees_[iRes].genmuon_py->assign(reco_GenParticle_FV[1].begin(), reco_GenParticle_FV[1].end());
+    outTrees_[iRes].genmuon_pz->assign(reco_GenParticle_FV[2].begin(), reco_GenParticle_FV[2].end());
+    outTrees_[iRes].genmuon_E->assign(reco_GenParticle_FV[3].begin(), reco_GenParticle_FV[3].end());
+    outTrees_[iRes].genmuon_id->assign(reco_GenParticle_id.begin(), reco_GenParticle_id.end());
+    outTrees_[iRes].genmuon_status->assign(reco_GenParticle_status.begin(), reco_GenParticle_status.end());
+    outTrees_[iRes].genmuon_mother1id->assign(reco_GenParticle_mother1id.begin(), reco_GenParticle_mother1id.end());
+    outTrees_[iRes].genmuon_mother2id->assign(reco_GenParticle_mother2id.begin(), reco_GenParticle_mother2id.end());
+    outTrees_[iRes].genmuon_isPromptFinalState->assign(reco_GenParticle_isPromptFinalState.begin(), reco_GenParticle_isPromptFinalState.end());
+
+
+    // Loop over reco. muons
     std::vector<MuonInformation> muonInfoList; muonInfoList.reserve(muonsHandle_->size());
     for (auto const& muon:(*muonsHandle_)){
       //---basic check
@@ -843,34 +914,12 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
         }
       }
 
-      bool genMatched = false;
-      bool genMatchedPrompt = false;
-      float genPt = -99.;
-      float genEta = -99.;
-      float genPhi = -99.;
       bool genMatchedJet = false;
       float genJetE = -99.;
       float genJetPt = -99.;
       float genJetEta = -99.;
       float genJetPhi = -99.;
-
       double mindr = std::numeric_limits<double>::max();
-      for (const reco::GenParticle &p : *genPartHandle_){
-        if (p.status() != 1) continue;
-        if (std::abs(p.pdgId()) != 13) continue;
-
-        double dr = reco::deltaR(muon, p);
-        if (dr<0.2 && dr<mindr){
-          mindr = dr;
-          genMatched = true;
-          genMatchedPrompt = p.isPromptFinalState();
-          genPt = p.pt();
-          genEta = p.eta();
-          genPhi = p.phi();
-        }
-      }
-
-      mindr = std::numeric_limits<double>::max();
       for (const auto& jet : *genJetHandle_){
         if (jet.pt() < 15.0 || jet.hadEnergy()/jet.energy() < 0.3) continue;
 
@@ -886,12 +935,7 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       }
       
       //---fill muon info
-      outTrees_[iRes].muonGenMatched->push_back(genMatched);
-      outTrees_[iRes].muonGenMatchedPrompt->push_back(genMatchedPrompt);
       outTrees_[iRes].muonGenMatchedJet->push_back(genMatchedJet);
-      outTrees_[iRes].muonGenPt->push_back(genPt);
-      outTrees_[iRes].muonGenEta->push_back(genEta);
-      outTrees_[iRes].muonGenPhi->push_back(genPhi);
       outTrees_[iRes].muonGenJetE->push_back(genJetE);
       outTrees_[iRes].muonGenJetPt->push_back(genJetPt);
       outTrees_[iRes].muonGenJetEta->push_back(genJetEta);
@@ -1050,6 +1094,37 @@ FTLMuonIsolation::fillDescriptions(edm::ConfigurationDescriptions& descriptions)
   edm::ParameterSetDescription desc;
   desc.setUnknown();
   descriptions.addDefault(desc);
+}
+
+std::vector<std::pair<int, int>> FTLMuonIsolation::findDuplicates(const std::vector<float>* fourvector, std::vector<int> id, std::vector<int> status){
+  vector<pair<int, int>> duplicates;
+
+  for (unsigned int xx=0; xx<id.size(); xx++){
+    TLorentzVector p_tm(fourvector[0].at(xx), fourvector[1].at(xx), fourvector[2].at(xx), fourvector[3].at(xx));
+    int id_tm = id.at(xx);
+    int st_tm = status.at(xx);
+    if (st_tm==23 || st_tm==1){
+      for (unsigned int yy=xx+1; yy<id.size(); yy++){
+        TLorentzVector p_tbm(fourvector[0].at(yy), fourvector[1].at(yy), fourvector[2].at(yy), fourvector[3].at(yy));
+        int id_tbm = id.at(yy);
+        int st_tbm = status.at(yy);
+
+        if (id_tbm==id_tm && st_tbm!=st_tm && (st_tbm==1 || st_tbm==23)){
+          double dot_tm = p_tbm.Dot(p_tm);
+          double diff_sqmass = dot_tm - p_tm.M2();
+          diff_sqmass = fabs((double) diff_sqmass);
+          if (diff_sqmass<0.005*fabs(p_tm.M2())){
+            int iFirst = (st_tm==23 ? xx : yy); // Should be order-independent
+            int iSecond = (st_tbm==1 ? yy : xx);
+            pair<int, int> dupinst(iFirst, iSecond);
+            duplicates.push_back(dupinst);
+          }
+        }
+      }
+    }
+  }
+
+  return duplicates;
 }
 
 //define this as a plug-in

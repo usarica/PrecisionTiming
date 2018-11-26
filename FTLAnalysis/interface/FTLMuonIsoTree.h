@@ -39,9 +39,6 @@ using namespace std;
     DATA(std::vector<unsigned int>, muonGenMatched)                      \
     DATA(std::vector<unsigned int>, muonGenMatchedPrompt)                \
     DATA(std::vector<unsigned int>, muonGenMatchedJet)                   \
-    DATA(std::vector<float>, muonGenPt)                          \
-    DATA(std::vector<float>, muonGenEta)                         \
-    DATA(std::vector<float>, muonGenPhi)                         \
     DATA(std::vector<float>, muonGenJetE)                           \
     DATA(std::vector<float>, muonGenJetPt)                          \
     DATA(std::vector<float>, muonGenJetEta)                         \
@@ -108,6 +105,15 @@ using namespace std;
     DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_sipcut_associationrank_0)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_sipcut_associationrank_1)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_sipcut_associationrank_2)          \
+    DATA(std::vector<float>, genmuon_px)                             \
+    DATA(std::vector<float>, genmuon_py)                             \
+    DATA(std::vector<float>, genmuon_pz)                             \
+    DATA(std::vector<float>, genmuon_E)                             \
+    DATA(std::vector<int>, genmuon_id)                              \
+    DATA(std::vector<int>, genmuon_status)                          \
+    DATA(std::vector<int>, genmuon_mother1id)                       \
+    DATA(std::vector<int>, genmuon_mother2id)                       \
+    DATA(std::vector<unsigned int>, genmuon_isPromptFinalState)     \
     DATA(std::vector<float>, track_pt)                             \
     DATA(std::vector<float>, track_eta)                            \
     DATA(std::vector<float>, track_phi)                            \
