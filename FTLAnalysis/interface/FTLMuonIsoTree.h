@@ -35,7 +35,8 @@ using namespace std;
     DATA(std::vector<float>, muon_terr)                          \
     DATA(std::vector<unsigned int>, isLooseMuon)                     \
     DATA(std::vector<unsigned int>, isMediumMuon)                    \
-    DATA(std::vector<unsigned int>, isTightMuon)                     \
+    DATA(std::vector<unsigned int>, isTightMuon3D)                     \
+    DATA(std::vector<unsigned int>, isTightMuon4D)                     \
     DATA(std::vector<unsigned int>, muonGenMatched)                      \
     DATA(std::vector<unsigned int>, muonGenMatchedPrompt)                \
     DATA(std::vector<unsigned int>, muonGenMatchedJet)                   \

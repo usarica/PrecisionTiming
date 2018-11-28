@@ -403,6 +403,57 @@ TGraph* createROCFromDistributions(TH1* hA, TH1* hB, TString name){
 
 float calculateSIP3D(float const& ip, float const& d_ip){ return (d_ip==0.f ? 0. : ip/d_ip); }
 
+int testGenMatchedPromptMuon(
+  float const& reco_px, float const& reco_py, float const& reco_pz,
+  std::vector<float> const& gen_px, std::vector<float> const& gen_py, std::vector<float> const& gen_pz, std::vector<float> const& gen_E,
+  std::vector<int> const& gen_id, std::vector<int> const& gen_status, std::vector<int> const& gen_mother1id, std::vector<int> const& gen_mother2id,
+  std::vector<unsigned int> const& gen_isPromptFinalState,
+  bool requireIsolationThr=true
+){
+  int res=-1;
+  float min_dr=9999;
+  TLorentzVector recoP(reco_px, reco_py, reco_pz, sqrt(reco_px*reco_px + reco_py*reco_py + reco_pz*reco_pz));
+  for (unsigned int ip=0; ip<gen_id.size(); ip++){
+    if (std::abs(gen_id.at(ip))!=13) continue;
+    if (gen_status.at(ip)!=1) continue;
+    if (!(gen_isPromptFinalState.at(ip)==1 || (gen_isPromptFinalState.at(ip)==0 && (std::abs(gen_mother1id.at(ip))==24 || std::abs(gen_mother1id.at(ip))==15)))) continue;
+
+    TLorentzVector genP(gen_px.at(ip), gen_py.at(ip), gen_pz.at(ip), gen_E.at(ip));
+    float dR = genP.DeltaR(recoP);
+    if (requireIsolationThr && dR>=0.2) continue;
+    if (dR<min_dr){
+      min_dr=dR;
+      res=ip;
+    }
+  }
+  return res;
+}
+int testGenMatchedNonPromptMuon(
+  float const& reco_px, float const& reco_py, float const& reco_pz,
+  std::vector<float> const& gen_px, std::vector<float> const& gen_py, std::vector<float> const& gen_pz, std::vector<float> const& gen_E,
+  std::vector<int> const& gen_id, std::vector<int> const& gen_status, std::vector<int> const& gen_mother1id, std::vector<int> const& gen_mother2id,
+  std::vector<unsigned int> const& gen_isPromptFinalState,
+  bool requireIsolationThr=true
+){
+  int res=-1;
+  float min_dr=9999;
+  TLorentzVector recoP(reco_px, reco_py, reco_pz, sqrt(reco_px*reco_px + reco_py*reco_py + reco_pz*reco_pz));
+  for (unsigned int ip=0; ip<gen_id.size(); ip++){
+    if (std::abs(gen_id.at(ip))!=13) continue;
+    if (gen_status.at(ip)!=1) continue;
+    if ((gen_isPromptFinalState.at(ip)==1 || (gen_isPromptFinalState.at(ip)==0 && (std::abs(gen_mother1id.at(ip))==24 || std::abs(gen_mother1id.at(ip))==15)))) continue;
+
+    TLorentzVector genP(gen_px.at(ip), gen_py.at(ip), gen_pz.at(ip), gen_E.at(ip));
+    float dR = genP.DeltaR(recoP);
+    if (requireIsolationThr && dR>=0.2) continue;
+    if (dR<min_dr){
+      min_dr=dR;
+      res=ip;
+    }
+  }
+  return res;
+}
+
 float getTrackMarkerSize(float const& refval, float const& refmin, float const& refmax){
   constexpr float vmin = 0.7;
   constexpr float vmax = 1.5;
@@ -484,12 +535,16 @@ void compareIsolation(TString strSelection="GenMatched"){
   std::vector<unsigned int>* isLooseMuon=nullptr;
   std::vector<unsigned int>* isMediumMuon=nullptr;
   std::vector<unsigned int>* isTightMuon=nullptr;
-  std::vector<unsigned int>* muonGenMatched=nullptr;
-  std::vector<unsigned int>* muonGenMatchedPrompt=nullptr;
+  std::vector<float>* genmuon_px=nullptr;
+  std::vector<float>* genmuon_py=nullptr;
+  std::vector<float>* genmuon_pz=nullptr;
+  std::vector<float>* genmuon_E=nullptr;
+  std::vector<int>* genmuon_id=nullptr;
+  std::vector<int>* genmuon_status=nullptr;
+  std::vector<int>* genmuon_mother1id=nullptr;
+  std::vector<int>* genmuon_mother2id=nullptr;
+  std::vector<unsigned int>* genmuon_isPromptFinalState=nullptr;
   std::vector<unsigned int>* muonGenMatchedJet=nullptr;
-  std::vector<float>* muonGenPt=nullptr;
-  std::vector<float>* muonGenEta=nullptr;
-  std::vector<float>* muonGenPhi=nullptr;
   std::vector<float>* muonGenJetE=nullptr;
   std::vector<float>* muonGenJetPt=nullptr;
   std::vector<float>* muonGenJetEta=nullptr;
@@ -547,13 +602,13 @@ void compareIsolation(TString strSelection="GenMatched"){
   std::vector<TChain*> treeList;
 
   treeList.push_back(new TChain("muon_tree_30"));
-  addFilesInDirectory(treeList.back(), "/hadoop/cms/store/user/usarica/MTD/UPS/MuonIsolation/20181024/DYToLL-M-50_0J_14TeV-madgraphMLM-pythia8/crab_DY_MuonIsolationMTD_200PU_932_HGCparam_new_v3");
+  addFilesInDirectory(treeList.back(), "/hadoop/cms/store/user/usarica/MTD/UPS/MuonIsolation/20181024/DYToLL-M-50_0J_14TeV-madgraphMLM-pythia8/crab_DY_MuonIsolationMTD_200PU_932_HGCparam_new_v4");
   strSampleTitle.emplace_back("DY");
   strSampleLabel.emplace_back("DY");
 
   treeList.push_back(new TChain("muon_tree_30"));
   //addFilesInDirectory(treeList.back(), "/hadoop/cms/store/user/usarica/MTD/UPS/MuonIsolation/20181024/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8/crab_TTbar_MuonIsolationMTD_200PU_932_HGCparam_new_v1");
-  addFilesInDirectory(treeList.back(), "/hadoop/cms/store/user/usarica/MTD/UPS/MuonIsolation/20181024/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8/crab_TTbar_ext_MuonIsolationMTD_200PU_932_HGCparam_new_nonlocal_v3");
+  addFilesInDirectory(treeList.back(), "/hadoop/cms/store/user/usarica/MTD/UPS/MuonIsolation/20181024/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8/crab_TTbar_ext_MuonIsolationMTD_200PU_932_HGCparam_new_nonlocal_v4");
   strSampleTitle.emplace_back("ttbar");
   strSampleLabel.emplace_back("t#bar{t}");
 
@@ -611,12 +666,16 @@ void compareIsolation(TString strSelection="GenMatched"){
     tree->SetBranchAddress("isLooseMuon", &isLooseMuon);
     tree->SetBranchAddress("isMediumMuon", &isMediumMuon);
     tree->SetBranchAddress("isTightMuon", &isTightMuon);
-    tree->SetBranchAddress("muonGenMatched", &muonGenMatched);
-    tree->SetBranchAddress("muonGenMatchedPrompt", &muonGenMatchedPrompt);
+    tree->SetBranchAddress("genmuon_px", &genmuon_px);
+    tree->SetBranchAddress("genmuon_py", &genmuon_py);
+    tree->SetBranchAddress("genmuon_pz", &genmuon_pz);
+    tree->SetBranchAddress("genmuon_E", &genmuon_E);
+    tree->SetBranchAddress("genmuon_id", &genmuon_id);
+    tree->SetBranchAddress("genmuon_status", &genmuon_status);
+    tree->SetBranchAddress("genmuon_mother1id", &genmuon_mother1id);
+    tree->SetBranchAddress("genmuon_mother2id", &genmuon_mother2id);
+    tree->SetBranchAddress("genmuon_isPromptFinalState", &genmuon_isPromptFinalState);
     tree->SetBranchAddress("muonGenMatchedJet", &muonGenMatchedJet);
-    tree->SetBranchAddress("muonGenPt", &muonGenPt);
-    tree->SetBranchAddress("muonGenEta", &muonGenEta);
-    tree->SetBranchAddress("muonGenPhi", &muonGenPhi);
     tree->SetBranchAddress("muonGenJetE", &muonGenJetE);
     tree->SetBranchAddress("muonGenJetPt", &muonGenJetPt);
     tree->SetBranchAddress("muonGenJetEta", &muonGenJetEta);
@@ -728,11 +787,26 @@ void compareIsolation(TString strSelection="GenMatched"){
       for (unsigned int imuon=0; imuon<muon_pt->size(); imuon++){
         if (muon_terr->at(imuon)<=0.) continue; // Only muons with time!
 
+        int index_GenMatchedPromptWithIsolationThr = testGenMatchedPromptMuon(
+          muon_px->at(imuon), muon_py->at(imuon), muon_pz->at(imuon),
+          *genmuon_px, *genmuon_py, *genmuon_pz, *genmuon_E,
+          *genmuon_id, *genmuon_status, *genmuon_mother1id, *genmuon_mother2id,
+          *genmuon_isPromptFinalState,
+          true
+        );
+        int index_GenMatchedNonPromptWithoutIsolationThr = testGenMatchedNonPromptMuon(
+          muon_px->at(imuon), muon_py->at(imuon), muon_pz->at(imuon),
+          *genmuon_px, *genmuon_py, *genmuon_pz, *genmuon_E,
+          *genmuon_id, *genmuon_status, *genmuon_mother1id, *genmuon_mother2id,
+          *genmuon_isPromptFinalState,
+          false
+        );
+
         if (strSelectionLower.Contains("genmatched") &&
             !(
-            (applySignalSelection && muonGenMatchedPrompt->at(imuon))
+            (applySignalSelection && index_GenMatchedPromptWithIsolationThr>=0)
               ||
-              (!applySignalSelection && !muonGenMatchedPrompt->at(imuon) && muonGenMatchedJet->at(imuon))
+              (!applySignalSelection && /*index_GenMatchedNonPromptWithoutIsolationThr>=0 && */index_GenMatchedPromptWithIsolationThr<0)
               )
             ) continue;
         if (strSelectionLower.Contains("loose") && !isLooseMuon->at(imuon)) continue;

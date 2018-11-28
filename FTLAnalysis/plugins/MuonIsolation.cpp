@@ -129,6 +129,7 @@ struct TrackInformation{
   reco::TransientTrack ttrk;
 
   bool isNonnull() const{ return ref.isNonnull(); }
+  bool isHighPurity() const{ return ref->quality(reco::TrackBase::highPurity); }
   bool hasTime() const{ return (terr>0.); }
   bool hasAssociatedVertex3D() const{ return (associatedVertex3D!=nullptr); }
   bool hasAssociatedVertex4D() const{ return (associatedVertex4D!=nullptr); }
@@ -803,6 +804,7 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
         // Compute isolation sums
         for (TrackInformation const& trkInfo_ : trackInfoList){
           if (trkInfo_.ref == trkInfo->ref) continue;
+          if (!trkInfo_.isHighPurity()) continue;
 
           // Checks on 3D vertex-like association
           float dz = std::abs(trkInfo_.ref->dz(muonInfo.associatedVertex3D->ptr->position()));
@@ -955,7 +957,8 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
         outTrees_[iRes].muon_terr->push_back(trkInfo->terr);
         outTrees_[iRes].isLooseMuon->push_back(muon::isLooseMuon(muon));
         outTrees_[iRes].isMediumMuon->push_back(muon::isMediumMuon(muon));
-        outTrees_[iRes].isTightMuon->push_back(muon::isTightMuon(muon, *(vtx4DInfoList.at(chosenVtx4D).ptr)));
+        outTrees_[iRes].isTightMuon3D->push_back(muon::isTightMuon(muon, *(vtx3DInfoList.at(chosenVtx3D).ptr)));
+        outTrees_[iRes].isTightMuon4D->push_back(muon::isTightMuon(muon, *(vtx4DInfoList.at(chosenVtx4D).ptr)));
       }
       else{
         outTrees_[iRes].muon_vx->push_back(0);
@@ -965,7 +968,8 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
         outTrees_[iRes].muon_terr->push_back(0);
         outTrees_[iRes].isLooseMuon->push_back(0);
         outTrees_[iRes].isMediumMuon->push_back(0);
-        outTrees_[iRes].isTightMuon->push_back(0);
+        outTrees_[iRes].isTightMuon3D->push_back(0);
+        outTrees_[iRes].isTightMuon4D->push_back(0);
       }
       outTrees_[iRes].muonTrkId->push_back(muonInfo.trkIndex);
       outTrees_[iRes].muonVtx3DId->push_back(chosenVtx3D);
@@ -1098,12 +1102,15 @@ FTLMuonIsolation::fillDescriptions(edm::ConfigurationDescriptions& descriptions)
 
 std::vector<std::pair<int, int>> FTLMuonIsolation::findDuplicates(const std::vector<float>* fourvector, std::vector<int> id, std::vector<int> status){
   vector<pair<int, int>> duplicates;
+  if (id.size()>1) duplicates.reserve(id.size()/2);
 
   for (unsigned int xx=0; xx<id.size(); xx++){
     TLorentzVector p_tm(fourvector[0].at(xx), fourvector[1].at(xx), fourvector[2].at(xx), fourvector[3].at(xx));
     int id_tm = id.at(xx);
     int st_tm = status.at(xx);
+
     if (st_tm==23 || st_tm==1){
+      double msq_tm = p_tm.M2();
       for (unsigned int yy=xx+1; yy<id.size(); yy++){
         TLorentzVector p_tbm(fourvector[0].at(yy), fourvector[1].at(yy), fourvector[2].at(yy), fourvector[3].at(yy));
         int id_tbm = id.at(yy);
@@ -1111,13 +1118,12 @@ std::vector<std::pair<int, int>> FTLMuonIsolation::findDuplicates(const std::vec
 
         if (id_tbm==id_tm && st_tbm!=st_tm && (st_tbm==1 || st_tbm==23)){
           double dot_tm = p_tbm.Dot(p_tm);
-          double diff_sqmass = dot_tm - p_tm.M2();
-          diff_sqmass = fabs((double) diff_sqmass);
-          if (diff_sqmass<0.005*fabs(p_tm.M2())){
-            int iFirst = (st_tm==23 ? xx : yy); // Should be order-independent
-            int iSecond = (st_tbm==1 ? yy : xx);
-            pair<int, int> dupinst(iFirst, iSecond);
-            duplicates.push_back(dupinst);
+          double diff_sqmass = dot_tm - msq_tm;
+          diff_sqmass = std::abs(diff_sqmass);
+          if (diff_sqmass<0.005*std::abs(msq_tm)){
+            int iFirst = (st_tm==23 ? xx : yy);
+            int iSecond = (st_tm==23 ? yy : xx);
+            duplicates.emplace_back(iFirst, iSecond);
           }
         }
       }

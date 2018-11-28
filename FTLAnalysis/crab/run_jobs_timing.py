@@ -2,10 +2,10 @@ from WMCore.Configuration import Configuration
 
 #sample  = "QCD"
 #sample = "TTbar"
-sample = "TTbar_ext"
-#sample = "DY"
+#sample = "TTbar_ext"
+sample = "DY"
 
-tag = "new_nonlocal_v3"
+tag = "new_v4"
 
 if sample == "QCD":
     in_dataset = '/QCD_Flat_Pt-15to7000_TuneCUETP8M1_14TeV_pythia8/PhaseIITDRFall17DR-PU200_93X_upgrade2023_realistic_v2-v1/GEN-SIM-RECO'
@@ -40,7 +40,6 @@ config.Data.splitting            = 'FileBased'
 config.Data.unitsPerJob          = 1
 config.Data.totalUnits           = -1
 config.Data.publication          = False
-config.Data.ignoreLocality       = True
 config.Data.allowNonValidInputDataset = True
 
 # This string is used to construct the output dataset name
@@ -51,6 +50,11 @@ config.section_('Site')
 # Where the output files will be transmitted to
 config.Site.storageSite          = 'T2_US_UCSD'
 #config.Site.whitelist            = ['T1_IT_CNAF', 'T2_CH_CERN', 'T2_US_MIT', 'T2_US_Florida']
-config.Site.ignoreGlobalBlacklist = True
-config.Site.whitelist            = ['T2_IT_*']
+if sample == "TTbar_ext" and "nonlocal" in tag:
+   config.Data.ignoreLocality       = True
+   config.Site.ignoreGlobalBlacklist = True
+   config.Site.whitelist            = ['T2_IT_*']
+else:
+   config.Data.ignoreLocality       = False
+   config.Site.ignoreGlobalBlacklist = False
 config.Site.blacklist            = ['T2_US_Nebraska','T2_DE_DESY']
