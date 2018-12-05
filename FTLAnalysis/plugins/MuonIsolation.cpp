@@ -653,31 +653,49 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
         int val_reco_GenParticle_mother22id=-9000;
         if (part.numberOfMothers()>0){
           auto const* theMother = part.mother(0);
-          while (theMother && theMother->pdgId()==part.pdgId() && theMother->numberOfMothers()==1) theMother = theMother->mother(0);
+          while (theMother && theMother->pdgId()==part.pdgId() && theMother->numberOfMothers()==1){
+            std::cout << "Particle mother1 same as particle, looking deeper" << endl;
+            theMother = theMother->mother(0);
+          }
           val_reco_GenParticle_mother1id = theMother->pdgId();
           if (theMother->numberOfMothers()>0){
             auto const* theMotherMom = theMother->mother(0);
-            while (theMotherMom && theMother->pdgId()==theMotherMom->pdgId() && theMotherMom->numberOfMothers()==1) theMotherMom = theMotherMom->mother(0);
+            while (theMotherMom && theMother->pdgId()==theMotherMom->pdgId() && theMotherMom->numberOfMothers()==1){
+              //std::cout << "Particle mother11 same as particle mother, looking deeper" << endl;
+              theMotherMom = theMotherMom->mother(0);
+            }
             val_reco_GenParticle_mother11id = theMotherMom->pdgId();
           }
           if (theMother->numberOfMothers()>1){
             auto const* theMotherMom = theMother->mother(1);
-            while (theMotherMom && theMother->pdgId()==theMotherMom->pdgId() && theMotherMom->numberOfMothers()==1) theMotherMom = theMotherMom->mother(0);
+            while (theMotherMom && theMother->pdgId()==theMotherMom->pdgId() && theMotherMom->numberOfMothers()==1){
+              //std::cout << "Particle mother12 same as particle mother, looking deeper" << endl;
+              theMotherMom = theMotherMom->mother(0);
+            }
             val_reco_GenParticle_mother12id = theMotherMom->pdgId();
           }
         }
         if (part.numberOfMothers()>1){
           auto const* theMother = part.mother(1);
-          while (theMother && theMother->pdgId()==part.pdgId() && theMother->numberOfMothers()==1) theMother = theMother->mother(0);
+          while (theMother && theMother->pdgId()==part.pdgId() && theMother->numberOfMothers()==1){
+            //std::cout << "Particle mother2 same as particle, looking deeper" << endl;
+            theMother = theMother->mother(0);
+          }
           val_reco_GenParticle_mother2id = theMother->pdgId();
           if (theMother->numberOfMothers()>0){
             auto const* theMotherMom = theMother->mother(0);
-            while (theMotherMom && theMother->pdgId()==theMotherMom->pdgId() && theMotherMom->numberOfMothers()==1) theMotherMom = theMotherMom->mother(0);
+            while (theMotherMom && theMother->pdgId()==theMotherMom->pdgId() && theMotherMom->numberOfMothers()==1){
+              //std::cout << "Particle mother21 same as particle mother, looking deeper" << endl;
+              theMotherMom = theMotherMom->mother(0);
+            }
             val_reco_GenParticle_mother21id = theMotherMom->pdgId();
           }
           if (theMother->numberOfMothers()>1){
             auto const* theMotherMom = theMother->mother(1);
-            while (theMotherMom && theMother->pdgId()==theMotherMom->pdgId() && theMotherMom->numberOfMothers()==1) theMotherMom = theMotherMom->mother(0);
+            while (theMotherMom && theMother->pdgId()==theMotherMom->pdgId() && theMotherMom->numberOfMothers()==1){
+              //std::cout << "Particle mother22 same as particle mother, looking deeper" << endl;
+              theMotherMom = theMotherMom->mother(0);
+            }
             val_reco_GenParticle_mother22id = theMotherMom->pdgId();
           }
         }
