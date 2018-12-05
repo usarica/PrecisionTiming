@@ -197,6 +197,16 @@ struct MuonInformation{
   bool isNonnull() const{ return (ptr!=nullptr); }
   bool hasTrackInfo() const{ return (trkinfo!=nullptr); }
   bool hasTime() const{ return (hasTrackInfo() && trkinfo->terr>0.); }
+
+  bool isTrackerMuon() const{ return (ptr && ptr->isTrackerMuon()); }
+  bool isGlobalMuon() const{ return (ptr && ptr->isGlobalMuon()); }
+  bool isPFMuon() const{ return (ptr && ptr->isPFMuon()); }
+  float normalizedChi2() const{ return (ptr && ptr->globalTrack().isNonnull() ? ptr->globalTrack()->normalizedChi2() : -1.); }
+  int numberOfValidMuonHits() const{ return (ptr && ptr->globalTrack().isNonnull() ? ptr->globalTrack()->hitPattern().numberOfValidMuonHits() : -1); }
+  int numberOfMatchedStations() const{ return (ptr ? ptr->numberOfMatchedStations() : -1); }
+  int numberOfValidPixelHits() const{ return (ptr && ptr->innerTrack().isNonnull() ? ptr->innerTrack()->hitPattern().numberOfValidPixelHits() : -1); }
+  int trackerLayersWithMeasurement() const{ return (ptr && ptr->innerTrack().isNonnull() ? ptr->innerTrack()->hitPattern().trackerLayersWithMeasurement() : -1); }
+
   void setup(){
     bool refIsNonnull = this->isNonnull();
     px = (refIsNonnull ? ptr->px() : 0);
@@ -971,6 +981,14 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
         outTrees_[iRes].isTightMuon3D->push_back(0);
         outTrees_[iRes].isTightMuon4D->push_back(0);
       }
+      outTrees_[iRes].isTrackerMuon->push_back(muonInfo.isTrackerMuon());
+      outTrees_[iRes].isGlobalMuon->push_back(muonInfo.isGlobalMuon());
+      outTrees_[iRes].isPFMuon->push_back(muonInfo.isPFMuon());
+      outTrees_[iRes].normalizedChi2->push_back(muonInfo.normalizedChi2());
+      outTrees_[iRes].numberOfValidMuonHits->push_back(muonInfo.numberOfValidMuonHits());
+      outTrees_[iRes].numberOfMatchedStations->push_back(muonInfo.numberOfMatchedStations());
+      outTrees_[iRes].numberOfValidPixelHits->push_back(muonInfo.numberOfValidPixelHits());
+      outTrees_[iRes].trackerLayersWithMeasurement->push_back(muonInfo.trackerLayersWithMeasurement());
       outTrees_[iRes].muonTrkId->push_back(muonInfo.trkIndex);
       outTrees_[iRes].muonVtx3DId->push_back(chosenVtx3D);
       outTrees_[iRes].muonIP3DVtx3D->push_back(IP3DVtx3D);
@@ -1091,8 +1109,7 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 }
   
 // ------------ method fills 'descriptions' with the allowed parameters for the module  ------------
-void
-FTLMuonIsolation::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+void FTLMuonIsolation::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   //The following says we do not know what parameters are allowed so do no validation
   // Please change this to state exactly what you do use, even if it is no parameters
   edm::ParameterSetDescription desc;

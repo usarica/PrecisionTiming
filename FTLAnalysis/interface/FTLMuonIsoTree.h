@@ -37,6 +37,14 @@ using namespace std;
     DATA(std::vector<unsigned int>, isMediumMuon)                    \
     DATA(std::vector<unsigned int>, isTightMuon3D)                     \
     DATA(std::vector<unsigned int>, isTightMuon4D)                     \
+    DATA(std::vector<unsigned int>, isTrackerMuon)                     \
+    DATA(std::vector<unsigned int>, isGlobalMuon)                     \
+    DATA(std::vector<unsigned int>, isPFMuon)                     \
+    DATA(std::vector<float>, normalizedChi2)                     \
+    DATA(std::vector<int>, numberOfValidMuonHits)                     \
+    DATA(std::vector<int>, numberOfMatchedStations)                     \
+    DATA(std::vector<int>, numberOfValidPixelHits)                     \
+    DATA(std::vector<int>, trackerLayersWithMeasurement)                \
     DATA(std::vector<unsigned int>, muonGenMatched)                      \
     DATA(std::vector<unsigned int>, muonGenMatchedPrompt)                \
     DATA(std::vector<unsigned int>, muonGenMatchedJet)                   \
