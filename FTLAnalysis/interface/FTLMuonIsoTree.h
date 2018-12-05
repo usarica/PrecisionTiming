@@ -122,7 +122,12 @@ using namespace std;
     DATA(std::vector<int>, genmuon_status)                          \
     DATA(std::vector<int>, genmuon_mother1id)                       \
     DATA(std::vector<int>, genmuon_mother2id)                       \
+    DATA(std::vector<int>, genmuon_mother11id)                       \
+    DATA(std::vector<int>, genmuon_mother12id)                       \
+    DATA(std::vector<int>, genmuon_mother21id)                       \
+    DATA(std::vector<int>, genmuon_mother22id)                       \
     DATA(std::vector<unsigned int>, genmuon_isPromptFinalState)     \
+    DATA(std::vector<unsigned int>, genmuon_isDirectPromptTauDecayProductFinalState)     \
     DATA(std::vector<float>, track_pt)                             \
     DATA(std::vector<float>, track_eta)                            \
     DATA(std::vector<float>, track_phi)                            \

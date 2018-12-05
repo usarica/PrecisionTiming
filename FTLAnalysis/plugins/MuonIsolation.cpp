@@ -620,7 +620,12 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     vector<int> reco_GenParticle_status;
     vector<int> reco_GenParticle_mother1id;
     vector<int> reco_GenParticle_mother2id;
+    vector<int> reco_GenParticle_mother11id;
+    vector<int> reco_GenParticle_mother12id;
+    vector<int> reco_GenParticle_mother21id;
+    vector<int> reco_GenParticle_mother22id;
     vector<unsigned int> reco_GenParticle_isPromptFinalState;
+    vector<unsigned int> reco_GenParticle_isDirectPromptTauDecayProductFinalState;
     for (reco::GenParticle const& part:(*genPartHandle_)){
       if (
         (std::abs(part.pdgId())==13 && (part.status()==23 || part.status()==1)) // Generated muons
@@ -638,10 +643,50 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
         reco_GenParticle_id.push_back(part.pdgId());
         reco_GenParticle_status.push_back(part.status());
         reco_GenParticle_isPromptFinalState.push_back(part.isPromptFinalState());
-        if (part.numberOfMothers()>0) reco_GenParticle_mother1id.push_back(part.mother(0)->pdgId());
-        else reco_GenParticle_mother1id.push_back(-9000);
-        if (part.numberOfMothers()>1) reco_GenParticle_mother2id.push_back(part.mother(1)->pdgId());
-        else reco_GenParticle_mother2id.push_back(-9000);
+        reco_GenParticle_isDirectPromptTauDecayProductFinalState.push_back(part.isDirectPromptTauDecayProductFinalState());
+
+        int val_reco_GenParticle_mother1id=-9000;
+        int val_reco_GenParticle_mother2id=-9000;
+        int val_reco_GenParticle_mother11id=-9000;
+        int val_reco_GenParticle_mother12id=-9000;
+        int val_reco_GenParticle_mother21id=-9000;
+        int val_reco_GenParticle_mother22id=-9000;
+        if (part.numberOfMothers()>0){
+          auto const* theMother = part.mother(0);
+          while (theMother && theMother->pdgId()==part.pdgId() && theMother->numberOfMothers()==1) theMother = theMother->mother(0);
+          val_reco_GenParticle_mother1id = theMother->pdgId();
+          if (theMother->numberOfMothers()>0){
+            auto const* theMotherMom = theMother->mother(0);
+            while (theMotherMom && theMother->pdgId()==theMotherMom->pdgId() && theMotherMom->numberOfMothers()==1) theMotherMom = theMotherMom->mother(0);
+            val_reco_GenParticle_mother11id = theMotherMom->pdgId();
+          }
+          if (theMother->numberOfMothers()>1){
+            auto const* theMotherMom = theMother->mother(1);
+            while (theMotherMom && theMother->pdgId()==theMotherMom->pdgId() && theMotherMom->numberOfMothers()==1) theMotherMom = theMotherMom->mother(0);
+            val_reco_GenParticle_mother12id = theMotherMom->pdgId();
+          }
+        }
+        if (part.numberOfMothers()>1){
+          auto const* theMother = part.mother(1);
+          while (theMother && theMother->pdgId()==part.pdgId() && theMother->numberOfMothers()==1) theMother = theMother->mother(0);
+          val_reco_GenParticle_mother2id = theMother->pdgId();
+          if (theMother->numberOfMothers()>0){
+            auto const* theMotherMom = theMother->mother(0);
+            while (theMotherMom && theMother->pdgId()==theMotherMom->pdgId() && theMotherMom->numberOfMothers()==1) theMotherMom = theMotherMom->mother(0);
+            val_reco_GenParticle_mother21id = theMotherMom->pdgId();
+          }
+          if (theMother->numberOfMothers()>1){
+            auto const* theMotherMom = theMother->mother(1);
+            while (theMotherMom && theMother->pdgId()==theMotherMom->pdgId() && theMotherMom->numberOfMothers()==1) theMotherMom = theMotherMom->mother(0);
+            val_reco_GenParticle_mother22id = theMotherMom->pdgId();
+          }
+        }
+        reco_GenParticle_mother1id.push_back(val_reco_GenParticle_mother1id);
+        reco_GenParticle_mother2id.push_back(val_reco_GenParticle_mother2id);
+        reco_GenParticle_mother11id.push_back(val_reco_GenParticle_mother11id);
+        reco_GenParticle_mother12id.push_back(val_reco_GenParticle_mother12id);
+        reco_GenParticle_mother21id.push_back(val_reco_GenParticle_mother21id);
+        reco_GenParticle_mother22id.push_back(val_reco_GenParticle_mother22id);
       }
     }
     {
@@ -667,7 +712,12 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
         reco_GenParticle_status.erase(reco_GenParticle_status.begin()+iTransfer);
         reco_GenParticle_mother1id.erase(reco_GenParticle_mother1id.begin()+iTransfer);
         reco_GenParticle_mother2id.erase(reco_GenParticle_mother2id.begin()+iTransfer);
+        reco_GenParticle_mother11id.erase(reco_GenParticle_mother11id.begin()+iTransfer);
+        reco_GenParticle_mother12id.erase(reco_GenParticle_mother12id.begin()+iTransfer);
+        reco_GenParticle_mother21id.erase(reco_GenParticle_mother21id.begin()+iTransfer);
+        reco_GenParticle_mother22id.erase(reco_GenParticle_mother22id.begin()+iTransfer);
         reco_GenParticle_isPromptFinalState.erase(reco_GenParticle_isPromptFinalState.begin()+iTransfer);
+        reco_GenParticle_isDirectPromptTauDecayProductFinalState.erase(reco_GenParticle_isDirectPromptTauDecayProductFinalState.begin()+iTransfer);
       }
     }
     outTrees_[iRes].genmuon_px->assign(reco_GenParticle_FV[0].begin(), reco_GenParticle_FV[0].end());
@@ -678,7 +728,12 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     outTrees_[iRes].genmuon_status->assign(reco_GenParticle_status.begin(), reco_GenParticle_status.end());
     outTrees_[iRes].genmuon_mother1id->assign(reco_GenParticle_mother1id.begin(), reco_GenParticle_mother1id.end());
     outTrees_[iRes].genmuon_mother2id->assign(reco_GenParticle_mother2id.begin(), reco_GenParticle_mother2id.end());
+    outTrees_[iRes].genmuon_mother11id->assign(reco_GenParticle_mother11id.begin(), reco_GenParticle_mother11id.end());
+    outTrees_[iRes].genmuon_mother12id->assign(reco_GenParticle_mother12id.begin(), reco_GenParticle_mother12id.end());
+    outTrees_[iRes].genmuon_mother21id->assign(reco_GenParticle_mother21id.begin(), reco_GenParticle_mother21id.end());
+    outTrees_[iRes].genmuon_mother22id->assign(reco_GenParticle_mother22id.begin(), reco_GenParticle_mother22id.end());
     outTrees_[iRes].genmuon_isPromptFinalState->assign(reco_GenParticle_isPromptFinalState.begin(), reco_GenParticle_isPromptFinalState.end());
+    outTrees_[iRes].genmuon_isDirectPromptTauDecayProductFinalState->assign(reco_GenParticle_isDirectPromptTauDecayProductFinalState.begin(), reco_GenParticle_isDirectPromptTauDecayProductFinalState.end());
 
 
     // Loop over reco. muons
