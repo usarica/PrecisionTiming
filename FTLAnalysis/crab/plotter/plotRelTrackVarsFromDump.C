@@ -925,7 +925,7 @@ void plotRelTrackVarsFromDump(){
         }
       }
 
-      TH2F hdummy("hdummy", Form("Event %i, muon %i, 4D vertex %i", eventId, imuon, ivtx), 100, -maxAbsDeltaT*1.1, maxAbsDeltaT*1.1, 100, 0, maxDeltaR*1.5);
+      TH2F hdummy("hdummy", Form("Event %i, muon %i, 4D vertex %i", eventId, jmuon, ivtx), 100, -maxAbsDeltaT*1.1, maxAbsDeltaT*1.1, 100, 0, maxDeltaR*1.5);
       hdummy.SetXTitle("t_{trk}-t_{#mu} (ns)");
       hdummy.SetYTitle("#DeltaR");
       hdummy.Draw();
@@ -1090,7 +1090,7 @@ void plotRelTrackVarsFromDump(){
         }
       }
 
-      TH2F hdummy("hdummy", Form("Event %i, muon %i, 4D vertex %i", eventId, imuon, ivtx), 100, 0, maxPtRatio*1.1, 100, 0, maxDeltaR*1.5);
+      TH2F hdummy("hdummy", Form("Event %i, muon %i, 4D vertex %i", eventId, jmuon, ivtx), 100, 0, maxPtRatio*1.1, 100, 0, maxDeltaR*1.5);
       hdummy.SetXTitle("p_{T}^{trk} / p_{T}^{#mu}");
       hdummy.SetYTitle("#DeltaR");
       hdummy.Draw();
@@ -1235,7 +1235,7 @@ void plotRelTrackVarsFromDump(){
         }
       }
 
-      TH2F hdummy("hdummy", Form("Event %i, muon %i, 3D vertex %i", eventId, imuon, ivtx), 100, 0, maxPtRatio*1.1, 100, 0, maxDeltaR*1.5);
+      TH2F hdummy("hdummy", Form("Event %i, muon %i, 3D vertex %i", eventId, jmuon, ivtx), 100, 0, maxPtRatio*1.1, 100, 0, maxDeltaR*1.5);
       hdummy.SetXTitle("p_{T}^{trk} / p_{T}^{#mu}");
       hdummy.SetYTitle("#DeltaR");
       hdummy.Draw();
