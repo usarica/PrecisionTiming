@@ -893,7 +893,7 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
           float dz = std::abs(trkInfo_.ref->dz(muonInfo.associatedVertex3D->ptr->position()));
           bool keep_dz = (dz <= dzCut_);
           float this_dr = reco::deltaR2(trkInfo_.ref->eta(), trkInfo_.ref->phi(), muonInfo.eta, muonInfo.phi);
-          bool keep_dr = (this_dr <= isoConeSize_);
+          bool keep_dr = (this_dr <= pow(isoConeSize_, 2));
 
           bool has_dtmuon = (trkInfo_.hasTime() && muonInfo.hasTime());
           float dtmuon = (has_dtmuon ? std::abs(trkInfo_.t - trkInfo->t) : 0);
@@ -964,7 +964,7 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
           dz = std::abs(trkInfo_.ref->dz(muonInfo.associatedVertex4D->ptr->position()));
           keep_dz = (dz <= dzCut_);
           this_dr = reco::deltaR2(trkInfo_.ref->eta(), trkInfo_.ref->phi(), muonInfo.eta, muonInfo.phi);
-          keep_dr = (this_dr <= isoConeSize_);
+          keep_dr = (this_dr <= pow(isoConeSize_, 2));
           float dt = (trkInfo_.hasTime() && muonInfo.associatedVertex4D->hasTime() ? std::abs(trkInfo_.t - muonInfo.associatedVertex4D->t) : 0);
           float dterr = (trkInfo_.hasTime() && muonInfo.associatedVertex4D->hasTime() ? sqrt(pow(trkInfo_.terr, 2) + pow(muonInfo.associatedVertex4D->terr, 2)) : 0);
           float reldt = (dterr>0. ? dt/dterr : 0.);
