@@ -20,14 +20,21 @@
 <use   name="Geometry/Records"/>
 <use   name="Geometry/HGCalGeometry"/>
 <use   name="Geometry/CaloGeometry"/>
-<use   name="TrackPropagation/SteppingHelixPropagator"/>
 <use   name="RecoEcal/EgammaCoreTools"/>
 <use   name="RecoEgamma/EgammaMCTools"/>
 <use   name="PhysicsTools/UtilAlgos"/>
+<use   name="TrackingTools/GeomPropagators"/>
+<use   name="TrackingTools/TrajectoryState"/>
 <use   name="TrackingTools/TransientTrack"/>
 <use   name="TrackingTools/Records"/>
 <use   name="TrackingTools/IPTools"/>
+<use   name="TrackPropagation/SteppingHelixPropagator"/>
+<use   name="RecoVertex/VertexPrimitives"/>
+<use   name="RecoVertex/VertexTools"/>
 <use   name="ExternalTools/DynamicTTree"/>
+
+<use name="CLHEP"/>
+
 <flags CPPDEFINES="_useTrackTime_=0" />
 <flags EDM_PLUGIN="1"/>
 <export>

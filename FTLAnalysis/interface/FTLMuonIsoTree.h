@@ -75,12 +75,23 @@ using namespace std;
     DATA(std::vector<unsigned int>, muon_Vtx4D_ntrks)                \
     DATA(std::vector<float>, muon_Vtx4D_ndof)                \
     DATA(std::vector<float>, muon_Vtx4D_chisq)               \
+    DATA(std::vector<float>, muon_isotracks_mindz3D)          \
+    DATA(std::vector<float>, muon_isotracks_maxdz3D)          \
+    DATA(std::vector<float>, muon_isotracks_mindz4D)          \
+    DATA(std::vector<float>, muon_isotracks_maxdz4D)          \
+    DATA(std::vector<float>, muon_isotracks_mindz_IP_3D)          \
+    DATA(std::vector<float>, muon_isotracks_maxdz_IP_3D)          \
+    DATA(std::vector<float>, muon_isotracks_mindz_IP_4D)          \
+    DATA(std::vector<float>, muon_isotracks_maxdz_IP_4D)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_unassociated)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_associationrank_0)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_associationrank_1)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_nodzcut_unassociated)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_dzIPcut_unassociated)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_sipcut_unassociated)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_sipcut_associationrank_0)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_sipcut_associationrank_1)          \
@@ -90,6 +101,9 @@ using namespace std;
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1)          \
@@ -99,6 +113,9 @@ using namespace std;
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1)          \
@@ -110,6 +127,10 @@ using namespace std;
     DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_nodzcut_associationrank_0)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_nodzcut_associationrank_1)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_nodzcut_associationrank_2)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_dzIPcut_unassociated)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_0)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_1)          \
+    DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_2)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_sipcut_unassociated)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_sipcut_associationrank_0)          \
     DATA(std::vector<float>, muon_isosumtrackpt_vtx4D_sipcut_associationrank_1)          \

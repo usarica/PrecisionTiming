@@ -19,13 +19,12 @@ process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 
 #process.MessageLogger.cerr.FwkReport.reportEvery = 1000
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32( 100 ) )
 
 # # Input source
 process.source = cms.Source("PoolSource",
 #    secondaryFileNames = cms.untracked.vstring(),
 #     # fileNames = cms.untracked.vstring(files)
-    fileNames = cms.untracked.vstring("root://cms-xrd-global.cern.ch///store/mc/PhaseIISpr18AODMiniAOD/DYToLL-M-50_0J_14TeV-madgraphMLM-pythia8/AODSIM/PU200_93X_upgrade2023_realistic_v5-v1/90000/FEA5A761-EE47-E811-9C32-0CC47A4C8E38.root")
+    fileNames = cms.untracked.vstring("/store/mc/PhaseIISpr18AODMiniAOD/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8/AODSIM/PU200_93X_upgrade2023_realistic_v5_ext1-v2/20000/0072EE98-988D-E811-B25A-24BE05CEDC81.root")
 )
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(15))
 
@@ -48,7 +47,7 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic', '')
 
 
 process.TFileService = cms.Service("TFileService",
-    fileName = cms.string("testfile.root"),
+    fileName = cms.string("testfile_ttbar.root"),
     closeFileFast = cms.untracked.bool(True)
 )
 
