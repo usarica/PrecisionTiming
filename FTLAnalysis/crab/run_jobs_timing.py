@@ -3,7 +3,7 @@ from WMCore.Configuration import Configuration
 #sample  = "QCD"
 #sample = "TTbar"
 #sample = "TTbar_ext"
-sample = "DY"
+sample = "DY_noPU"
 
 tag = "new_v7"
 
@@ -15,6 +15,14 @@ elif sample == "TTbar":
     in_dataset = '/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8/PhaseIISpr18AODMiniAOD-PU200_93X_upgrade2023_realistic_v5-v2/AODSIM'
 elif sample == "DY":
     in_dataset = '/DYToLL-M-50_0J_14TeV-madgraphMLM-pythia8/PhaseIISpr18AODMiniAOD-PU200_93X_upgrade2023_realistic_v5-v1/AODSIM'
+elif sample == "DY_noPU":
+    in_dataset = '/DYToLL-M-50_0J_14TeV-madgraphMLM-pythia8/PhaseIISpr18AODMiniAOD-noPU_93X_upgrade2023_realistic_v5-v1/AODSIM'
+elif sample == "TTbar_ext_noPU":
+    in_dataset = '/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8/PhaseIISpr18AODMiniAOD-PU200_93X_upgrade2023_realistic_v5_ext1-v2/AODSIM'
+elif sample == "TTHGG":
+    in_dataset = '/ttHToGG_M125_14TeV_powheg_pythia8/PhaseIISpr18AODMiniAOD-PU200_93X_upgrade2023_realistic_v5-v1/AODSIM'
+elif sample == "TTHGG_noPU":
+    in_dataset = '/ttHToGG_M125_14TeV_powheg_pythia8/PhaseIISpr18AODMiniAOD-noPU_93X_upgrade2023_realistic_v5-v1/AODSIM'
 
 config = Configuration()
 

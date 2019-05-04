@@ -403,57 +403,6 @@ TGraph* createROCFromDistributions(TH1* hA, TH1* hB, TString name){
 
 float calculateSIP3D(float const& ip, float const& d_ip){ return (d_ip==0.f ? 0. : ip/d_ip); }
 
-int testGenMatchedPromptMuon(
-  float const& reco_px, float const& reco_py, float const& reco_pz,
-  std::vector<float> const& gen_px, std::vector<float> const& gen_py, std::vector<float> const& gen_pz, std::vector<float> const& gen_E,
-  std::vector<int> const& gen_id, std::vector<int> const& gen_status, std::vector<int> const& gen_mother1id, std::vector<int> const& gen_mother2id,
-  std::vector<unsigned int> const& gen_isPromptFinalState,
-  bool requireIsolationThr=true
-){
-  int res=-1;
-  float min_dr=9999;
-  TLorentzVector recoP(reco_px, reco_py, reco_pz, sqrt(reco_px*reco_px + reco_py*reco_py + reco_pz*reco_pz));
-  for (unsigned int ip=0; ip<gen_id.size(); ip++){
-    if (std::abs(gen_id.at(ip))!=13) continue;
-    if (gen_status.at(ip)!=1) continue;
-    if (!(gen_isPromptFinalState.at(ip)==1 || (gen_isPromptFinalState.at(ip)==0 && (std::abs(gen_mother1id.at(ip))==24 || std::abs(gen_mother1id.at(ip))==15)))) continue;
-
-    TLorentzVector genP(gen_px.at(ip), gen_py.at(ip), gen_pz.at(ip), gen_E.at(ip));
-    float dR = genP.DeltaR(recoP);
-    if (requireIsolationThr && dR>=0.2) continue;
-    if (dR<min_dr){
-      min_dr=dR;
-      res=ip;
-    }
-  }
-  return res;
-}
-int testGenMatchedNonPromptMuon(
-  float const& reco_px, float const& reco_py, float const& reco_pz,
-  std::vector<float> const& gen_px, std::vector<float> const& gen_py, std::vector<float> const& gen_pz, std::vector<float> const& gen_E,
-  std::vector<int> const& gen_id, std::vector<int> const& gen_status, std::vector<int> const& gen_mother1id, std::vector<int> const& gen_mother2id,
-  std::vector<unsigned int> const& gen_isPromptFinalState,
-  bool requireIsolationThr=true
-){
-  int res=-1;
-  float min_dr=9999;
-  TLorentzVector recoP(reco_px, reco_py, reco_pz, sqrt(reco_px*reco_px + reco_py*reco_py + reco_pz*reco_pz));
-  for (unsigned int ip=0; ip<gen_id.size(); ip++){
-    if (std::abs(gen_id.at(ip))!=13) continue;
-    if (gen_status.at(ip)!=1) continue;
-    if ((gen_isPromptFinalState.at(ip)==1 || (gen_isPromptFinalState.at(ip)==0 && (std::abs(gen_mother1id.at(ip))==24 || std::abs(gen_mother1id.at(ip))==15)))) continue;
-
-    TLorentzVector genP(gen_px.at(ip), gen_py.at(ip), gen_pz.at(ip), gen_E.at(ip));
-    float dR = genP.DeltaR(recoP);
-    if (requireIsolationThr && dR>=0.2) continue;
-    if (dR<min_dr){
-      min_dr=dR;
-      res=ip;
-    }
-  }
-  return res;
-}
-
 float getTrackMarkerSize(float const& refval, float const& refmin, float const& refmax){
   constexpr float vmin = 0.7;
   constexpr float vmax = 1.5;
@@ -534,7 +483,8 @@ void compareIsolation(TString strSelection="GenMatched"){
   std::vector<float>* muon_terr=nullptr;
   std::vector<unsigned int>* isLooseMuon=nullptr;
   std::vector<unsigned int>* isMediumMuon=nullptr;
-  std::vector<unsigned int>* isTightMuon=nullptr;
+  std::vector<unsigned int>* isTightMuon3D=nullptr;
+  std::vector<unsigned int>* isTightMuon4D=nullptr;
   std::vector<float>* genmuon_px=nullptr;
   std::vector<float>* genmuon_py=nullptr;
   std::vector<float>* genmuon_pz=nullptr;
@@ -543,7 +493,12 @@ void compareIsolation(TString strSelection="GenMatched"){
   std::vector<int>* genmuon_status=nullptr;
   std::vector<int>* genmuon_mother1id=nullptr;
   std::vector<int>* genmuon_mother2id=nullptr;
+  std::vector<int>* genmuon_mother11id=nullptr;
+  std::vector<int>* genmuon_mother12id=nullptr;
+  std::vector<int>* genmuon_mother21id=nullptr;
+  std::vector<int>* genmuon_mother22id=nullptr;
   std::vector<unsigned int>* genmuon_isPromptFinalState=nullptr;
+  std::vector<unsigned int>* genmuon_isDirectPromptTauDecayProductFinalState=nullptr;
   std::vector<unsigned int>* muonGenMatchedJet=nullptr;
   std::vector<float>* muonGenJetE=nullptr;
   std::vector<float>* muonGenJetPt=nullptr;
@@ -563,6 +518,9 @@ void compareIsolation(TString strSelection="GenMatched"){
   std::vector<float>* muon_isosumtrackpt_vtx3D_nodzcut_unassociated=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1=nullptr;
+  std::vector<float>* muon_isosumtrackpt_vtx3D_dzIPcut_unassociated=nullptr;
+  std::vector<float>* muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0=nullptr;
+  std::vector<float>* muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx3D_sipcut_unassociated=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx3D_sipcut_associationrank_0=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx3D_sipcut_associationrank_1=nullptr;
@@ -572,6 +530,9 @@ void compareIsolation(TString strSelection="GenMatched"){
   std::vector<float>* muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1=nullptr;
+  std::vector<float>* muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated=nullptr;
+  std::vector<float>* muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0=nullptr;
+  std::vector<float>* muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1=nullptr;
@@ -581,6 +542,9 @@ void compareIsolation(TString strSelection="GenMatched"){
   std::vector<float>* muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1=nullptr;
+  std::vector<float>* muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated=nullptr;
+  std::vector<float>* muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0=nullptr;
+  std::vector<float>* muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1=nullptr;
@@ -592,6 +556,10 @@ void compareIsolation(TString strSelection="GenMatched"){
   std::vector<float>* muon_isosumtrackpt_vtx4D_nodzcut_associationrank_0=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx4D_nodzcut_associationrank_1=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx4D_nodzcut_associationrank_2=nullptr;
+  std::vector<float>* muon_isosumtrackpt_vtx4D_dzIPcut_unassociated=nullptr;
+  std::vector<float>* muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_0=nullptr;
+  std::vector<float>* muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_1=nullptr;
+  std::vector<float>* muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_2=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx4D_sipcut_unassociated=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx4D_sipcut_associationrank_0=nullptr;
   std::vector<float>* muon_isosumtrackpt_vtx4D_sipcut_associationrank_1=nullptr;
@@ -602,13 +570,12 @@ void compareIsolation(TString strSelection="GenMatched"){
   std::vector<TChain*> treeList;
 
   treeList.push_back(new TChain("muon_tree_30"));
-  addFilesInDirectory(treeList.back(), "/hadoop/cms/store/user/usarica/MTD/UPS/MuonIsolation/20181024/DYToLL-M-50_0J_14TeV-madgraphMLM-pythia8/crab_DY_MuonIsolationMTD_200PU_932_HGCparam_new_v4");
+  addFilesInDirectory(treeList.back(), "/hadoop/cms/store/user/usarica/MTD/UPS/MuonIsolation/20181024/DYToLL-M-50_0J_14TeV-madgraphMLM-pythia8/crab_DY_MuonIsolationMTD_200PU_932_HGCparam_new_v7");
   strSampleTitle.emplace_back("DY");
   strSampleLabel.emplace_back("DY");
 
   treeList.push_back(new TChain("muon_tree_30"));
-  //addFilesInDirectory(treeList.back(), "/hadoop/cms/store/user/usarica/MTD/UPS/MuonIsolation/20181024/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8/crab_TTbar_MuonIsolationMTD_200PU_932_HGCparam_new_v1");
-  addFilesInDirectory(treeList.back(), "/hadoop/cms/store/user/usarica/MTD/UPS/MuonIsolation/20181024/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8/crab_TTbar_ext_MuonIsolationMTD_200PU_932_HGCparam_new_nonlocal_v4");
+  addFilesInDirectory(treeList.back(), "/hadoop/cms/store/user/usarica/MTD/UPS/MuonIsolation/20181024/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8/crab_TTbar_ext_MuonIsolationMTD_200PU_932_HGCparam_new_nonlocal_v7");
   strSampleTitle.emplace_back("ttbar");
   strSampleLabel.emplace_back("t#bar{t}");
 
@@ -620,6 +587,9 @@ void compareIsolation(TString strSelection="GenMatched"){
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_nodzcut_unassociated;
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0;
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1;
+  std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_dzIPcut_unassociated;
+  std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0;
+  std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1;
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_sipcut_unassociated;
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_sipcut_associationrank_0;
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_sipcut_associationrank_1;
@@ -630,6 +600,9 @@ void compareIsolation(TString strSelection="GenMatched"){
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated;
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0;
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1;
+  std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated;
+  std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0;
+  std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1;
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated;
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0;
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1;
@@ -640,6 +613,9 @@ void compareIsolation(TString strSelection="GenMatched"){
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated;
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0;
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1;
+  std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated;
+  std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0;
+  std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1;
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated;
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0;
   std::vector<TH1F> list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1;
@@ -665,7 +641,8 @@ void compareIsolation(TString strSelection="GenMatched"){
     tree->SetBranchAddress("muon_terr", &muon_terr);
     tree->SetBranchAddress("isLooseMuon", &isLooseMuon);
     tree->SetBranchAddress("isMediumMuon", &isMediumMuon);
-    tree->SetBranchAddress("isTightMuon", &isTightMuon);
+    tree->SetBranchAddress("isTightMuon3D", &isTightMuon3D);
+    tree->SetBranchAddress("isTightMuon4D", &isTightMuon4D);
     tree->SetBranchAddress("genmuon_px", &genmuon_px);
     tree->SetBranchAddress("genmuon_py", &genmuon_py);
     tree->SetBranchAddress("genmuon_pz", &genmuon_pz);
@@ -674,7 +651,12 @@ void compareIsolation(TString strSelection="GenMatched"){
     tree->SetBranchAddress("genmuon_status", &genmuon_status);
     tree->SetBranchAddress("genmuon_mother1id", &genmuon_mother1id);
     tree->SetBranchAddress("genmuon_mother2id", &genmuon_mother2id);
+    tree->SetBranchAddress("genmuon_mother11id", &genmuon_mother11id);
+    tree->SetBranchAddress("genmuon_mother12id", &genmuon_mother12id);
+    tree->SetBranchAddress("genmuon_mother21id", &genmuon_mother21id);
+    tree->SetBranchAddress("genmuon_mother22id", &genmuon_mother22id);
     tree->SetBranchAddress("genmuon_isPromptFinalState", &genmuon_isPromptFinalState);
+    tree->SetBranchAddress("genmuon_isDirectPromptTauDecayProductFinalState", &genmuon_isDirectPromptTauDecayProductFinalState);
     tree->SetBranchAddress("muonGenMatchedJet", &muonGenMatchedJet);
     tree->SetBranchAddress("muonGenJetE", &muonGenJetE);
     tree->SetBranchAddress("muonGenJetPt", &muonGenJetPt);
@@ -693,6 +675,9 @@ void compareIsolation(TString strSelection="GenMatched"){
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_nodzcut_unassociated", &muon_isosumtrackpt_vtx3D_nodzcut_unassociated);
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0", &muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0);
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1", &muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1);
+    tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_dzIPcut_unassociated", &muon_isosumtrackpt_vtx3D_dzIPcut_unassociated);
+    tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0", &muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0);
+    tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1", &muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1);
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_sipcut_unassociated", &muon_isosumtrackpt_vtx3D_sipcut_unassociated);
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_sipcut_associationrank_0", &muon_isosumtrackpt_vtx3D_sipcut_associationrank_0);
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_sipcut_associationrank_1", &muon_isosumtrackpt_vtx3D_sipcut_associationrank_1);
@@ -702,6 +687,9 @@ void compareIsolation(TString strSelection="GenMatched"){
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated", &muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated);
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0", &muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0);
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1", &muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1);
+    tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated", &muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated);
+    tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0", &muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0);
+    tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1", &muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1);
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated", &muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated);
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0", &muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0);
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1", &muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1);
@@ -711,6 +699,9 @@ void compareIsolation(TString strSelection="GenMatched"){
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated", &muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated);
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0", &muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0);
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1", &muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1);
+    tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated", &muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated);
+    tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0", &muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0);
+    tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1", &muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1);
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated", &muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated);
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0", &muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0);
     tree->SetBranchAddress("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1", &muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1);
@@ -731,6 +722,9 @@ void compareIsolation(TString strSelection="GenMatched"){
     list_muon_isosumtrackpt_vtx3D_nodzcut_unassociated.emplace_back(Form("muon_isosumtrackpt_vtx3D_nodzcut_unassociated_Sample%i", is), "", n_binarray-1, binarray.data());
     list_muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0.emplace_back(Form("muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0_Sample%i", is), "", n_binarray-1, binarray.data());
     list_muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1.emplace_back(Form("muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1_Sample%i", is), "", n_binarray-1, binarray.data());
+    list_muon_isosumtrackpt_vtx3D_dzIPcut_unassociated.emplace_back(Form("muon_isosumtrackpt_vtx3D_dzIPcut_unassociated_Sample%i", is), "", n_binarray-1, binarray.data());
+    list_muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0.emplace_back(Form("muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0_Sample%i", is), "", n_binarray-1, binarray.data());
+    list_muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1.emplace_back(Form("muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1_Sample%i", is), "", n_binarray-1, binarray.data());
     list_muon_isosumtrackpt_vtx3D_sipcut_unassociated.emplace_back(Form("muon_isosumtrackpt_vtx3D_sipcut_unassociated_Sample%i", is), "", n_binarray-1, binarray.data());
     list_muon_isosumtrackpt_vtx3D_sipcut_associationrank_0.emplace_back(Form("muon_isosumtrackpt_vtx3D_sipcut_associationrank_0_Sample%i", is), "", n_binarray-1, binarray.data());
     list_muon_isosumtrackpt_vtx3D_sipcut_associationrank_1.emplace_back(Form("muon_isosumtrackpt_vtx3D_sipcut_associationrank_1_Sample%i", is), "", n_binarray-1, binarray.data());
@@ -740,6 +734,9 @@ void compareIsolation(TString strSelection="GenMatched"){
     TH1F& h_muon_isosumtrackpt_vtx3D_nodzcut_unassociated=list_muon_isosumtrackpt_vtx3D_nodzcut_unassociated.back();
     TH1F& h_muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0=list_muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0.back();
     TH1F& h_muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1=list_muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1.back();
+    TH1F& h_muon_isosumtrackpt_vtx3D_dzIPcut_unassociated=list_muon_isosumtrackpt_vtx3D_dzIPcut_unassociated.back();
+    TH1F& h_muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0=list_muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0.back();
+    TH1F& h_muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1=list_muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1.back();
     TH1F& h_muon_isosumtrackpt_vtx3D_sipcut_unassociated=list_muon_isosumtrackpt_vtx3D_sipcut_unassociated.back();
     TH1F& h_muon_isosumtrackpt_vtx3D_sipcut_associationrank_0=list_muon_isosumtrackpt_vtx3D_sipcut_associationrank_0.back();
     TH1F& h_muon_isosumtrackpt_vtx3D_sipcut_associationrank_1=list_muon_isosumtrackpt_vtx3D_sipcut_associationrank_1.back();
@@ -749,6 +746,9 @@ void compareIsolation(TString strSelection="GenMatched"){
     list_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated.emplace_back(Form("muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated_Sample%i", is), "", n_binarray-1, binarray.data());
     list_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0.emplace_back(Form("muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0_Sample%i", is), "", n_binarray-1, binarray.data());
     list_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1.emplace_back(Form("muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1_Sample%i", is), "", n_binarray-1, binarray.data());
+    list_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated.emplace_back(Form("muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated_Sample%i", is), "", n_binarray-1, binarray.data());
+    list_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0.emplace_back(Form("muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0_Sample%i", is), "", n_binarray-1, binarray.data());
+    list_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1.emplace_back(Form("muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1_Sample%i", is), "", n_binarray-1, binarray.data());
     list_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated.emplace_back(Form("muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated_Sample%i", is), "", n_binarray-1, binarray.data());
     list_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0.emplace_back(Form("muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0_Sample%i", is), "", n_binarray-1, binarray.data());
     list_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1.emplace_back(Form("muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1_Sample%i", is), "", n_binarray-1, binarray.data());
@@ -758,6 +758,9 @@ void compareIsolation(TString strSelection="GenMatched"){
     TH1F& h_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated=list_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated.back();
     TH1F& h_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0=list_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0.back();
     TH1F& h_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1=list_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1.back();
+    TH1F& h_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated=list_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated.back();
+    TH1F& h_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0=list_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0.back();
+    TH1F& h_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1=list_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1.back();
     TH1F& h_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated=list_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated.back();
     TH1F& h_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0=list_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0.back();
     TH1F& h_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1=list_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1.back();
@@ -767,6 +770,9 @@ void compareIsolation(TString strSelection="GenMatched"){
     list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated.emplace_back(Form("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated_Sample%i", is), "", n_binarray-1, binarray.data());
     list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0.emplace_back(Form("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0_Sample%i", is), "", n_binarray-1, binarray.data());
     list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1.emplace_back(Form("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1_Sample%i", is), "", n_binarray-1, binarray.data());
+    list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated.emplace_back(Form("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated_Sample%i", is), "", n_binarray-1, binarray.data());
+    list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0.emplace_back(Form("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0_Sample%i", is), "", n_binarray-1, binarray.data());
+    list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1.emplace_back(Form("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1_Sample%i", is), "", n_binarray-1, binarray.data());
     list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated.emplace_back(Form("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated_Sample%i", is), "", n_binarray-1, binarray.data());
     list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0.emplace_back(Form("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0_Sample%i", is), "", n_binarray-1, binarray.data());
     list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1.emplace_back(Form("muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1_Sample%i", is), "", n_binarray-1, binarray.data());
@@ -776,6 +782,9 @@ void compareIsolation(TString strSelection="GenMatched"){
     TH1F& h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated=list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated.back();
     TH1F& h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0=list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0.back();
     TH1F& h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1=list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1.back();
+    TH1F& h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated=list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated.back();
+    TH1F& h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0=list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0.back();
+    TH1F& h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1=list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1.back();
     TH1F& h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated=list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated.back();
     TH1F& h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0=list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0.back();
     TH1F& h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1=list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1.back();
@@ -784,32 +793,54 @@ void compareIsolation(TString strSelection="GenMatched"){
     cout << "Will loop over " << nEntries << " entries in Sample " << is << endl;
     for (int ev=0; ev<nEntries; ev++){
       tree->GetEntry(ev);
+
+      // Do gen. matching
+      std::vector<unsigned int> remaining_recomuons; if (muon_pt->size()>0) remaining_recomuons.reserve(muon_pt->size());
+      for (unsigned int imuon=0; imuon<muon_pt->size(); imuon++) remaining_recomuons.push_back(imuon);
+      std::vector<unsigned int> remaining_genmuons; if (genmuon_id->size()>0) remaining_genmuons.reserve(genmuon_id->size());
+      for (unsigned int imuon=0; imuon<genmuon_id->size(); imuon++){ if (genmuon_status->at(imuon)==1) remaining_genmuons.push_back(imuon); }
+      std::vector<std::pair<std::pair<unsigned int, unsigned int>, float>> reco_gen_pairs; reco_gen_pairs.reserve(std::max(remaining_recomuons.size(), remaining_genmuons.size()));
+      while (!remaining_recomuons.empty() && !remaining_genmuons.empty()){
+        int chosenRecoMuon=-1;
+        int chosenGenMuon=-1;
+        float minDeltaR=-1;
+        for (unsigned int const& rmuon:remaining_recomuons){
+          TLorentzVector pReco; pReco.SetPtEtaPhiM(muon_pt->at(rmuon), muon_eta->at(rmuon), muon_phi->at(rmuon), 0);
+          for (unsigned int const& gmuon:remaining_genmuons){
+            TLorentzVector pGen(genmuon_px->at(gmuon), genmuon_py->at(gmuon), genmuon_pz->at(gmuon), sqrt(pow(genmuon_px->at(gmuon), 2)+pow(genmuon_py->at(gmuon), 2)+pow(genmuon_pz->at(gmuon), 2)));
+            float deltaR = pGen.DeltaR(pReco);
+            if (minDeltaR==-1. || deltaR<minDeltaR){
+              minDeltaR=deltaR;
+              chosenRecoMuon=rmuon;
+              chosenGenMuon=gmuon;
+            }
+          }
+        }
+        std::pair<unsigned int, unsigned int> chosenIndices((unsigned int) chosenRecoMuon, (unsigned int) chosenGenMuon);
+        reco_gen_pairs.emplace_back(chosenIndices, minDeltaR);
+        for (auto it=remaining_recomuons.begin(); it!=remaining_recomuons.end(); it++){ if ((int) *it == chosenRecoMuon){ remaining_recomuons.erase(it); break; } }
+        for (auto it=remaining_genmuons.begin(); it!=remaining_genmuons.end(); it++){ if ((int) *it == chosenGenMuon){ remaining_genmuons.erase(it); break; } }
+      }
+
       for (unsigned int imuon=0; imuon<muon_pt->size(); imuon++){
         if (muon_terr->at(imuon)<=0.) continue; // Only muons with time!
 
-        int index_GenMatchedPromptWithIsolationThr = testGenMatchedPromptMuon(
-          muon_px->at(imuon), muon_py->at(imuon), muon_pz->at(imuon),
-          *genmuon_px, *genmuon_py, *genmuon_pz, *genmuon_E,
-          *genmuon_id, *genmuon_status, *genmuon_mother1id, *genmuon_mother2id,
-          *genmuon_isPromptFinalState,
-          true
-        );
-        int index_GenMatchedNonPromptWithoutIsolationThr = testGenMatchedNonPromptMuon(
-          muon_px->at(imuon), muon_py->at(imuon), muon_pz->at(imuon),
-          *genmuon_px, *genmuon_py, *genmuon_pz, *genmuon_E,
-          *genmuon_id, *genmuon_status, *genmuon_mother1id, *genmuon_mother2id,
-          *genmuon_isPromptFinalState,
-          false
-        );
+        int igen = -1;
+        float dRmatch = -1;
+        for (auto pp:reco_gen_pairs){ if (pp.first.first==imuon){ igen = pp.first.second; dRmatch = pp.second; break; } }
+        bool isPromptMatched = (igen>=0 && dRmatch<0.025 && (genmuon_isPromptFinalState->at(igen) || genmuon_isDirectPromptTauDecayProductFinalState->at(igen)));
 
         if (strSelectionLower.Contains("genmatched") &&
-            !(
-            (applySignalSelection && index_GenMatchedPromptWithIsolationThr>=0)
+              !(
+              (applySignalSelection && isPromptMatched)
               ||
-              (!applySignalSelection && /*index_GenMatchedNonPromptWithoutIsolationThr>=0 && */index_GenMatchedPromptWithIsolationThr<0)
+              (!applySignalSelection && !isPromptMatched)
               )
             ) continue;
         if (strSelectionLower.Contains("loose") && !isLooseMuon->at(imuon)) continue;
+        if (strSelectionLower.Contains("medium") && !isMediumMuon->at(imuon)) continue;
+        if (strSelectionLower.Contains("tight3d") && !isTightMuon3D->at(imuon)) continue;
+        if (strSelectionLower.Contains("tight4d") && !isTightMuon4D->at(imuon)) continue;
         if (strSelectionLower.Contains("endcap") && !(fabs(muon_eta->at(imuon))<2.4 && fabs(muon_eta->at(imuon))>=1.5)) continue;
         if (strSelectionLower.Contains("barrel") && !(fabs(muon_eta->at(imuon))<1.5)) continue;
         if (strSelectionLower.Contains("highpt") && !(muon_pt->at(imuon)>20.)) continue;
@@ -827,6 +858,10 @@ void compareIsolation(TString strSelection="GenMatched"){
           h_muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1.Fill((muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1->at(imuon))/muon_pt->at(imuon));
           h_muon_isosumtrackpt_vtx3D_nodzcut_unassociated.Fill((muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1->at(imuon)+muon_isosumtrackpt_vtx3D_nodzcut_unassociated->at(imuon))/muon_pt->at(imuon));
 
+          h_muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0.Fill((muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0->at(imuon))/muon_pt->at(imuon));
+          h_muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1.Fill((muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1->at(imuon))/muon_pt->at(imuon));
+          h_muon_isosumtrackpt_vtx3D_dzIPcut_unassociated.Fill((muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1->at(imuon)+muon_isosumtrackpt_vtx3D_dzIPcut_unassociated->at(imuon))/muon_pt->at(imuon));
+
           h_muon_isosumtrackpt_vtx3D_sipcut_associationrank_0.Fill((muon_isosumtrackpt_vtx3D_sipcut_associationrank_0->at(imuon))/muon_pt->at(imuon));
           h_muon_isosumtrackpt_vtx3D_sipcut_associationrank_1.Fill((muon_isosumtrackpt_vtx3D_sipcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_sipcut_associationrank_1->at(imuon))/muon_pt->at(imuon));
           h_muon_isosumtrackpt_vtx3D_sipcut_unassociated.Fill((muon_isosumtrackpt_vtx3D_sipcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_sipcut_associationrank_1->at(imuon)+muon_isosumtrackpt_vtx3D_sipcut_unassociated->at(imuon))/muon_pt->at(imuon));
@@ -839,6 +874,10 @@ void compareIsolation(TString strSelection="GenMatched"){
           h_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1.Fill((muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1->at(imuon))/muon_pt->at(imuon));
           h_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated.Fill((muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1->at(imuon)+muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated->at(imuon))/muon_pt->at(imuon));
 
+          h_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0.Fill((muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0->at(imuon))/muon_pt->at(imuon));
+          h_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1.Fill((muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1->at(imuon))/muon_pt->at(imuon));
+          h_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated.Fill((muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1->at(imuon)+muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated->at(imuon))/muon_pt->at(imuon));
+
           h_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0.Fill((muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0->at(imuon))/muon_pt->at(imuon));
           h_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1.Fill((muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1->at(imuon))/muon_pt->at(imuon));
           h_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated.Fill((muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1->at(imuon)+muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated->at(imuon))/muon_pt->at(imuon));
@@ -850,6 +889,10 @@ void compareIsolation(TString strSelection="GenMatched"){
           h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0.Fill((muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0->at(imuon))/muon_pt->at(imuon));
           h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1.Fill((muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1->at(imuon))/muon_pt->at(imuon));
           h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated.Fill((muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1->at(imuon)+muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated->at(imuon))/muon_pt->at(imuon));
+
+          h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0.Fill((muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0->at(imuon))/muon_pt->at(imuon));
+          h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1.Fill((muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1->at(imuon))/muon_pt->at(imuon));
+          h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated.Fill((muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1->at(imuon)+muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated->at(imuon))/muon_pt->at(imuon));
 
           h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0.Fill((muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0->at(imuon))/muon_pt->at(imuon));
           h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1.Fill((muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0->at(imuon)+muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1->at(imuon))/muon_pt->at(imuon));
@@ -865,6 +908,9 @@ void compareIsolation(TString strSelection="GenMatched"){
     postprocessHist(h_muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0);
     postprocessHist(h_muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1);
     postprocessHist(h_muon_isosumtrackpt_vtx3D_nodzcut_unassociated);
+    postprocessHist(h_muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0);
+    postprocessHist(h_muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1);
+    postprocessHist(h_muon_isosumtrackpt_vtx3D_dzIPcut_unassociated);
     postprocessHist(h_muon_isosumtrackpt_vtx3D_sipcut_associationrank_0);
     postprocessHist(h_muon_isosumtrackpt_vtx3D_sipcut_associationrank_1);
     postprocessHist(h_muon_isosumtrackpt_vtx3D_sipcut_unassociated);
@@ -875,6 +921,9 @@ void compareIsolation(TString strSelection="GenMatched"){
     postprocessHist(h_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0);
     postprocessHist(h_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1);
     postprocessHist(h_muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated);
+    postprocessHist(h_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0);
+    postprocessHist(h_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1);
+    postprocessHist(h_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated);
     postprocessHist(h_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0);
     postprocessHist(h_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1);
     postprocessHist(h_muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated);
@@ -885,6 +934,9 @@ void compareIsolation(TString strSelection="GenMatched"){
     postprocessHist(h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0);
     postprocessHist(h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1);
     postprocessHist(h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated);
+    postprocessHist(h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0);
+    postprocessHist(h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1);
+    postprocessHist(h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated);
     postprocessHist(h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0);
     postprocessHist(h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1);
     postprocessHist(h_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated);
@@ -915,6 +967,7 @@ void compareIsolation(TString strSelection="GenMatched"){
 
       std::vector<TString> hlabels; hlabels.reserve(6);
       std::vector<TH1F> plotables; plotables.reserve(6);
+      /*
       plotables.emplace_back(getPlottableHistogram(list_muon_isosumtrackpt_vtx3D_unassociated.at(0)));
       plotables.back().SetLineColor(kBlack); plotables.back().SetLineWidth(2); hlabels.emplace_back("3D A, C and others (#Deltaz<0.1 cm)");
       plotables.emplace_back(getPlottableHistogram(list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_unassociated.at(0)));
@@ -927,8 +980,39 @@ void compareIsolation(TString strSelection="GenMatched"){
       plotables.back().SetLineColor(kRed); plotables.back().SetLineWidth(2); plotables.back().SetLineStyle(7);
       plotables.emplace_back(getPlottableHistogram(list_muon_isosumtrackpt_vtx3D_dtmuoncut_unassociated.at(1)));
       plotables.back().SetLineColor(kBlue); plotables.back().SetLineWidth(2); plotables.back().SetLineStyle(7);
+      */
+      //
+      if (strSelectionLower.Contains("dzregularcut")){
+        plotables.emplace_back(getPlottableHistogram(list_muon_isosumtrackpt_vtx3D_unassociated.at(0)));
+        plotables.back().SetLineColor(kBlack); plotables.back().SetLineWidth(2); hlabels.emplace_back("3D A, C and others (#Deltaz<0.1 cm)");
+        plotables.emplace_back(getPlottableHistogram(list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_unassociated.at(0)));
+        plotables.back().SetLineColor(kRed); plotables.back().SetLineWidth(2); hlabels.emplace_back("3D A, C and others (#Deltaz<0.1 cm, |t_{trk}-t_{#mu}|<3#delta#Deltat)");
+        plotables.emplace_back(getPlottableHistogram(list_muon_isosumtrackpt_vtx3D_dtmuoncut_unassociated.at(0)));
+        plotables.back().SetLineColor(kBlue); plotables.back().SetLineWidth(2); hlabels.emplace_back("3D A, C and others (#Deltaz<0.1 cm, no t_{trk} or |t_{trk}-t_{#mu}|<3#delta#Deltat)");
+        plotables.emplace_back(getPlottableHistogram(list_muon_isosumtrackpt_vtx3D_unassociated.at(1)));
+        plotables.back().SetLineColor(kBlack); plotables.back().SetLineWidth(2); plotables.back().SetLineStyle(7);
+        plotables.emplace_back(getPlottableHistogram(list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_unassociated.at(1)));
+        plotables.back().SetLineColor(kRed); plotables.back().SetLineWidth(2); plotables.back().SetLineStyle(7);
+        plotables.emplace_back(getPlottableHistogram(list_muon_isosumtrackpt_vtx3D_dtmuoncut_unassociated.at(1)));
+        plotables.back().SetLineColor(kBlue); plotables.back().SetLineWidth(2); plotables.back().SetLineStyle(7);
+      }
+      else{
+        plotables.emplace_back(getPlottableHistogram(list_muon_isosumtrackpt_vtx3D_dzIPcut_unassociated.at(0)));
+        plotables.back().SetLineColor(kBlack); plotables.back().SetLineWidth(2); hlabels.emplace_back("3D A, C and others (#Deltaz<0.1 cm)");
+        plotables.emplace_back(getPlottableHistogram(list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated.at(0)));
+        plotables.back().SetLineColor(kRed); plotables.back().SetLineWidth(2); hlabels.emplace_back("3D A, C and others (#Deltaz<0.1 cm, |t_{trk}-t_{#mu}|<3#delta#Deltat)");
+        plotables.emplace_back(getPlottableHistogram(list_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated.at(0)));
+        plotables.back().SetLineColor(kBlue); plotables.back().SetLineWidth(2); hlabels.emplace_back("3D A, C and others (#Deltaz<0.1 cm, no t_{trk} or |t_{trk}-t_{#mu}|<3#delta#Deltat)");
+        plotables.emplace_back(getPlottableHistogram(list_muon_isosumtrackpt_vtx3D_dzIPcut_unassociated.at(1)));
+        plotables.back().SetLineColor(kBlack); plotables.back().SetLineWidth(2); plotables.back().SetLineStyle(7);
+        plotables.emplace_back(getPlottableHistogram(list_muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated.at(1)));
+        plotables.back().SetLineColor(kRed); plotables.back().SetLineWidth(2); plotables.back().SetLineStyle(7);
+        plotables.emplace_back(getPlottableHistogram(list_muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated.at(1)));
+        plotables.back().SetLineColor(kBlue); plotables.back().SetLineWidth(2); plotables.back().SetLineStyle(7);
+      }
+      //
       plotables.front().GetXaxis()->SetRangeUser(0, 0.3);
-      plotables.front().GetYaxis()->SetRangeUser(5e-2, 50.);
+      plotables.front().GetYaxis()->SetRangeUser(1e-2, 1e2);
 
       const float legend_minX = 0.50;
       const float legend_maxY = 0.90;
