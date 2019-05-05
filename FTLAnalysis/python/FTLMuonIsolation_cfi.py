@@ -17,7 +17,7 @@ FTLMuonIsolation = cms.EDAnalyzer(
     genPartTag = cms.untracked.InputTag("genParticles", "", "HLT"),
     genJetsTag = cms.untracked.InputTag("ak4GenJets", "", "HLT"),
     ###---Target time resolution (assumes sample were made with 30ps track t resolution)
-    targetResolutions = cms.untracked.vdouble(0.03, 0.05, 0.07, 0.09),
+    targetResolutions = cms.untracked.vdouble(0.03, 0.04, 0.05),
     # targetResolutions = cms.untracked.vdouble(0.05),
     dzCut = cms.untracked.double(0.1),
     ###---I/O options

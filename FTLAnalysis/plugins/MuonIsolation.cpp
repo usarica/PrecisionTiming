@@ -384,7 +384,6 @@ private:
   vector<double> targetResolutions_;
   double dzCut_;
 
-
   //---I/O
   int iEvent_;
   edm::Service<TFileService> fs;
@@ -477,6 +476,14 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   for (auto& iRes : targetResolutions_){
     //---reset output
     outTrees_[iRes].Reset();
+
+    // Apply basic checks
+    if (
+      vtx3DHandle_->empty()
+      || vtx4DHandle_->empty()
+      || tracksHandle_->empty()
+      || muonsHandle_->empty()
+      ) continue;
 
     //---fill global info            
     outTrees_[iRes].event = iEvent.id().event();
@@ -642,24 +649,17 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     vector<float> reco_GenParticle_FV[4];
     vector<int> reco_GenParticle_id;
     vector<int> reco_GenParticle_status;
-    vector<int> reco_GenParticle_mother1id;
-    vector<int> reco_GenParticle_mother2id;
-    vector<int> reco_GenParticle_mother11id;
-    vector<int> reco_GenParticle_mother12id;
-    vector<int> reco_GenParticle_mother21id;
-    vector<int> reco_GenParticle_mother22id;
     vector<unsigned int> reco_GenParticle_isPromptFinalState;
     vector<unsigned int> reco_GenParticle_isDirectPromptTauDecayProductFinalState;
     for (reco::GenParticle const& part:(*genPartHandle_)){
       if (
-        (std::abs(part.pdgId())==13 && (part.status()==23 || part.status()==1)) // Generated muons
+        (std::abs(part.pdgId())==13 && part.status()==1) // Generated muons
         //((part.pdgId()==25 || part.pdgId()==32) && part.status()==22) // Generated Higgs
         //||
         //((std::abs(part.pdgId())>=11 && std::abs(part.pdgId())<=16) && (part.status()==23 || part.status()==1)) // Generated leptons
         //||
         //((std::abs(part.pdgId())<=6 || std::abs(part.pdgId())==21) && (part.status()==21 || part.status()==23 || part.status()==22)) // Generated partons
         ){
-        if (part.status()==23 && part.numberOfDaughters()==1){ if (std::abs(part.daughter(0)->pdgId())==13 && part.daughter(0)->status()==1) continue; }
         reco_GenParticle_FV[0].push_back(part.px());
         reco_GenParticle_FV[1].push_back(part.py());
         reco_GenParticle_FV[2].push_back(part.pz());
@@ -668,98 +668,6 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
         reco_GenParticle_status.push_back(part.status());
         reco_GenParticle_isPromptFinalState.push_back(part.isPromptFinalState());
         reco_GenParticle_isDirectPromptTauDecayProductFinalState.push_back(part.isDirectPromptTauDecayProductFinalState());
-
-        int val_reco_GenParticle_mother1id=-9000;
-        int val_reco_GenParticle_mother2id=-9000;
-        int val_reco_GenParticle_mother11id=-9000;
-        int val_reco_GenParticle_mother12id=-9000;
-        int val_reco_GenParticle_mother21id=-9000;
-        int val_reco_GenParticle_mother22id=-9000;
-        if (part.numberOfMothers()>0){
-          auto const* theMother = part.mother(0);
-          while (theMother && theMother->pdgId()==part.pdgId() && theMother->numberOfMothers()==1){
-            std::cout << "Particle mother1 same as particle, looking deeper" << endl;
-            theMother = theMother->mother(0);
-          }
-          val_reco_GenParticle_mother1id = theMother->pdgId();
-          if (theMother->numberOfMothers()>0){
-            auto const* theMotherMom = theMother->mother(0);
-            while (theMotherMom && theMother->pdgId()==theMotherMom->pdgId() && theMotherMom->numberOfMothers()==1){
-              //std::cout << "Particle mother11 same as particle mother, looking deeper" << endl;
-              theMotherMom = theMotherMom->mother(0);
-            }
-            val_reco_GenParticle_mother11id = theMotherMom->pdgId();
-          }
-          if (theMother->numberOfMothers()>1){
-            auto const* theMotherMom = theMother->mother(1);
-            while (theMotherMom && theMother->pdgId()==theMotherMom->pdgId() && theMotherMom->numberOfMothers()==1){
-              //std::cout << "Particle mother12 same as particle mother, looking deeper" << endl;
-              theMotherMom = theMotherMom->mother(0);
-            }
-            val_reco_GenParticle_mother12id = theMotherMom->pdgId();
-          }
-        }
-        if (part.numberOfMothers()>1){
-          auto const* theMother = part.mother(1);
-          while (theMother && theMother->pdgId()==part.pdgId() && theMother->numberOfMothers()==1){
-            //std::cout << "Particle mother2 same as particle, looking deeper" << endl;
-            theMother = theMother->mother(0);
-          }
-          val_reco_GenParticle_mother2id = theMother->pdgId();
-          if (theMother->numberOfMothers()>0){
-            auto const* theMotherMom = theMother->mother(0);
-            while (theMotherMom && theMother->pdgId()==theMotherMom->pdgId() && theMotherMom->numberOfMothers()==1){
-              //std::cout << "Particle mother21 same as particle mother, looking deeper" << endl;
-              theMotherMom = theMotherMom->mother(0);
-            }
-            val_reco_GenParticle_mother21id = theMotherMom->pdgId();
-          }
-          if (theMother->numberOfMothers()>1){
-            auto const* theMotherMom = theMother->mother(1);
-            while (theMotherMom && theMother->pdgId()==theMotherMom->pdgId() && theMotherMom->numberOfMothers()==1){
-              //std::cout << "Particle mother22 same as particle mother, looking deeper" << endl;
-              theMotherMom = theMotherMom->mother(0);
-            }
-            val_reco_GenParticle_mother22id = theMotherMom->pdgId();
-          }
-        }
-        reco_GenParticle_mother1id.push_back(val_reco_GenParticle_mother1id);
-        reco_GenParticle_mother2id.push_back(val_reco_GenParticle_mother2id);
-        reco_GenParticle_mother11id.push_back(val_reco_GenParticle_mother11id);
-        reco_GenParticle_mother12id.push_back(val_reco_GenParticle_mother12id);
-        reco_GenParticle_mother21id.push_back(val_reco_GenParticle_mother21id);
-        reco_GenParticle_mother22id.push_back(val_reco_GenParticle_mother22id);
-      }
-    }
-    {
-      vector<pair<int, int>> reco_GenParticle_duplicates = findDuplicates(reco_GenParticle_FV, reco_GenParticle_id, reco_GenParticle_status);
-      vector<int> removalArray;
-      for (pair<int, int> const& duplicate:reco_GenParticle_duplicates){
-        int const& iTransfer = duplicate.first; // Status==23 particle
-        bool inserted=false;
-        for (unsigned int it = 0; it<removalArray.size(); it++){
-          int const& iIndex = removalArray.at(it);
-          if (iTransfer > iIndex){
-            removalArray.insert(removalArray.begin()+it, iTransfer);
-            inserted=true;
-            break;
-          }
-        }
-        if (!inserted) removalArray.push_back(iTransfer);
-      }
-      // Remove status==23 duplicates from genParticles
-      for (int const& iTransfer:removalArray){
-        for (int fv=0; fv<4; fv++) reco_GenParticle_FV[fv].erase(reco_GenParticle_FV[fv].begin()+iTransfer);
-        reco_GenParticle_id.erase(reco_GenParticle_id.begin()+iTransfer);
-        reco_GenParticle_status.erase(reco_GenParticle_status.begin()+iTransfer);
-        reco_GenParticle_mother1id.erase(reco_GenParticle_mother1id.begin()+iTransfer);
-        reco_GenParticle_mother2id.erase(reco_GenParticle_mother2id.begin()+iTransfer);
-        reco_GenParticle_mother11id.erase(reco_GenParticle_mother11id.begin()+iTransfer);
-        reco_GenParticle_mother12id.erase(reco_GenParticle_mother12id.begin()+iTransfer);
-        reco_GenParticle_mother21id.erase(reco_GenParticle_mother21id.begin()+iTransfer);
-        reco_GenParticle_mother22id.erase(reco_GenParticle_mother22id.begin()+iTransfer);
-        reco_GenParticle_isPromptFinalState.erase(reco_GenParticle_isPromptFinalState.begin()+iTransfer);
-        reco_GenParticle_isDirectPromptTauDecayProductFinalState.erase(reco_GenParticle_isDirectPromptTauDecayProductFinalState.begin()+iTransfer);
       }
     }
     outTrees_[iRes].genmuon_px->assign(reco_GenParticle_FV[0].begin(), reco_GenParticle_FV[0].end());
@@ -768,12 +676,6 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     outTrees_[iRes].genmuon_E->assign(reco_GenParticle_FV[3].begin(), reco_GenParticle_FV[3].end());
     outTrees_[iRes].genmuon_id->assign(reco_GenParticle_id.begin(), reco_GenParticle_id.end());
     outTrees_[iRes].genmuon_status->assign(reco_GenParticle_status.begin(), reco_GenParticle_status.end());
-    outTrees_[iRes].genmuon_mother1id->assign(reco_GenParticle_mother1id.begin(), reco_GenParticle_mother1id.end());
-    outTrees_[iRes].genmuon_mother2id->assign(reco_GenParticle_mother2id.begin(), reco_GenParticle_mother2id.end());
-    outTrees_[iRes].genmuon_mother11id->assign(reco_GenParticle_mother11id.begin(), reco_GenParticle_mother11id.end());
-    outTrees_[iRes].genmuon_mother12id->assign(reco_GenParticle_mother12id.begin(), reco_GenParticle_mother12id.end());
-    outTrees_[iRes].genmuon_mother21id->assign(reco_GenParticle_mother21id.begin(), reco_GenParticle_mother21id.end());
-    outTrees_[iRes].genmuon_mother22id->assign(reco_GenParticle_mother22id.begin(), reco_GenParticle_mother22id.end());
     outTrees_[iRes].genmuon_isPromptFinalState->assign(reco_GenParticle_isPromptFinalState.begin(), reco_GenParticle_isPromptFinalState.end());
     outTrees_[iRes].genmuon_isDirectPromptTauDecayProductFinalState->assign(reco_GenParticle_isDirectPromptTauDecayProductFinalState.begin(), reco_GenParticle_isDirectPromptTauDecayProductFinalState.end());
 
@@ -786,379 +688,174 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       muonInfoList.emplace_back(muon, trackInfoList);
       auto& muonInfo = muonInfoList.back();
       TrackInformation const* trkInfo = muonInfo.trkinfo;
+      if (!trkInfo) continue;
 
       // Vertex association variables
+      float IP3DVtx3D_0=0, dIP3DVtx3D_0=0;
+      float IP3DVtx4D_0=0, dIP3DVtx4D_0=0;
+
       int chosenVtx3D=-1;
-      int rankVtx3D=-1;
+      //int rankVtx3D=-1;
       float IP3DVtx3D=0, dIP3DVtx3D=0;
+
       int chosenVtx4D=-1;
-      int rankVtx4D=-1;
+      //int rankVtx4D=-1;
       float IP3DVtx4D=0, dIP3DVtx4D=0;
+
       // chIso pt sums
-      float muon_isosumtrackpt_vtx3D_unassociated=0;
-      float muon_isosumtrackpt_vtx3D_associationrank_0=0;
-      float muon_isosumtrackpt_vtx3D_associationrank_1=0;
+      float muon_isosumtrackpt_vtx3D=0;
+      float muon_isosumtrackpt_vtx3D_dzcut=0;
 
-      float muon_isosumtrackpt_vtx3D_nodzcut_unassociated;
-      float muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0=0;
-      float muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1=0;
+      float muon_isosumtrackpt_vtx3D_nodtmuon=0;
+      float muon_isosumtrackpt_vtx3D_dzcut_nodtmuon=0;
 
-      float muon_isosumtrackpt_vtx3D_dzIPcut_unassociated;
-      float muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0=0;
-      float muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1=0;
+      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut=0;
+      float muon_isosumtrackpt_vtx3D_dzcut_hasdtmuon_dtmuoncut=0;
 
-      float muon_isosumtrackpt_vtx3D_sipcut_unassociated;
-      float muon_isosumtrackpt_vtx3D_sipcut_associationrank_0=0;
-      float muon_isosumtrackpt_vtx3D_sipcut_associationrank_1=0;
-
-      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_unassociated=0;
-      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_associationrank_0=0;
-      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_associationrank_1=0;
-      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated=0;
-      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0=0;
-      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1=0;
-      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated=0;
-      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0=0;
-      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1=0;
-      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated=0;
-      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0=0;
-      float muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1=0;
-      float muon_isosumtrackpt_vtx3D_dtmuoncut_unassociated=0;
-      float muon_isosumtrackpt_vtx3D_dtmuoncut_associationrank_0=0;
-      float muon_isosumtrackpt_vtx3D_dtmuoncut_associationrank_1=0;
-      float muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated=0;
-      float muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0=0;
-      float muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1=0;
-      float muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated=0;
-      float muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0=0;
-      float muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1=0;
-      float muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated=0;
-      float muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0=0;
-      float muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1=0;
+      float muon_isosumtrackpt_vtx4D=0;
+      float muon_isosumtrackpt_vtx4D_dzcut=0;
 
 
-      float muon_isosumtrackpt_vtx4D_unassociated=0;
-      float muon_isosumtrackpt_vtx4D_associationrank_0=0;
-      float muon_isosumtrackpt_vtx4D_associationrank_1=0;
-      float muon_isosumtrackpt_vtx4D_associationrank_2=0;
-
-      float muon_isosumtrackpt_vtx4D_nodzcut_unassociated;
-      float muon_isosumtrackpt_vtx4D_nodzcut_associationrank_0=0;
-      float muon_isosumtrackpt_vtx4D_nodzcut_associationrank_1=0;
-      float muon_isosumtrackpt_vtx4D_nodzcut_associationrank_2=0;
-
-      float muon_isosumtrackpt_vtx4D_dzIPcut_unassociated;
-      float muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_0=0;
-      float muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_1=0;
-      float muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_2=0;
-
-      float muon_isosumtrackpt_vtx4D_sipcut_unassociated;
-      float muon_isosumtrackpt_vtx4D_sipcut_associationrank_0=0;
-      float muon_isosumtrackpt_vtx4D_sipcut_associationrank_1=0;
-      float muon_isosumtrackpt_vtx4D_sipcut_associationrank_2=0;
-
-      float muon_isotracks_mindz3D = 0;
-      float muon_isotracks_maxdz3D = 0;
-      float muon_isotracks_mindz4D = 0;
-      float muon_isotracks_maxdz4D = 0;
-
-      float muon_isotracks_mindz_IP_3D = 0;
-      float muon_isotracks_maxdz_IP_3D = 0;
-      float muon_isotracks_mindz_IP_4D = 0;
-      float muon_isotracks_maxdz_IP_4D = 0;
-
-      if (trkInfo){
-        // Loop over 3D vertices
+      // Loop over 3D vertices
+      for (unsigned int ivtx=0; ivtx<vtx3DInfoList.size(); ivtx++){
+        auto const& vtxInfo = vtx3DInfoList.at(ivtx);
+        if (testTrackUsedInVertexFit(vtxInfo, *trkInfo)) chosenVtx3D = ivtx;
+      }
+      if (chosenVtx3D<0){
+        float minSIP=std::numeric_limits<float>::max();
         for (unsigned int ivtx=0; ivtx<vtx3DInfoList.size(); ivtx++){
           auto const& vtxInfo = vtx3DInfoList.at(ivtx);
-          if (testTrackUsedInVertexFit(vtxInfo, *trkInfo)) chosenVtx3D = ivtx;
+          float IP_Vtx = 0, dIP_Vtx = 0;
+          if (!computeIPVals(vtxInfo, *trkInfo, IP_Vtx, dIP_Vtx)) continue;
+          const float valSIP = (dIP_Vtx!=0. ? fabs(IP_Vtx)/dIP_Vtx : 0);
+          if (minSIP>valSIP){
+            minSIP = valSIP;
+            chosenVtx3D = ivtx;
+          }
         }
-        if (chosenVtx3D<0){
-          float minSIP=std::numeric_limits<float>::max();
-          for (unsigned int ivtx=0; ivtx<vtx3DInfoList.size(); ivtx++){
-            auto const& vtxInfo = vtx3DInfoList.at(ivtx);
+        //if (chosenVtx3D>=0) rankVtx3D=1;
+      }
+      //else rankVtx3D=0;
+      if (chosenVtx3D<0) chosenVtx3D=0;
+      muonInfo.associatedVertex3D = &(vtx3DInfoList.at(chosenVtx3D));
+      computeIPVals(vtx3DInfoList.at(chosenVtx3D), *trkInfo, IP3DVtx3D, dIP3DVtx3D);
+      computeIPVals(vtx3DInfoList.at(0), *trkInfo, IP3DVtx3D_0, dIP3DVtx3D_0);
+
+      // Loop over 4D vertices
+      for (unsigned int ivtx=0; ivtx<vtx4DInfoList.size(); ivtx++){
+        auto const& vtxInfo = vtx4DInfoList.at(ivtx);
+        if (testTrackUsedInVertexFit(vtxInfo, *trkInfo)) chosenVtx4D = ivtx;
+      }
+      if (chosenVtx4D<0){
+        float minSIP=std::numeric_limits<float>::max();
+        if (trkInfo->hasTime()){ // Search within vertices with time measurement first if the track has time. Include dt/delta_dt in SIP
+          for (unsigned int ivtx=0; ivtx<vtx4DInfoList.size(); ivtx++){
+            auto const& vtxInfo = vtx4DInfoList.at(ivtx);
+            float IP_Vtx = 0, dIP_Vtx = 0, dt = 0, dterr = 0;
+            if (!computeIPVals(vtxInfo, *trkInfo, IP_Vtx, dIP_Vtx)) continue;
+            if (!computeRelTimeVals(vtxInfo, *trkInfo, dt, dterr)) continue;
+            const float valSIP = sqrt(pow((dIP_Vtx!=0. ? IP_Vtx/dIP_Vtx : 0.), 2) + pow((dterr!=0. ? dt/dterr : 0.), 2));
+            if (minSIP>valSIP){
+              minSIP = valSIP;
+              chosenVtx4D = ivtx;
+            }
+          }
+        }
+        if (chosenVtx4D<0){
+          minSIP=std::numeric_limits<float>::max();
+          for (unsigned int ivtx=0; ivtx<vtx4DInfoList.size(); ivtx++){
+            auto const& vtxInfo = vtx4DInfoList.at(ivtx);
             float IP_Vtx = 0, dIP_Vtx = 0;
             if (!computeIPVals(vtxInfo, *trkInfo, IP_Vtx, dIP_Vtx)) continue;
             const float valSIP = (dIP_Vtx!=0. ? fabs(IP_Vtx)/dIP_Vtx : 0);
             if (minSIP>valSIP){
               minSIP = valSIP;
-              chosenVtx3D = ivtx;
+              chosenVtx4D = ivtx;
             }
           }
-          if (chosenVtx3D>=0) rankVtx3D=1;
+          //if (chosenVtx4D>=0) rankVtx4D=2;
         }
-        else rankVtx3D=0;
-        if (chosenVtx3D<0) chosenVtx3D=0;
-        muonInfo.associatedVertex3D = &(vtx3DInfoList.at(chosenVtx3D));
-        computeIPVals(vtx3DInfoList.at(chosenVtx3D), *trkInfo, IP3DVtx3D, dIP3DVtx3D);
-
-        // Loop over 4D vertices
-        for (unsigned int ivtx=0; ivtx<vtx4DInfoList.size(); ivtx++){
-          auto const& vtxInfo = vtx4DInfoList.at(ivtx);
-          if (testTrackUsedInVertexFit(vtxInfo, *trkInfo)) chosenVtx4D = ivtx;
-        }
-        if (chosenVtx4D<0){
-          float minSIP=std::numeric_limits<float>::max();
-          if (trkInfo->hasTime()){ // Search within vertices with time measurement first if the track has time. Include dt/delta_dt in SIP
-            for (unsigned int ivtx=0; ivtx<vtx4DInfoList.size(); ivtx++){
-              auto const& vtxInfo = vtx4DInfoList.at(ivtx);
-              float IP_Vtx = 0, dIP_Vtx = 0, dt = 0, dterr = 0;
-              if (!computeIPVals(vtxInfo, *trkInfo, IP_Vtx, dIP_Vtx)) continue;
-              if (!computeRelTimeVals(vtxInfo, *trkInfo, dt, dterr)) continue;
-              const float valSIP = sqrt(pow((dIP_Vtx!=0. ? IP_Vtx/dIP_Vtx : 0.), 2) + pow((dterr!=0. ? dt/dterr : 0.), 2));
-              if (minSIP>valSIP){
-                minSIP = valSIP;
-                chosenVtx4D = ivtx;
-              }
-            }
-          }
-          if (chosenVtx4D<0){
-            minSIP=std::numeric_limits<float>::max();
-            for (unsigned int ivtx=0; ivtx<vtx4DInfoList.size(); ivtx++){
-              auto const& vtxInfo = vtx4DInfoList.at(ivtx);
-              float IP_Vtx = 0, dIP_Vtx = 0;
-              if (!computeIPVals(vtxInfo, *trkInfo, IP_Vtx, dIP_Vtx)) continue;
-              const float valSIP = (dIP_Vtx!=0. ? fabs(IP_Vtx)/dIP_Vtx : 0);
-              if (minSIP>valSIP){
-                minSIP = valSIP;
-                chosenVtx4D = ivtx;
-              }
-            }
-            if (chosenVtx4D>=0) rankVtx4D=2;
-          }
-          else rankVtx4D=1;
-        }
-        else rankVtx4D=0;
-        if (chosenVtx4D<0) chosenVtx4D=0;
-        muonInfo.associatedVertex4D = &(vtx4DInfoList.at(chosenVtx4D));
-        computeIPVals(vtx4DInfoList.at(chosenVtx4D), *trkInfo, IP3DVtx4D, dIP3DVtx4D);
-
-        muon_isotracks_mindz3D = std::numeric_limits<float>::max();
-        muon_isotracks_maxdz3D = std::numeric_limits<float>::min();
-        muon_isotracks_mindz4D = std::numeric_limits<float>::max();
-        muon_isotracks_maxdz4D = std::numeric_limits<float>::min();
-
-        muon_isotracks_mindz_IP_3D = std::numeric_limits<float>::max();
-        muon_isotracks_maxdz_IP_3D = std::numeric_limits<float>::min();
-        muon_isotracks_mindz_IP_4D = std::numeric_limits<float>::max();
-        muon_isotracks_maxdz_IP_4D = std::numeric_limits<float>::min();
-        // Compute isolation sums
-        for (TrackInformation const& trkInfo_ : trackInfoList){
-          if (trkInfo_.ref == trkInfo->ref) continue;
-          if (!trkInfo_.isHighPurity()) continue;
-
-          // Checks on 3D vertex-like association
-          GlobalPoint b3D;
-          GlobalError berr3D;
-          trkInfo_.getImpactPointAndError(*(muonInfo.associatedVertex3D), b3D, berr3D);
-          float dz_IP = std::abs(b3D.z() - muonInfo.associatedVertex3D->vz);
-          bool keep_dz_IP = (dz_IP <= dzCut_);
-
-          float dz = std::abs(trkInfo_.ref->dz(muonInfo.associatedVertex3D->ptr->position()));
-          bool keep_dz = (dz <= dzCut_);
-          float this_dr = reco::deltaR2(trkInfo_.ref->eta(), trkInfo_.ref->phi(), muonInfo.eta, muonInfo.phi);
-          bool keep_dr = (this_dr <= pow(isoConeSize_, 2));
-
-          bool has_dtmuon = (trkInfo_.hasTime() && muonInfo.hasTime());
-          float dtmuon = (has_dtmuon ? std::abs(trkInfo_.t - trkInfo->t) : 0);
-          float dtmuonerr = (has_dtmuon ? sqrt(pow(trkInfo_.terr, 2) + pow(trkInfo->terr, 2)) : 0);
-          float reldtmuon = (dtmuonerr>0. ? dtmuon/dtmuonerr : 0.);
-          bool keep_dtmuon = (reldtmuon <= isoTimeScale_);
-
-          float trkIP_Vtx = 0, trkdIP_Vtx = 0;
-          bool hasSip = (computeIPVals(*(muonInfo.associatedVertex3D), trkInfo_, trkIP_Vtx, trkdIP_Vtx));
-          float abssipval = (hasSip && trkdIP_Vtx>0. ? fabs(trkIP_Vtx/trkdIP_Vtx) : 0);
-
-          if (keep_dr){
-            if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0) muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0 += trkInfo_.pt;
-            else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1) muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1 += trkInfo_.pt;
-            else muon_isosumtrackpt_vtx3D_nodzcut_unassociated += trkInfo_.pt;
-
-            muon_isotracks_mindz3D = std::min(muon_isotracks_mindz3D, dz);
-            muon_isotracks_maxdz3D = std::max(muon_isotracks_maxdz3D, dz);
-            muon_isotracks_mindz_IP_3D = std::min(muon_isotracks_mindz_IP_3D, dz_IP);
-            muon_isotracks_maxdz_IP_3D = std::max(muon_isotracks_mindz_IP_3D, dz_IP);
-
-            if (keep_dz){
-              if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0) muon_isosumtrackpt_vtx3D_associationrank_0 += trkInfo_.pt;
-              else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1) muon_isosumtrackpt_vtx3D_associationrank_1 += trkInfo_.pt;
-              else muon_isosumtrackpt_vtx3D_unassociated += trkInfo_.pt;
-            }
-
-            if (keep_dz_IP){
-              if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0) muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0 += trkInfo_.pt;
-              else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1) muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1 += trkInfo_.pt;
-              else muon_isosumtrackpt_vtx3D_dzIPcut_unassociated += trkInfo_.pt;
-            }
-
-            if (hasSip){
-              if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0 && abssipval<3.) muon_isosumtrackpt_vtx3D_sipcut_associationrank_0 += trkInfo_.pt;
-              else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1 && abssipval<3.) muon_isosumtrackpt_vtx3D_sipcut_associationrank_1 += trkInfo_.pt;
-              else if (abssipval<3.) muon_isosumtrackpt_vtx3D_sipcut_unassociated += trkInfo_.pt;
-            }
-
-            if (keep_dtmuon){
-              if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0) muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0 += trkInfo_.pt;
-              else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1) muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1 += trkInfo_.pt;
-              else muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated += trkInfo_.pt;
-
-              if (keep_dz){
-                if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0) muon_isosumtrackpt_vtx3D_dtmuoncut_associationrank_0 += trkInfo_.pt;
-                else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1) muon_isosumtrackpt_vtx3D_dtmuoncut_associationrank_1 += trkInfo_.pt;
-                else muon_isosumtrackpt_vtx3D_dtmuoncut_unassociated += trkInfo_.pt;
-              }
-
-              if (keep_dz_IP){
-                if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0) muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0 += trkInfo_.pt;
-                else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1) muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1 += trkInfo_.pt;
-                else muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated += trkInfo_.pt;
-              }
-
-              if (hasSip){
-                if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0 && abssipval<3.) muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0 += trkInfo_.pt;
-                else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1 && abssipval<3.) muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1 += trkInfo_.pt;
-                else if (abssipval<3.) muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated += trkInfo_.pt;
-              }
-
-              if (has_dtmuon){
-                if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0) muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0 += trkInfo_.pt;
-                else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1) muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1 += trkInfo_.pt;
-                else muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated += trkInfo_.pt;
-
-                if (keep_dz){
-                  if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0) muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_associationrank_0 += trkInfo_.pt;
-                  else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1) muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_associationrank_1 += trkInfo_.pt;
-                  else muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_unassociated += trkInfo_.pt;
-                }
-
-                if (keep_dz_IP){
-                  if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0) muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0 += trkInfo_.pt;
-                  else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1) muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1 += trkInfo_.pt;
-                  else muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated += trkInfo_.pt;
-                }
-
-                if (hasSip){
-                  if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==0 && abssipval<3.) muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0 += trkInfo_.pt;
-                  else if (trkInfo_.associatedVertex3D==muonInfo.associatedVertex3D && trkInfo_.vtx3DAssociationRank==1 && abssipval<3.) muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1 += trkInfo_.pt;
-                  else if (abssipval<3.) muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated += trkInfo_.pt;
-                }
-              }
-            }
-
-          }
-
-          // Checks on 4D vertex-like association
-          GlobalPoint b4D;
-          GlobalError berr4D;
-          trkInfo_.getImpactPointAndError(*(muonInfo.associatedVertex4D), b4D, berr4D);
-          dz_IP = std::abs(b4D.z() - muonInfo.associatedVertex4D->vz);
-          keep_dz_IP = (dz_IP <= dzCut_);
-
-          dz = std::abs(trkInfo_.ref->dz(muonInfo.associatedVertex4D->ptr->position()));
-          keep_dz = (dz <= dzCut_);
-          this_dr = reco::deltaR2(trkInfo_.ref->eta(), trkInfo_.ref->phi(), muonInfo.eta, muonInfo.phi);
-          keep_dr = (this_dr <= pow(isoConeSize_, 2));
-          float dt = (trkInfo_.hasTime() && muonInfo.associatedVertex4D->hasTime() ? std::abs(trkInfo_.t - muonInfo.associatedVertex4D->t) : 0);
-          float dterr = (trkInfo_.hasTime() && muonInfo.associatedVertex4D->hasTime() ? sqrt(pow(trkInfo_.terr, 2) + pow(muonInfo.associatedVertex4D->terr, 2)) : 0);
-          float reldt = (dterr>0. ? dt/dterr : 0.);
-          bool keep_dt = (reldt <= isoTimeScale_);
-
-          trkIP_Vtx = 0;
-          trkdIP_Vtx = 0;
-          hasSip = (computeIPVals(*(muonInfo.associatedVertex4D), trkInfo_, trkIP_Vtx, trkdIP_Vtx));
-          abssipval = (hasSip && trkdIP_Vtx>0. ? fabs(trkIP_Vtx/trkdIP_Vtx) : 0);
-
-          if (keep_dr && keep_dt){
-            if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==0) muon_isosumtrackpt_vtx4D_nodzcut_associationrank_0 += trkInfo_.pt;
-            else if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==1) muon_isosumtrackpt_vtx4D_nodzcut_associationrank_1 += trkInfo_.pt;
-            else if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==2) muon_isosumtrackpt_vtx4D_nodzcut_associationrank_2 += trkInfo_.pt;
-            else muon_isosumtrackpt_vtx4D_nodzcut_unassociated += trkInfo_.pt;
-
-            muon_isotracks_mindz4D = std::min(muon_isotracks_mindz4D, dz);
-            muon_isotracks_maxdz4D = std::max(muon_isotracks_maxdz4D, dz);
-            muon_isotracks_mindz_IP_4D = std::min(muon_isotracks_mindz_IP_4D, dz_IP);
-            muon_isotracks_maxdz_IP_4D = std::max(muon_isotracks_mindz_IP_4D, dz_IP);
-
-            if (keep_dz){
-              if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==0) muon_isosumtrackpt_vtx4D_associationrank_0 += trkInfo_.pt;
-              else if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==1) muon_isosumtrackpt_vtx4D_associationrank_1 += trkInfo_.pt;
-              else if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==2) muon_isosumtrackpt_vtx4D_associationrank_2 += trkInfo_.pt;
-              else muon_isosumtrackpt_vtx4D_unassociated += trkInfo_.pt;
-            }
-
-            if (keep_dz_IP){
-              if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==0) muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_0 += trkInfo_.pt;
-              else if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==1) muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_1 += trkInfo_.pt;
-              else if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==2) muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_2 += trkInfo_.pt;
-              else muon_isosumtrackpt_vtx4D_dzIPcut_unassociated += trkInfo_.pt;
-            }
-
-            if (hasSip){
-              if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==0 && abssipval<5.) muon_isosumtrackpt_vtx4D_sipcut_associationrank_0 += trkInfo_.pt;
-              else if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==1 && abssipval<5.) muon_isosumtrackpt_vtx4D_sipcut_associationrank_1 += trkInfo_.pt;
-              else if (trkInfo_.associatedVertex4D==muonInfo.associatedVertex4D && trkInfo_.vtx4DAssociationRank==2 && abssipval<5.) muon_isosumtrackpt_vtx4D_sipcut_associationrank_2 += trkInfo_.pt;
-              else if (abssipval<5.) muon_isosumtrackpt_vtx4D_sipcut_unassociated += trkInfo_.pt;
-            }
-          }
-
-        }
+        //else rankVtx4D=1;
       }
+      //else rankVtx4D=0;
+      if (chosenVtx4D<0) chosenVtx4D=0;
+      muonInfo.associatedVertex4D = &(vtx4DInfoList.at(chosenVtx4D));
+      computeIPVals(vtx4DInfoList.at(chosenVtx4D), *trkInfo, IP3DVtx4D, dIP3DVtx4D);
 
-      bool genMatchedJet = false;
-      float genJetE = -99.;
-      float genJetPt = -99.;
-      float genJetEta = -99.;
-      float genJetPhi = -99.;
-      double mindr = std::numeric_limits<double>::max();
-      for (const auto& jet : *genJetHandle_){
-        if (jet.pt() < 15.0 || jet.hadEnergy()/jet.energy() < 0.3) continue;
+      // Compute isolation sums
+      for (TrackInformation const& trkInfo_ : trackInfoList){
+        if (trkInfo_.ref == trkInfo->ref) continue;
+        if (!trkInfo_.isHighPurity()) continue;
 
-        double dr = reco::deltaR(muon, jet);
-        if (dr < 0.3 && dr < mindr){
-          mindr = dr;
-          genMatchedJet = true;
-          genJetE = jet.energy();
-          genJetPt = jet.pt();
-          genJetEta = jet.eta();
-          genJetPhi = jet.phi();
+        float this_dr = reco::deltaR2(trkInfo_.ref->eta(), trkInfo_.ref->phi(), muonInfo.eta, muonInfo.phi);
+        bool keep_dr = (this_dr <= pow(isoConeSize_, 2));
+        if (!keep_dr) continue;
+
+        // Checks on 3D vertex-like association
+        GlobalPoint b3D;
+        GlobalError berr3D;
+        trkInfo_.getImpactPointAndError(*(muonInfo.associatedVertex3D), b3D, berr3D);
+        float dz = std::abs(b3D.z() - muonInfo.associatedVertex3D->vz);
+        bool keep_dz = (dz <= dzCut_);
+
+        bool has_dtmuon = (trkInfo_.hasTime() && muonInfo.hasTime());
+        float dtmuon = (has_dtmuon ? std::abs(trkInfo_.t - trkInfo->t) : 0);
+        float dtmuonerr = (has_dtmuon ? sqrt(pow(trkInfo_.terr, 2) + pow(trkInfo->terr, 2)) : 0);
+        float reldtmuon = (dtmuonerr>0. ? dtmuon/dtmuonerr : 0.);
+        bool keep_dtmuon = (reldtmuon <= isoTimeScale_);
+
+        if (keep_dr){
+          muon_isosumtrackpt_vtx3D += trkInfo_.pt;
+          if (keep_dz) muon_isosumtrackpt_vtx3D_dzcut += trkInfo_.pt;
+
+          if (keep_dtmuon){
+            if (has_dtmuon){
+              muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut += trkInfo_.pt;
+              if (keep_dz) muon_isosumtrackpt_vtx3D_dzcut_hasdtmuon_dtmuoncut += trkInfo_.pt;
+            }
+            else{
+              muon_isosumtrackpt_vtx3D_nodtmuon += trkInfo_.pt;
+              if (keep_dz) muon_isosumtrackpt_vtx3D_dzcut_nodtmuon += trkInfo_.pt;
+            }
+          }
+        }
+
+        // Checks on 4D vertex-like association
+        GlobalPoint b4D;
+        GlobalError berr4D;
+        trkInfo_.getImpactPointAndError(*(muonInfo.associatedVertex4D), b4D, berr4D);
+        dz = std::abs(b4D.z() - muonInfo.associatedVertex4D->vz);
+        keep_dz = (dz <= dzCut_);
+
+        float dt = (trkInfo_.hasTime() && muonInfo.associatedVertex4D->hasTime() ? std::abs(trkInfo_.t - muonInfo.associatedVertex4D->t) : 0);
+        float dterr = (trkInfo_.hasTime() && muonInfo.associatedVertex4D->hasTime() ? sqrt(pow(trkInfo_.terr, 2) + pow(muonInfo.associatedVertex4D->terr, 2)) : 0);
+        float reldt = (dterr>0. ? dt/dterr : 0.);
+        bool keep_dt = (reldt <= isoTimeScale_);
+
+        if (keep_dr && keep_dt){
+          muon_isosumtrackpt_vtx4D += trkInfo_.pt;
+          if (keep_dz) muon_isosumtrackpt_vtx4D_dzcut += trkInfo_.pt;
         }
       }
       
       //---fill muon info
-      outTrees_[iRes].muonGenMatchedJet->push_back(genMatchedJet);
-      outTrees_[iRes].muonGenJetE->push_back(genJetE);
-      outTrees_[iRes].muonGenJetPt->push_back(genJetPt);
-      outTrees_[iRes].muonGenJetEta->push_back(genJetEta);
-      outTrees_[iRes].muonGenJetPhi->push_back(genJetPhi);
-
       outTrees_[iRes].muon_pt->push_back(muonInfo.pt);
       outTrees_[iRes].muon_eta->push_back(muonInfo.eta);
       outTrees_[iRes].muon_phi->push_back(muonInfo.phi);
       outTrees_[iRes].muon_px->push_back(muonInfo.px);
       outTrees_[iRes].muon_py->push_back(muonInfo.py);
       outTrees_[iRes].muon_pz->push_back(muonInfo.pz);
-      if (trkInfo){
-        outTrees_[iRes].muon_vx->push_back(trkInfo->vx);
-        outTrees_[iRes].muon_vy->push_back(trkInfo->vy);
-        outTrees_[iRes].muon_vz->push_back(trkInfo->vz);
-        outTrees_[iRes].muon_t->push_back(trkInfo->t);
-        outTrees_[iRes].muon_terr->push_back(trkInfo->terr);
-        outTrees_[iRes].isLooseMuon->push_back(muon::isLooseMuon(muon));
-        outTrees_[iRes].isMediumMuon->push_back(muon::isMediumMuon(muon));
-        outTrees_[iRes].isTightMuon3D->push_back(muon::isTightMuon(muon, *(vtx3DInfoList.at(chosenVtx3D).ptr)));
-        outTrees_[iRes].isTightMuon4D->push_back(muon::isTightMuon(muon, *(vtx4DInfoList.at(chosenVtx4D).ptr)));
-      }
-      else{
-        outTrees_[iRes].muon_vx->push_back(0);
-        outTrees_[iRes].muon_vy->push_back(0);
-        outTrees_[iRes].muon_vz->push_back(0);
-        outTrees_[iRes].muon_t->push_back(0);
-        outTrees_[iRes].muon_terr->push_back(0);
-        outTrees_[iRes].isLooseMuon->push_back(0);
-        outTrees_[iRes].isMediumMuon->push_back(0);
-        outTrees_[iRes].isTightMuon3D->push_back(0);
-        outTrees_[iRes].isTightMuon4D->push_back(0);
-      }
+
+      outTrees_[iRes].muon_vx->push_back(trkInfo->vx);
+      outTrees_[iRes].muon_vy->push_back(trkInfo->vy);
+      outTrees_[iRes].muon_vz->push_back(trkInfo->vz);
+      outTrees_[iRes].muon_t->push_back(trkInfo->t);
+      outTrees_[iRes].muon_terr->push_back(trkInfo->terr);
+      outTrees_[iRes].isLooseMuon->push_back(muon::isLooseMuon(muon));
+      outTrees_[iRes].isMediumMuon->push_back(muon::isMediumMuon(muon));
+      outTrees_[iRes].isTightMuon3D->push_back(muon::isTightMuon(muon, *(vtx3DInfoList.at(chosenVtx3D).ptr)));
+      outTrees_[iRes].isTightMuon4D->push_back(muon::isTightMuon(muon, *(vtx4DInfoList.at(chosenVtx4D).ptr)));
+
       outTrees_[iRes].isTrackerMuon->push_back(muonInfo.isTrackerMuon());
       outTrees_[iRes].isGlobalMuon->push_back(muonInfo.isGlobalMuon());
       outTrees_[iRes].isPFMuon->push_back(muonInfo.isPFMuon());
@@ -1171,7 +868,9 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       outTrees_[iRes].muonVtx3DId->push_back(chosenVtx3D);
       outTrees_[iRes].muonIP3DVtx3D->push_back(IP3DVtx3D);
       outTrees_[iRes].muondIP3DVtx3D->push_back(dIP3DVtx3D);
-      outTrees_[iRes].muonVtx3DAssociationRank->push_back(rankVtx3D);
+      outTrees_[iRes].muonIP3DVtx3D_0->push_back(IP3DVtx3D_0);
+      outTrees_[iRes].muondIP3DVtx3D_0->push_back(dIP3DVtx3D_0);
+      //outTrees_[iRes].muonVtx3DAssociationRank->push_back(rankVtx3D);
       outTrees_[iRes].muon_Vtx3D_vx->push_back(muonInfo.associatedVertex3D->vx);
       outTrees_[iRes].muon_Vtx3D_vy->push_back(muonInfo.associatedVertex3D->vy);
       outTrees_[iRes].muon_Vtx3D_vz->push_back(muonInfo.associatedVertex3D->vz);
@@ -1182,7 +881,9 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       outTrees_[iRes].muonVtx4DId->push_back(chosenVtx4D);
       outTrees_[iRes].muonIP3DVtx4D->push_back(IP3DVtx4D);
       outTrees_[iRes].muondIP3DVtx4D->push_back(dIP3DVtx4D);
-      outTrees_[iRes].muonVtx4DAssociationRank->push_back(rankVtx4D);
+      outTrees_[iRes].muonIP3DVtx4D_0->push_back(IP3DVtx4D_0);
+      outTrees_[iRes].muondIP3DVtx4D_0->push_back(dIP3DVtx4D_0);
+      //outTrees_[iRes].muonVtx4DAssociationRank->push_back(rankVtx4D);
       outTrees_[iRes].muon_Vtx4D_vx->push_back(muonInfo.associatedVertex4D->vx);
       outTrees_[iRes].muon_Vtx4D_vy->push_back(muonInfo.associatedVertex4D->vy);
       outTrees_[iRes].muon_Vtx4D_vz->push_back(muonInfo.associatedVertex4D->vz);
@@ -1192,68 +893,17 @@ void FTLMuonIsolation::analyze(const edm::Event& iEvent, const edm::EventSetup& 
       outTrees_[iRes].muon_Vtx4D_chisq->push_back(muonInfo.associatedVertex4D->chisq);
       outTrees_[iRes].muon_Vtx4D_ntrks->push_back(muonInfo.associatedVertex4D->ptr->nTracks(0.));
 
-      outTrees_[iRes].muon_isotracks_mindz3D->push_back(muon_isotracks_mindz3D);
-      outTrees_[iRes].muon_isotracks_maxdz3D->push_back(muon_isotracks_maxdz3D);
-      outTrees_[iRes].muon_isotracks_mindz4D->push_back(muon_isotracks_mindz4D);
-      outTrees_[iRes].muon_isotracks_maxdz4D->push_back(muon_isotracks_maxdz4D);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D->push_back(muon_isosumtrackpt_vtx3D);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dzcut->push_back(muon_isosumtrackpt_vtx3D_dzcut);
 
-      outTrees_[iRes].muon_isotracks_mindz_IP_3D->push_back(muon_isotracks_mindz_IP_3D);
-      outTrees_[iRes].muon_isotracks_maxdz_IP_3D->push_back(muon_isotracks_maxdz_IP_3D);
-      outTrees_[iRes].muon_isotracks_mindz_IP_4D->push_back(muon_isotracks_mindz_IP_4D);
-      outTrees_[iRes].muon_isotracks_maxdz_IP_4D->push_back(muon_isotracks_maxdz_IP_4D);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_nodtmuon->push_back(muon_isosumtrackpt_vtx3D_nodtmuon);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dzcut_nodtmuon->push_back(muon_isosumtrackpt_vtx3D_dzcut_nodtmuon);
 
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_unassociated->push_back(muon_isosumtrackpt_vtx3D_unassociated);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_associationrank_0);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_associationrank_1);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_nodzcut_unassociated->push_back(muon_isosumtrackpt_vtx3D_nodzcut_unassociated);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_nodzcut_associationrank_0);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_nodzcut_associationrank_1);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dzIPcut_unassociated->push_back(muon_isosumtrackpt_vtx3D_dzIPcut_unassociated);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_0);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_dzIPcut_associationrank_1);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_sipcut_unassociated->push_back(muon_isosumtrackpt_vtx3D_sipcut_unassociated);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_sipcut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_sipcut_associationrank_0);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_sipcut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_sipcut_associationrank_1);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_unassociated->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_unassociated);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_associationrank_0);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_associationrank_1);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_unassociated);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_0);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_nodzcut_associationrank_1);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_unassociated);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_0);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_dzIPcut_associationrank_1);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_unassociated);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_0);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_dtmuoncut_sipcut_associationrank_1);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_unassociated->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_unassociated);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_associationrank_0);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_associationrank_1);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_unassociated);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_0);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_nodzcut_associationrank_1);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_unassociated);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_0);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_dzIPcut_associationrank_1);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_unassociated);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_0);
-      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut_sipcut_associationrank_1);
-      outTrees_[iRes].muon_isosumtrackpt_vtx4D_unassociated->push_back(muon_isosumtrackpt_vtx4D_unassociated);
-      outTrees_[iRes].muon_isosumtrackpt_vtx4D_associationrank_0->push_back(muon_isosumtrackpt_vtx4D_associationrank_0);
-      outTrees_[iRes].muon_isosumtrackpt_vtx4D_associationrank_1->push_back(muon_isosumtrackpt_vtx4D_associationrank_1);
-      outTrees_[iRes].muon_isosumtrackpt_vtx4D_associationrank_2->push_back(muon_isosumtrackpt_vtx4D_associationrank_2);
-      outTrees_[iRes].muon_isosumtrackpt_vtx4D_nodzcut_unassociated->push_back(muon_isosumtrackpt_vtx4D_nodzcut_unassociated);
-      outTrees_[iRes].muon_isosumtrackpt_vtx4D_nodzcut_associationrank_0->push_back(muon_isosumtrackpt_vtx4D_nodzcut_associationrank_0);
-      outTrees_[iRes].muon_isosumtrackpt_vtx4D_nodzcut_associationrank_1->push_back(muon_isosumtrackpt_vtx4D_nodzcut_associationrank_1);
-      outTrees_[iRes].muon_isosumtrackpt_vtx4D_nodzcut_associationrank_2->push_back(muon_isosumtrackpt_vtx4D_nodzcut_associationrank_2);
-      outTrees_[iRes].muon_isosumtrackpt_vtx4D_dzIPcut_unassociated->push_back(muon_isosumtrackpt_vtx4D_dzIPcut_unassociated);
-      outTrees_[iRes].muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_0->push_back(muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_0);
-      outTrees_[iRes].muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_1->push_back(muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_1);
-      outTrees_[iRes].muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_2->push_back(muon_isosumtrackpt_vtx4D_dzIPcut_associationrank_2);
-      outTrees_[iRes].muon_isosumtrackpt_vtx4D_sipcut_unassociated->push_back(muon_isosumtrackpt_vtx4D_sipcut_unassociated);
-      outTrees_[iRes].muon_isosumtrackpt_vtx4D_sipcut_associationrank_0->push_back(muon_isosumtrackpt_vtx4D_sipcut_associationrank_0);
-      outTrees_[iRes].muon_isosumtrackpt_vtx4D_sipcut_associationrank_1->push_back(muon_isosumtrackpt_vtx4D_sipcut_associationrank_1);
-      outTrees_[iRes].muon_isosumtrackpt_vtx4D_sipcut_associationrank_2->push_back(muon_isosumtrackpt_vtx4D_sipcut_associationrank_2);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut->push_back(muon_isosumtrackpt_vtx3D_hasdtmuon_dtmuoncut);
+      outTrees_[iRes].muon_isosumtrackpt_vtx3D_dzcut_hasdtmuon_dtmuoncut->push_back(muon_isosumtrackpt_vtx3D_dzcut_hasdtmuon_dtmuoncut);
+
+      outTrees_[iRes].muon_isosumtrackpt_vtx4D->push_back(muon_isosumtrackpt_vtx4D);
+      outTrees_[iRes].muon_isosumtrackpt_vtx4D_dzcut->push_back(muon_isosumtrackpt_vtx4D_dzcut);
     }
     outTrees_[iRes].nMuons = muonInfoList.size();
 
